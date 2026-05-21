@@ -259,7 +259,21 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
             continue
           }
 
-          const phoneNumberId = value.metadata.phone_number_id
+          const phoneNumberId = value.metadata?.phone_number_id
+
+          if (!phoneNumberId) {
+            console.error('[webhook] missing phone_number_id in metadata:', value.metadata)
+            void logHttpEvent({
+              userId: null,
+              direction: 'incoming',
+              service: 'whatsapp',
+              endpoint: '/api/whatsapp/webhook',
+              payload: { note: 'phone_number_id_missing_in_metadata', metadata: value.metadata },
+              headers: null,
+              note: 'webhook_error',
+            })
+            continue
+          }
 
           // Resolve user_id from phone_number_id FIRST so we can use it for
           // all subsequent logging and processing.
@@ -315,11 +329,62 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
           }
 
           // Handle incoming messages
-          if (!value.messages || !value.contacts) continue
+          if (!value.messages) {
+            void logHttpEvent({
+              userId,
+              direction: 'incoming',
+              service: 'whatsapp',
+              endpoint: '/api/whatsapp/webhook',
+              payload: { note: 'missing_messages_array', value },
+              headers: null,
+              note: 'webhook_error',
+            })
+            continue
+          }
+
+          if (!value.contacts || value.contacts.length === 0) {
+            void logHttpEvent({
+              userId,
+              direction: 'incoming',
+              service: 'whatsapp',
+              endpoint: '/api/whatsapp/webhook',
+              payload: { 
+                note: 'missing_or_empty_contacts_array', 
+                contacts_length: value.contacts?.length ?? 0,
+                messages_count: value.messages.length,
+                value 
+              },
+              headers: null,
+              note: 'webhook_error',
+            })
+            continue
+          }
 
           for (let i = 0; i < value.messages.length; i++) {
             const message = value.messages[i]
-            const contact = value.contacts[i] || value.contacts[0]
+            
+            // Safely resolve contact: use per-message contact if available,
+            // otherwise fall back to first contact. Both must exist at this point.
+            const contactIndex = Math.min(i, value.contacts.length - 1)
+            const contact = value.contacts[contactIndex]
+            
+            if (!contact) {
+              console.error(`[webhook] contact at index ${contactIndex} is null/undefined, skipping message ${message.id}`)
+              void logHttpEvent({
+                userId,
+                direction: 'incoming',
+                service: 'whatsapp',
+                endpoint: '/api/whatsapp/webhook',
+                payload: { 
+                  note: 'contact_resolve_failed', 
+                  message_id: message.id,
+                  contact_index: contactIndex
+                },
+                headers: null,
+                note: 'webhook_error',
+              })
+              continue
+            }
 
             await processMessage(
               message,
@@ -605,8 +670,6 @@ async function processMessage(
     userId,
     contactRecord.id
   )
-  if (!conversation) return
-
   if (!conversation) {
     void logHttpEvent({
       userId,
@@ -691,7 +754,30 @@ async function processMessage(
     media_url: mediaUrl,
     message_id: message.id,
     status: 'delivered',
-    created_at: new Date(parseInt(message.timestamp) * 1000).toISOString(),
+    created_at: (() => {
+      try {
+        // Handle both string and integer timestamp formats from Meta
+        const timestamp = typeof message.timestamp === 'string' 
+          ? parseInt(message.timestamp, 10) 
+          : message.timestamp
+        
+        if (isNaN(timestamp)) {
+          console.error('[webhook] invalid timestamp format:', message.timestamp)
+          return new Date().toISOString()
+        }
+        
+        const dateObj = new Date(timestamp * 1000)
+        if (isNaN(dateObj.getTime())) {
+          console.error('[webhook] timestamp produces invalid date:', timestamp)
+          return new Date().toISOString()
+        }
+        
+        return dateObj.toISOString()
+      } catch (err) {
+        console.error('[webhook] timestamp parsing error:', err, 'timestamp:', message.timestamp)
+        return new Date().toISOString()
+      }
+    })(),
     reply_to_message_id: replyToInternalId,
   })
 
