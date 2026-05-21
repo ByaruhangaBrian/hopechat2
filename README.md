@@ -1,21 +1,20 @@
-# wacrm — CRM Template for WhatsApp
+# HopeChat — Modern WhatsApp CRM
 
-> Self-hostable CRM template for WhatsApp® — shared inbox, contacts,
-> sales pipelines, broadcasts, and no-code automations. Fork it, brand
-> it, host it.
+> Modern self-hosted SaaS messaging CRM for WhatsApp® — shared inbox,
+> contacts, sales pipelines, broadcasts, and no-code automations.
 
 [![Deploy on Hostinger](https://img.shields.io/badge/Deploy_on-Hostinger-673DE6?style=for-the-badge&logo=hostinger&logoColor=white)](https://www.hostinger.com/web-apps-hosting)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-violet.svg)](./LICENSE)
-[![CI](https://github.com/ArnasDon/wacrm/actions/workflows/ci.yml/badge.svg)](https://github.com/ArnasDon/wacrm/actions/workflows/ci.yml)
+[![CI](https://github.com/your-org/hopechat/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/hopechat/actions/workflows/ci.yml)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs)](https://nextjs.org)
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Auth-3ecf8e?logo=supabase)](https://supabase.com)
-[![Stars](https://img.shields.io/github/stars/ArnasDon/wacrm?style=social)](https://github.com/ArnasDon/wacrm/stargazers)
+[![Stars](https://img.shields.io/github/stars/your-org/hopechat?style=social)](https://github.com/your-org/hopechat/stargazers)
 
 The marketing site and self-host docs live in a separate repo:
-[ArnasDon/wacrm-site](https://github.com/ArnasDon/wacrm-site)
-([wacrm.tech](https://wacrm.tech)). This repo is the product —
-clone or fork it to run your own CRM.
+[hopechat-site](https://github.com/your-org/hopechat-site)
+([hopechat.com](https://hopechat.com)). This repo is the product —
+clone or fork it to run your own HopeChat deployment.
 
 ## What you get out of the box
 
@@ -55,9 +54,9 @@ in an afternoon and make yours.
 ## Quick start
 
 ```bash
-# Fork on GitHub first: https://github.com/ArnasDon/wacrm → Fork
-git clone https://github.com/<your-username>/wacrm.git
-cd wacrm
+# Fork on GitHub first: https://github.com/<your-username>/hopechat.git → Fork
+git clone https://github.com/<your-username>/hopechat.git
+cd hopechat
 npm install
 cp .env.local.example .env.local   # fill in Supabase + Meta creds
 npm run dev
@@ -70,17 +69,17 @@ Open <http://localhost:3000>. You'll be redirected to `/login` (or
 
 Full self-host documentation — Supabase migrations, WhatsApp Business
 API config, and production deploy — lives at
-**[wacrm.tech/docs](https://wacrm.tech/docs)**
-(source: [ArnasDon/wacrm-site](https://github.com/ArnasDon/wacrm-site)).
+**[hopechat.com/docs](https://hopechat.com/docs)**
+(source: [hopechat-site](https://github.com/your-org/hopechat-site)).
 
 Key pages:
-- [Getting started](https://wacrm.tech/docs/getting-started)
-- [Supabase setup](https://wacrm.tech/docs/supabase-setup)
-- [WhatsApp setup](https://wacrm.tech/docs/whatsapp-setup)
-- [Environment variables](https://wacrm.tech/docs/environment-variables)
-- [Deploy on Hostinger](https://wacrm.tech/docs/deployment-hostinger)
-- [Architecture](https://wacrm.tech/docs/architecture)
-- [Troubleshooting](https://wacrm.tech/docs/troubleshooting)
+- [Getting started](https://hopechat.com/docs/getting-started)
+- [Supabase setup](https://hopechat.com/docs/supabase-setup)
+- [WhatsApp setup](https://hopechat.com/docs/whatsapp-setup)
+- [Environment variables](https://hopechat.com/docs/environment-variables)
+- [Deploy on Hostinger](https://hopechat.com/docs/deployment-hostinger)
+- [Architecture](https://hopechat.com/docs/architecture)
+- [Troubleshooting](https://hopechat.com/docs/troubleshooting)
 
 ## Stack
 
