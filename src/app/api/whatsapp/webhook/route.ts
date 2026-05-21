@@ -508,12 +508,38 @@ async function processMessage(
   if (!contactOutcome) return
   const contactRecord = contactOutcome.contact
 
+  if (!contactRecord) {
+    void logHttpEvent({
+      userId,
+      direction: 'incoming',
+      service: 'whatsapp',
+      endpoint: '/api/whatsapp/webhook',
+      payload: { note: 'contact_lookup_failed', phone: senderPhone },
+      headers: null,
+      note: 'contact_lookup_failed',
+    })
+    return
+  }
+
   // Find or create conversation
   const conversation = await findOrCreateConversation(
     userId,
     contactRecord.id
   )
   if (!conversation) return
+
+  if (!conversation) {
+    void logHttpEvent({
+      userId,
+      direction: 'incoming',
+      service: 'whatsapp',
+      endpoint: '/api/whatsapp/webhook',
+      payload: { note: 'conversation_create_failed', contact_id: contactRecord.id },
+      headers: null,
+      note: 'conversation_create_failed',
+    })
+    return
+  }
 
   // Reactions short-circuit here — they aren't messages. We never insert
   // into `messages`, never bump unread_count, never update last_message_text.
@@ -592,6 +618,15 @@ async function processMessage(
 
   if (msgError) {
     console.error('Error inserting message:', msgError)
+    void logHttpEvent({
+      userId,
+      direction: 'incoming',
+      service: 'whatsapp',
+      endpoint: '/api/whatsapp/webhook',
+      payload: { meta_message_id: message.id, error: msgError },
+      headers: null,
+      note: 'message_insert_failed',
+    })
     return
   }
 
@@ -624,6 +659,15 @@ async function processMessage(
 
   if (convError) {
     console.error('Error updating conversation:', convError)
+    void logHttpEvent({
+      userId,
+      direction: 'incoming',
+      service: 'whatsapp',
+      endpoint: '/api/whatsapp/webhook',
+      payload: { conversation_id: conversation.id, error: convError },
+      headers: null,
+      note: 'conversation_update_failed',
+    })
   }
 
   // If this contact was a recent broadcast recipient, flag the reply
