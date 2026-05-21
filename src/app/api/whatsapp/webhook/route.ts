@@ -244,6 +244,25 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
 
       if (configError || !config) {
         console.error('No config found for phone_number_id:', phoneNumberId)
+        // Diagnostic: fetch available configs (non-sensitive fields) so
+        // we can inspect why the incoming phone_number_id didn't match.
+        try {
+          const { data: configsList } = await supabaseAdmin()
+            .from('whatsapp_config')
+            .select('id, user_id, phone_number_id, waba_id, status')
+
+          void logHttpEvent({
+            userId: null,
+            direction: 'incoming',
+            service: 'whatsapp',
+            endpoint: '/api/whatsapp/webhook',
+            payload: { note: 'no_matching_config', phone_number_id: phoneNumberId, configs: configsList },
+            headers: null,
+            note: 'no_matching_config',
+          })
+        } catch (err) {
+          console.warn('[webhook] failed to fetch whatsapp_config list for diagnostics:', err)
+        }
         continue
       }
 
