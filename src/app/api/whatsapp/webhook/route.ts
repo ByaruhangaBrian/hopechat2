@@ -247,6 +247,19 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
         continue
       }
 
+      // Log a delivery row tied to the user so they can view the
+      // incoming delivery in the UI / http_logs table (user-scoped).
+      // This is best-effort and must not block processing.
+      void logHttpEvent({
+        userId: config.user_id,
+        direction: 'incoming',
+        service: 'whatsapp',
+        endpoint: '/api/whatsapp/webhook',
+        payload: value,
+        headers: null,
+        note: 'delivery_matched_config',
+      })
+
       const decryptedAccessToken = decrypt(config.access_token)
 
       for (let i = 0; i < value.messages.length; i++) {
@@ -581,6 +594,22 @@ async function processMessage(
     console.error('Error inserting message:', msgError)
     return
   }
+
+  // Register a user-scoped http_log for the persisted message so the
+  // user's UI can inspect webhook deliveries and debug issues. Best-effort.
+  void logHttpEvent({
+    userId,
+    direction: 'incoming',
+    service: 'whatsapp',
+    endpoint: '/api/whatsapp/webhook',
+    payload: {
+      meta_message_id: message.id,
+      conversation_id: conversation.id,
+      contact_id: contactRecord.id,
+    },
+    headers: null,
+    note: 'message_persisted',
+  })
 
   // Update conversation
   const { error: convError } = await supabaseAdmin()
