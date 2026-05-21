@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendTextMessage, sendTemplateMessage } from '@/lib/whatsapp/meta-api'
 import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/encryption'
+import { logHttpEvent } from '@/lib/logs/http-logs'
 import {
   sanitizePhoneForMeta,
   isValidE164,
@@ -266,6 +267,16 @@ export async function POST(request: Request) {
 
     if (msgError) {
       console.error('Error inserting sent message:', msgError)
+      // Log outgoing attempt even if DB insert failed
+      void logHttpEvent({
+        userId: user.id,
+        direction: 'outgoing',
+        service: 'meta',
+        endpoint: `/v21.0/${config.phone_number_id}/messages`,
+        payload: { to: workingPhone, type: message_type, text: content_text ?? null, template: template_name ?? null },
+        statusCode: 200,
+        note: `send_route:db_insert_failed`,
+      })
       return NextResponse.json(
         { error: `Message sent to Meta but failed to save to DB: ${msgError.message}` },
         { status: 500 }
@@ -295,3 +306,4 @@ export async function POST(request: Request) {
     )
   }
 }
+
