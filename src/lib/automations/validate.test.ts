@@ -165,6 +165,29 @@ describe("validateStepsForActivation", () => {
     ]);
   });
 
+  it("allows assign_to_ai steps without required config", () => {
+    expect(
+      validateStepsForActivation([
+        { step_type: "assign_to_ai", step_config: {} },
+      ]),
+    ).toEqual([]);
+  });
+
+  it("flags invalid assign_to_ai config values", () => {
+    const issues = validateStepsForActivation([
+      {
+        step_type: "assign_to_ai",
+        step_config: { enable_fallback_to_human: "yes" },
+      },
+    ]);
+    expect(issues).toEqual([
+      {
+        path: "steps[0].enable_fallback_to_human",
+        message: "enable_fallback_to_human must be a boolean",
+      },
+    ]);
+  });
+
   it("flags condition subject/operand independently", () => {
     const issues = validateStepsForActivation([
       { step_type: "condition", step_config: {} },

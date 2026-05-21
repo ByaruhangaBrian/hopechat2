@@ -132,6 +132,14 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
         issues.push({ path: `${path}.url`, message: 'webhook URL is not a valid URL' })
       }
       break
+    case 'assign_to_ai':
+      if (c.enable_fallback_to_human !== undefined && typeof c.enable_fallback_to_human !== 'boolean') {
+        issues.push({
+          path: `${path}.enable_fallback_to_human`,
+          message: 'enable_fallback_to_human must be a boolean',
+        })
+      }
+      break
     case 'close_conversation':
       // No config required.
       break
