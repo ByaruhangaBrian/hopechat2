@@ -108,9 +108,9 @@ export async function POST(req: Request) {
         { onConflict: 'user_id' },
       )
       .select()
-      .single()
+      .maybeSingle()
 
-    if (saveError || !saved) {
+    if (saveError) {
       console.error('[ai-settings] save failed:', saveError)
       return NextResponse.json({ error: 'Failed to save AI settings' }, { status: 500 })
     }
