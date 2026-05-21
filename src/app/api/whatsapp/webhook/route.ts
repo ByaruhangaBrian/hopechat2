@@ -217,81 +217,142 @@ export async function POST(request: Request) {
 }
 
 async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
-  if (!body.entry) return
+  try {
+    if (!body.entry) {
+      void logHttpEvent({
+        userId: null,
+        direction: 'incoming',
+        service: 'whatsapp',
+        endpoint: '/api/whatsapp/webhook',
+        payload: { note: 'no_entry_in_body' },
+        headers: null,
+        note: 'webhook_error',
+      })
+      return
+    }
 
-  for (const entry of body.entry) {
-    for (const change of entry.changes) {
-      const value = change.value
-      const phoneNumberId = value.metadata.phone_number_id
+    void logHttpEvent({
+      userId: null,
+      direction: 'incoming',
+      service: 'whatsapp',
+      endpoint: '/api/whatsapp/webhook',
+      payload: { note: 'processWebhook_started', entry_count: body.entry.length },
+      headers: null,
+      note: 'webhook_processing',
+    })
 
-      // Resolve user_id from phone_number_id FIRST so we can use it for
-      // all subsequent logging and processing.
-      const { data: config, error: configError } = await supabaseAdmin()
-        .from('whatsapp_config')
-        .select('*')
-        .eq('phone_number_id', phoneNumberId)
-        .single()
-
-      if (configError || !config) {
-        console.error('No config found for phone_number_id:', phoneNumberId)
-        // Diagnostic: fetch available configs (non-sensitive fields) so
-        // we can inspect why the incoming phone_number_id didn't match.
+    for (const entry of body.entry) {
+      for (const change of entry.changes) {
         try {
-          const { data: configsList } = await supabaseAdmin()
-            .from('whatsapp_config')
-            .select('id, user_id, phone_number_id, waba_id, status')
+          const value = change.value
+          
+          if (!value.metadata?.phone_number_id) {
+            void logHttpEvent({
+              userId: null,
+              direction: 'incoming',
+              service: 'whatsapp',
+              endpoint: '/api/whatsapp/webhook',
+              payload: { note: 'missing_phone_number_id', value },
+              headers: null,
+              note: 'webhook_error',
+            })
+            continue
+          }
 
+          const phoneNumberId = value.metadata.phone_number_id
+
+          // Resolve user_id from phone_number_id FIRST so we can use it for
+          // all subsequent logging and processing.
+          const { data: config, error: configError } = await supabaseAdmin()
+            .from('whatsapp_config')
+            .select('*')
+            .eq('phone_number_id', phoneNumberId)
+            .single()
+
+          if (configError || !config) {
+            console.error('No config found for phone_number_id:', phoneNumberId, configError)
+            // Diagnostic: fetch available configs (non-sensitive fields) so
+            // we can inspect why the incoming phone_number_id didn't match.
+            try {
+              const { data: configsList } = await supabaseAdmin()
+                .from('whatsapp_config')
+                .select('id, user_id, phone_number_id, waba_id, status')
+
+              void logHttpEvent({
+                userId: null,
+                direction: 'incoming',
+                service: 'whatsapp',
+                endpoint: '/api/whatsapp/webhook',
+                payload: { note: 'no_matching_config', phone_number_id: phoneNumberId, configs: configsList, error: configError },
+                headers: null,
+                note: 'no_matching_config',
+              })
+            } catch (err) {
+              console.warn('[webhook] failed to fetch whatsapp_config list for diagnostics:', err)
+            }
+            continue
+          }
+
+          const userId = config.user_id
+          const decryptedAccessToken = decrypt(config.access_token)
+
+          // Log config match with user_id
+          void logHttpEvent({
+            userId,
+            direction: 'incoming',
+            service: 'whatsapp',
+            endpoint: '/api/whatsapp/webhook',
+            payload: { phone_number_id: phoneNumberId },
+            headers: null,
+            note: 'config_matched',
+          })
+
+          // Handle status updates with user context
+          if (value.statuses) {
+            for (const status of value.statuses) {
+              await handleStatusUpdate(status)
+            }
+          }
+
+          // Handle incoming messages
+          if (!value.messages || !value.contacts) continue
+
+          for (let i = 0; i < value.messages.length; i++) {
+            const message = value.messages[i]
+            const contact = value.contacts[i] || value.contacts[0]
+
+            await processMessage(
+              message,
+              contact,
+              userId,
+              decryptedAccessToken
+            )
+          }
+        } catch (changeErr) {
+          console.error('[webhook] error processing change:', changeErr)
           void logHttpEvent({
             userId: null,
             direction: 'incoming',
             service: 'whatsapp',
             endpoint: '/api/whatsapp/webhook',
-            payload: { note: 'no_matching_config', phone_number_id: phoneNumberId, configs: configsList },
+            payload: { note: 'change_processing_error', error: changeErr instanceof Error ? changeErr.message : String(changeErr) },
             headers: null,
-            note: 'no_matching_config',
+            note: 'webhook_error',
           })
-        } catch (err) {
-          console.warn('[webhook] failed to fetch whatsapp_config list for diagnostics:', err)
         }
-        continue
-      }
-
-      const userId = config.user_id
-      const decryptedAccessToken = decrypt(config.access_token)
-
-      // Log config match with user_id
-      void logHttpEvent({
-        userId,
-        direction: 'incoming',
-        service: 'whatsapp',
-        endpoint: '/api/whatsapp/webhook',
-        payload: { phone_number_id: phoneNumberId },
-        headers: null,
-        note: 'config_matched',
-      })
-
-      // Handle status updates with user context
-      if (value.statuses) {
-        for (const status of value.statuses) {
-          await handleStatusUpdate(status)
-        }
-      }
-
-      // Handle incoming messages
-      if (!value.messages || !value.contacts) continue
-
-      for (let i = 0; i < value.messages.length; i++) {
-        const message = value.messages[i]
-        const contact = value.contacts[i] || value.contacts[0]
-
-        await processMessage(
-          message,
-          contact,
-          userId,
-          decryptedAccessToken
-        )
       }
     }
+  } catch (err) {
+    console.error('[webhook] processWebhook fatal error:', err)
+    void logHttpEvent({
+      userId: null,
+      direction: 'incoming',
+      service: 'whatsapp',
+      endpoint: '/api/whatsapp/webhook',
+      payload: { note: 'processWebhook_fatal_error', error: err instanceof Error ? err.message : String(err) },
+      headers: null,
+      note: 'webhook_error',
+    })
   }
 }
 
