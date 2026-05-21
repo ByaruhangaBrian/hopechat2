@@ -150,6 +150,22 @@ export async function POST(request: Request) {
   const rawBody = await request.text()
   const signature = request.headers.get('x-hub-signature-256')
 
+  // Non-blocking, best-effort local logging for debugging. This
+  // writes the raw body and signature to ./logs/whatsapp-webhook.log
+  // but deliberately does not block or affect the webhook response.
+  void (async () => {
+    try {
+      const fs = await import('fs')
+      await fs.promises.mkdir('./logs', { recursive: true })
+      const entry = `${new Date().toISOString()} RAW_BODY:\n${rawBody}\nSIGNATURE: ${signature}\n\n`
+      await fs.promises.appendFile('./logs/whatsapp-webhook.log', entry, 'utf8')
+    } catch (err) {
+      // Swallow errors to avoid impacting webhook handling; log for visibility.
+      // eslint-disable-next-line no-console
+      console.warn('[webhook] local log failed:', err)
+    }
+  })()
+
   if (!verifyMetaWebhookSignature(rawBody, signature)) {
     // 401 (not 200) — we want Meta's delivery dashboard to show failures
     // loudly if a misconfiguration causes signatures to stop matching,
