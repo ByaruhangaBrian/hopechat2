@@ -75,11 +75,9 @@ export async function POST(req: Request) {
         keyToSave = encrypt(rawKey)
       } catch (err) {
         console.error('[ai-settings] encrypt failed:', err)
+        const msg = err instanceof Error ? err.message : String(err)
         return NextResponse.json(
-          {
-            error:
-              'Failed to encrypt Groq API key. Check that ENCRYPTION_KEY is configured and valid.',
-          },
+          { error: `Failed to encrypt Groq API key: ${msg}` },
           { status: 500 },
         )
       }
