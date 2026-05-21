@@ -82,6 +82,7 @@ const STEP_META: Record<AutomationStepType, StepMeta> = {
   add_tag: { label: "Add Tag", icon: Tag, border: "border-l-violet-500" },
   remove_tag: { label: "Remove Tag", icon: TagIcon, border: "border-l-violet-500" },
   assign_conversation: { label: "Assign Conversation", icon: UserCheck, border: "border-l-violet-500" },
+  assign_to_ai: { label: "Assign to AI assistant", icon: Loader2, border: "border-l-violet-500" },
   update_contact_field: { label: "Update Contact Field", icon: PencilLine, border: "border-l-violet-500" },
   create_deal: { label: "Create Deal", icon: Briefcase, border: "border-l-violet-500" },
   wait: { label: "Wait", icon: Hourglass, border: "border-l-slate-500" },
@@ -96,6 +97,7 @@ const ADDABLE_STEPS: AutomationStepType[] = [
   "add_tag",
   "remove_tag",
   "assign_conversation",
+  "assign_to_ai",
   "update_contact_field",
   "create_deal",
   "wait",
@@ -148,6 +150,8 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
       return { subject: "tag_presence", operand: "", value: "" }
     case "send_webhook":
       return { url: "", headers: {}, body_template: "" }
+    case "assign_to_ai":
+      return { enable_fallback_to_human: false }
     case "close_conversation":
       return {}
     default:
@@ -919,6 +923,20 @@ function StepEditor({
           </FieldBlock>
         </>
       )
+    case "assign_to_ai":
+      return (
+        <FieldBlock label="Enable human fallback">
+          <div className="flex items-center gap-3">
+            <Switch
+              checked={Boolean(cfg.enable_fallback_to_human)}
+              onCheckedChange={(checked) => set({ enable_fallback_to_human: checked })}
+            />
+            <span className="text-sm text-slate-300">
+              If AI is disabled for this conversation, keep it available for humans.
+            </span>
+          </div>
+        </FieldBlock>
+      )
     case "close_conversation":
       return (
         <p className="text-xs text-slate-400">
@@ -951,6 +969,8 @@ function previewFor(step: BuilderStep): string {
       return (step.step_config.text as string) || "no text yet"
     case "send_template":
       return (step.step_config.template_name as string) || "pick a template"
+    case "assign_to_ai":
+      return "generate an AI reply"
     case "wait":
       return `${step.step_config.amount ?? "?"} ${step.step_config.unit ?? ""}`
     case "condition":

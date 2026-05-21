@@ -66,6 +66,7 @@ export interface Conversation {
   contact_id: string;
   status: ConversationStatus;
   assigned_agent_id?: string;
+  ai_enabled?: boolean;
   last_message_text?: string;
   last_message_at?: string;
   unread_count: number;
@@ -245,6 +246,7 @@ export type AutomationStepType =
   | 'wait'
   | 'condition'
   | 'send_webhook'
+  | 'assign_to_ai'
   | 'close_conversation';
 
 export type AutomationLogStatus = 'success' | 'partial' | 'failed';
@@ -328,6 +330,10 @@ export interface SendWebhookStepConfig {
   body_template?: string;
 }
 
+export interface AssignToAiStepConfig {
+  enable_fallback_to_human?: boolean;
+}
+
 export type AutomationStepConfig =
   | SendMessageStepConfig
   | SendTemplateStepConfig
@@ -338,6 +344,7 @@ export type AutomationStepConfig =
   | WaitStepConfig
   | ConditionStepConfig
   | SendWebhookStepConfig
+  | AssignToAiStepConfig
   | Record<string, never>
   | Record<string, unknown>;
 
@@ -384,4 +391,15 @@ export interface AutomationLog {
   error_message?: string | null;
   created_at: string;
   contact?: Contact;
+}
+
+export interface AiSettings {
+  id: string;
+  user_id: string;
+  groq_api_key: string;
+  system_prompt: string;
+  training_documents?: string[];
+  is_enabled: boolean;
+  created_at: string;
+  updated_at: string;
 }

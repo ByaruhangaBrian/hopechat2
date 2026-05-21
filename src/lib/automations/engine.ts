@@ -13,9 +13,11 @@ import type {
   WaitStepConfig,
   CreateDealStepConfig,
   AssignConversationStepConfig,
+  AssignToAiStepConfig,
 } from '@/types'
 import { supabaseAdmin } from './admin-client'
 import { engineSendText, engineSendTemplate } from './meta-send'
+import { generateAiResponse } from './groq-client'
 
 // ------------------------------------------------------------
 // Public API
@@ -431,6 +433,58 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       })
       if (!res.ok) throw new Error(`webhook returned ${res.status}`)
       return `webhook ${res.status}`
+    }
+
+    case 'assign_to_ai': {
+      const cfg = step.step_config as AssignToAiStepConfig
+      if (!args.contactId) throw new Error('assign_to_ai needs a contact')
+      const conversationId = await resolveConversationId(args)
+
+      const { data: conversation, error: conversationErr } = await db
+        .from('conversations')
+        .select('id, ai_enabled')
+        .eq('id', conversationId)
+        .eq('user_id', args.automation.user_id)
+        .maybeSingle()
+      if (conversationErr) throw new Error(`conversation lookup failed: ${conversationErr.message}`)
+      if (!conversation) throw new Error('conversation not found')
+
+      if (conversation.ai_enabled === false) {
+        if (cfg.enable_fallback_to_human) {
+          return 'AI disabled for this conversation; human takeover preserved'
+        }
+        throw new Error('AI is disabled for this conversation')
+      }
+
+      const { data: messages } = await db
+        .from('messages')
+        .select('sender_type, content_text')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      const conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = (messages ?? [])
+        .map((message) => {
+          const role = (message.sender_type === 'bot' ? 'assistant' : 'user') as 'assistant' | 'user'
+          return {
+            role,
+            content: String(message.content_text ?? ''),
+          }
+        })
+        .reverse()
+        .filter((item) => item.content.trim())
+
+      const userMessage = String(args.context.message_text ?? conversationHistory.slice(-1)[0]?.content ?? '').trim()
+      if (!userMessage) throw new Error('assign_to_ai has no user message to generate from')
+
+      const replyText = await generateAiResponse(args.automation.user_id, userMessage, conversationHistory)
+      const { whatsapp_message_id } = await engineSendText({
+        userId: args.automation.user_id,
+        conversationId,
+        contactId: args.contactId,
+        text: replyText,
+      })
+      return `AI reply sent via Meta (${whatsapp_message_id})`
     }
 
     case 'close_conversation': {

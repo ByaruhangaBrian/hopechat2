@@ -257,7 +257,12 @@ function ConversationItem({
           </span>
           <span className="shrink-0 text-[10px] text-slate-500">{timeAgo}</span>
         </div>
-        <div className="mt-0.5 flex items-center justify-between gap-2">
+        <div className="mt-1 flex items-center gap-2">
+          {conversation.ai_enabled && (
+            <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+              AI
+            </span>
+          )}
           <p className="truncate text-xs text-slate-400">
             {conversation.last_message_text || "No messages yet"}
           </p>

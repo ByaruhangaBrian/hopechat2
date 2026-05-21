@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,6 +64,7 @@ interface MessageThreadProps {
     conversationId: string,
     assignedAgentId: string | null,
   ) => void;
+  onAiEnabledChange: (conversationId: string, aiEnabled: boolean) => void;
   /**
    * On mobile, the thread is shown full-screen with the conversation list
    * hidden. This callback lets the page deselect the active conversation
@@ -111,6 +113,7 @@ export function MessageThread({
   onUpdateMessage,
   onStatusChange,
   onAssignChange,
+  onAiEnabledChange,
   onBack,
 }: MessageThreadProps) {
   const { user } = useAuth();
@@ -605,6 +608,27 @@ export function MessageThread({
     [conversation, onAssignChange],
   );
 
+  const handleAiToggle = useCallback(
+    async (enabled: boolean) => {
+      if (!conversation) return;
+
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("conversations")
+        .update({ ai_enabled: enabled })
+        .eq("id", conversation.id);
+
+      if (error) {
+        console.error("Failed to update AI state:", error);
+        toast.error("Failed to update AI state");
+        return;
+      }
+
+      onAiEnabledChange(conversation.id, enabled);
+    },
+    [conversation, onAiEnabledChange],
+  );
+
   // Empty state
   if (!conversation || !contact) {
     return (
@@ -751,6 +775,15 @@ export function MessageThread({
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-300">
+            <span>AI</span>
+            <Switch
+              checked={conversation.ai_enabled ?? false}
+              onCheckedChange={handleAiToggle}
+              className="h-5 w-9"
+            />
+          </div>
         </div>
       </div>
 
