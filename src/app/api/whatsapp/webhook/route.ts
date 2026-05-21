@@ -262,12 +262,17 @@ async function processMessage(
   const senderPhone = normalizePhone(message.from);
 
   // 1. Find or Create Contact
-  const { data: contacts } = await supabaseAdmin()
+  let { data: contact, error: contactFetchError } = await supabaseAdmin()
     .from('contacts')
     .select('*')
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .eq('phone', senderPhone)
+    .maybeSingle();
 
-  let contact = contacts?.find((c: any) => phonesMatch(c.phone, senderPhone));
+  if (contactFetchError) {
+    console.error('[webhook] Contact lookup failed:', contactFetchError);
+    throw new Error(`Contact lookup failed: ${contactFetchError.message}`);
+  }
 
   if (!contact) {
     const { data: newContact, error: createError } = await supabaseAdmin()
@@ -275,7 +280,7 @@ async function processMessage(
       .insert({ user_id: userId, phone: senderPhone, name: contactName })
       .select()
       .single();
-    
+
     if (createError) {
       void logHttpEvent({
         userId,
@@ -299,12 +304,17 @@ async function processMessage(
   }
 
   // 2. Find or Create Conversation
-  let { data: conversation } = await supabaseAdmin()
+  let { data: conversation, error: conversationFetchError } = await supabaseAdmin()
     .from('conversations')
     .select('*')
     .eq('user_id', userId)
     .eq('contact_id', contact.id)
-    .single();
+    .maybeSingle();
+
+  if (conversationFetchError) {
+    console.error('[webhook] Conversation lookup failed:', conversationFetchError);
+    throw new Error(`Conversation lookup failed: ${conversationFetchError.message}`);
+  }
 
   if (!conversation) {
     const { data: newConv, error: convError } = await supabaseAdmin()
@@ -312,7 +322,7 @@ async function processMessage(
       .insert({ user_id: userId, contact_id: contact.id })
       .select()
       .single();
-    
+
     if (convError) {
       void logHttpEvent({
         userId,

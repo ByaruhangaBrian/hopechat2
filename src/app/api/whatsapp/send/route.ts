@@ -56,23 +56,8 @@ export async function POST(request: Request) {
       contextMessageId = parent?.message_id;
     }
 
-    // 4. Send to Meta
-    let waMessageId: string;
-    try {
-      const result = await sendTextMessage({
-        phoneNumberId: config.phone_number_id,
-        accessToken,
-        to,
-        text: content_text,
-        contextMessageId,
-      });
-      waMessageId = result.messageId;
-    } catch (err: any) {
-      console.error('[send] Meta API error:', err);
-      return NextResponse.json({ error: err.message || 'Meta API failure' }, { status: 502 });
-    }
-
-    // 5. Save Outbound Message
+    // 4. Save Outbound Message immediately so the UI can render this reply
+    // without waiting for Meta's delivery confirmation.
     const { data: msgRecord, error: msgError } = await supabase
       .from('messages')
       .insert({
@@ -81,37 +66,84 @@ export async function POST(request: Request) {
         sender_id: user.id,
         content_type: 'text',
         content_text,
-        message_id: waMessageId,
-        status: 'sent',
+        message_id: null,
+        status: 'sending',
         reply_to_message_id: reply_to_message_id || null,
       })
       .select()
       .single();
 
-    if (msgError) {
+    if (msgError || !msgRecord) {
       console.error('[send] DB error:', msgError);
-      return NextResponse.json({ error: 'Message sent but failed to save' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to create outbound message' }, { status: 500 });
     }
 
-    // 6. Update Conversation
+    // 5. Update Conversation immediately
     await supabase
       .from('conversations')
       .update({
         last_message_text: content_text,
         last_message_at: new Date().toISOString(),
-        unread_count: 0, // Reset unread when agent replies
+        unread_count: 0,
       })
       .eq('id', conversation_id);
 
-    // 7. Log Event
+    // 6. Log the outgoing send request quickly
     void logHttpEvent({
       userId: user.id,
       direction: 'outgoing',
       service: 'whatsapp',
       endpoint: '/api/whatsapp/send',
-      payload: { to, text: content_text },
-      note: 'agent_reply_sent',
+      payload: { to, text: content_text, conversation_id },
+      note: 'agent_reply_queued',
     });
+
+    // 7. Send to Meta in the background. The route already returned.
+    void (async () => {
+      try {
+        const result = await sendTextMessage({
+          phoneNumberId: config.phone_number_id,
+          accessToken,
+          to,
+          text: content_text,
+          contextMessageId,
+        });
+
+        await supabase
+          .from('messages')
+          .update({
+            message_id: result.messageId,
+            status: 'sent',
+          })
+          .eq('id', msgRecord.id);
+
+        void logHttpEvent({
+          userId: user.id,
+          direction: 'outgoing',
+          service: 'whatsapp',
+          endpoint: '/api/whatsapp/send',
+          payload: { to, text: content_text, wa_message_id: result.messageId },
+          note: 'agent_reply_sent',
+        });
+      } catch (err: any) {
+        console.error('[send] Meta API background error:', err);
+        await supabase
+          .from('messages')
+          .update({
+            status: 'failed',
+          })
+          .eq('id', msgRecord.id);
+
+        void logHttpEvent({
+          userId: user.id,
+          direction: 'outgoing',
+          service: 'whatsapp',
+          endpoint: '/api/whatsapp/send',
+          payload: { to, text: content_text, error: err?.message ?? String(err) },
+          note: 'agent_reply_failed',
+        });
+      }
+    })();
 
     return NextResponse.json({ success: true, message: msgRecord });
   } catch (error: any) {
