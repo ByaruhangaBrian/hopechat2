@@ -149,8 +149,10 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
       if (!value) continue;
 
       const phoneNumberId = String(value.metadata?.phone_number_id || '');
-      const isMessageEvent = Array.isArray(value.messages) && value.messages.length > 0;
-      const isStatusEvent = Array.isArray(value.statuses) && value.statuses.length > 0;
+      const statuses = Array.isArray(value.statuses) ? value.statuses : [];
+      const messages = Array.isArray(value.messages) ? value.messages : [];
+      const isMessageEvent = messages.length > 0;
+      const isStatusEvent = statuses.length > 0;
 
       if (!phoneNumberId) {
         void logHttpEvent({
@@ -205,13 +207,13 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
       });
 
       if (isStatusEvent) {
-        for (const status of value.statuses) {
+        for (const status of statuses) {
           await handleStatusUpdate(status);
         }
       }
 
       if (isMessageEvent) {
-        for (const message of value.messages) {
+        for (const message of messages) {
           const contactInfo = value.contacts?.find((c) => c.wa_id === message.from);
           const contactName = contactInfo?.profile?.name || message.from;
 
