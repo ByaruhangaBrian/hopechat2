@@ -326,17 +326,17 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       // scrambles every template with ≥10 variables.
       const params = cfg.variables
         ? Object.keys(cfg.variables)
-            .sort((a, b) => {
-              const na = Number(a)
-              const nb = Number(b)
-              const aNum = Number.isFinite(na)
-              const bNum = Number.isFinite(nb)
-              if (aNum && bNum) return na - nb
-              if (aNum) return -1
-              if (bNum) return 1
-              return a.localeCompare(b)
-            })
-            .map((k) => String(cfg.variables![k]))
+          .sort((a, b) => {
+            const na = Number(a)
+            const nb = Number(b)
+            const aNum = Number.isFinite(na)
+            const bNum = Number.isFinite(nb)
+            if (aNum && bNum) return na - nb
+            if (aNum) return -1
+            if (bNum) return 1
+            return a.localeCompare(b)
+          })
+          .map((k) => String(cfg.variables![k]))
         : []
       const { whatsapp_message_id } = await engineSendTemplate({
         userId: args.automation.user_id,

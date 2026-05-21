@@ -17,6 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createClient } from "@/lib/supabase/client";
+import { getErrorMessage } from '@/lib/utils';
 import type { Pipeline, PipelineStage } from "@/types";
 import {
   Dialog,
@@ -127,7 +128,9 @@ export function PipelineSettings({
     setSaving(false);
 
     if (renameRes.error || stagesRes.error) {
-      toast.error("Failed to save pipeline");
+      toast.error(
+        getErrorMessage(renameRes.error || stagesRes.error, 'Failed to save pipeline'),
+      );
       return;
     }
 

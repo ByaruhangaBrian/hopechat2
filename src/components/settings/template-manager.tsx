@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Plus, Trash2, Loader2, RefreshCw } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { getErrorMessage } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -171,7 +172,7 @@ export function TemplateManager() {
       if (user) await fetchTemplates(user.id);
     } catch (err) {
       console.error('Save error:', err);
-      toast.error('Failed to create template');
+      toast.error(getErrorMessage(err, 'Failed to create template'));
     } finally {
       setSaving(false);
     }

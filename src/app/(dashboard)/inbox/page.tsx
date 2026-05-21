@@ -89,14 +89,14 @@ export default function InboxPage() {
           prev.map((c) =>
             c.id === newMsg.conversation_id
               ? {
-                  ...c,
-                  last_message_text: newMsg.content_text ?? "",
-                  last_message_at: newMsg.created_at,
-                  unread_count:
-                    activeConversation?.id === newMsg.conversation_id
-                      ? 0
-                      : c.unread_count + 1,
-                }
+                ...c,
+                last_message_text: newMsg.content_text ?? "",
+                last_message_at: newMsg.created_at,
+                unread_count:
+                  activeConversation?.id === newMsg.conversation_id
+                    ? 0
+                    : c.unread_count + 1,
+              }
               : c
           )
         );

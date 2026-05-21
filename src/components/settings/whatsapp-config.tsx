@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   RotateCcw,
 } from 'lucide-react';
+import { getErrorMessage, getResponseErrorMessage } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
@@ -171,13 +172,14 @@ export function WhatsAppConfig() {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        toast.error(data.error || 'Failed to save configuration');
+        const message = await getResponseErrorMessage(res, 'Failed to save configuration');
+        toast.error(message);
         setSaving(false);
         return;
       }
+
+      const data = await res.json();
 
       toast.success(
         data.phone_info?.verified_name
@@ -188,7 +190,7 @@ export function WhatsAppConfig() {
       if (user) await fetchConfig(user.id);
     } catch (err) {
       console.error('Save error:', err);
-      toast.error('Failed to save configuration');
+      toast.error(getErrorMessage(err, 'Failed to save configuration'));
     } finally {
       setSaving(false);
     }
@@ -235,7 +237,8 @@ export function WhatsAppConfig() {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || 'Failed to reset configuration');
+        const message = data?.error || data?.message || 'Failed to save configuration';
+        toast.error(message);
         return;
       }
 
@@ -251,7 +254,7 @@ export function WhatsAppConfig() {
       setStatusMessage('');
     } catch (err) {
       console.error('Reset error:', err);
-      toast.error('Failed to reset configuration');
+      toast.error(getErrorMessage(err, 'Failed to reset configuration'));
     } finally {
       setResetting(false);
     }

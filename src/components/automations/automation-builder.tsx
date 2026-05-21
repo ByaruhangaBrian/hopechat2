@@ -213,15 +213,15 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
 
       const res = isEditing
         ? await fetch(`/api/automations/${initial.id}`, {
-            method: "PATCH",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(payload),
-          })
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        })
         : await fetch(`/api/automations`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(payload),
-          })
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        })
 
       const body = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -480,10 +480,10 @@ function StepList(props: StepListProps) {
     parentPath.length === 0
       ? { kind: "root" }
       : (() => {
-          const last = parentPath[parentPath.length - 1]
-          if (last.kind !== "branch") return { kind: "root" } as const
-          return { kind: "branch", parentCid: last.parentCid, branch: last.branch } as const
-        })()
+        const last = parentPath[parentPath.length - 1]
+        if (last.kind !== "branch") return { kind: "root" } as const
+        return { kind: "branch", parentCid: last.parentCid, branch: last.branch } as const
+      })()
 
   return (
     <div className="flex flex-col items-center">
@@ -883,10 +883,10 @@ function StepEditor({
                 cfg.subject === "time_of_day"
                   ? "HH:mm-HH:mm"
                   : cfg.subject === "contact_field"
-                  ? "name / email / company"
-                  : cfg.subject === "tag_presence"
-                  ? "tag id"
-                  : ""
+                    ? "name / email / company"
+                    : cfg.subject === "tag_presence"
+                      ? "tag id"
+                      : ""
               }
               value={(cfg.operand as string) ?? ""}
               onChange={(e) => set({ operand: e.target.value })}
@@ -1071,10 +1071,10 @@ function removeAt(steps: BuilderStep[], path: StepPath): BuilderStep[] {
       rest.length === 0
         ? bucket.filter((_, i) => i !== head.index)
         : bucket.map((child, i) =>
-            i !== head.index
-              ? child
-              : { ...child, branches: removeFromBranches(child.branches, rest) },
-          )
+          i !== head.index
+            ? child
+            : { ...child, branches: removeFromBranches(child.branches, rest) },
+        )
     return { ...s, branches: { ...s.branches, [head.branch]: next } }
   })
 }
@@ -1092,10 +1092,10 @@ function removeFromBranches(
     rest.length === 0
       ? bucket.filter((_, i) => i !== head.index)
       : bucket.map((child, i) =>
-          i !== head.index
-            ? child
-            : { ...child, branches: removeFromBranches(child.branches, rest) },
-        )
+        i !== head.index
+          ? child
+          : { ...child, branches: removeFromBranches(child.branches, rest) },
+      )
   return { ...branches, [head.branch]: next }
 }
 
@@ -1111,7 +1111,7 @@ function moveAt(
     const j = i + direction
     if (j < 0 || j >= arr.length) return arr
     const copy = [...arr]
-    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+      ;[copy[i], copy[j]] = [copy[j], copy[i]]
     return copy
   }
   if (head.kind === "root") {
@@ -1142,7 +1142,7 @@ function moveInBranches(
     const j = i + direction
     if (j < 0 || j >= arr.length) return arr
     const copy = [...arr]
-    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+      ;[copy[i], copy[j]] = [copy[j], copy[i]]
     return copy
   }
   const next = rest.length === 0 ? swap(bucket, head.index) : bucket
@@ -1188,9 +1188,9 @@ export function fromServerSteps(nodes: ServerStepNode[]): BuilderStep[] {
     branches:
       n.step_type === "condition"
         ? {
-            yes: fromServerSteps(n.branches?.yes ?? []),
-            no: fromServerSteps(n.branches?.no ?? []),
-          }
+          yes: fromServerSteps(n.branches?.yes ?? []),
+          no: fromServerSteps(n.branches?.no ?? []),
+        }
         : undefined,
   }))
 }

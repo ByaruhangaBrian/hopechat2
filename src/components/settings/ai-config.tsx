@@ -8,179 +8,180 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { getErrorMessage, getResponseErrorMessage } from '@/lib/utils';
 
 interface AiSettingsPayload {
-  groq_api_key?: string;
-  system_prompt: string;
-  training_documents: string[];
-  is_enabled: boolean;
+    groq_api_key?: string;
+    system_prompt: string;
+    training_documents: string[];
+    is_enabled: boolean;
 }
 
 const DEFAULT_PROMPT = 'You are a helpful customer service AI assistant.';
 
 export function AiConfig() {
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [isEnabled, setIsEnabled] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState(false);
-  const [apiKey, setApiKey] = useState('');
-  const [apiKeyEdited, setApiKeyEdited] = useState(false);
-  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_PROMPT);
-  const [trainingDocuments, setTrainingDocuments] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [isEnabled, setIsEnabled] = useState(false);
+    const [hasApiKey, setHasApiKey] = useState(false);
+    const [apiKey, setApiKey] = useState('');
+    const [apiKeyEdited, setApiKeyEdited] = useState(false);
+    const [systemPrompt, setSystemPrompt] = useState(DEFAULT_PROMPT);
+    const [trainingDocuments, setTrainingDocuments] = useState('');
 
-  const fetchSettings = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/ai-settings');
-      const payload = await res.json();
-      if (!res.ok) {
-        throw new Error(payload.error || 'Failed to load AI settings');
-      }
+    const fetchSettings = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/ai-settings');
+            const payload = await res.json();
+            if (!res.ok) {
+                throw new Error(payload.error || 'Failed to load AI settings');
+            }
 
-      const settings = payload.settings ?? {};
-      setIsEnabled(Boolean(settings.is_enabled));
-      setHasApiKey(Boolean(settings.has_api_key));
-      setApiKey('');
-      setApiKeyEdited(false);
-      setSystemPrompt(settings.system_prompt || DEFAULT_PROMPT);
-      setTrainingDocuments((settings.training_documents ?? []).join('\n\n---\n\n'));
-    } catch (err) {
-      console.error('[AI Settings] fetch failed:', err);
-      toast.error('Unable to load AI settings');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+            const settings = payload.settings ?? {};
+            setIsEnabled(Boolean(settings.is_enabled));
+            setHasApiKey(Boolean(settings.has_api_key));
+            setApiKey('');
+            setApiKeyEdited(false);
+            setSystemPrompt(settings.system_prompt || DEFAULT_PROMPT);
+            setTrainingDocuments((settings.training_documents ?? []).join('\n\n---\n\n'));
+        } catch (err) {
+            console.error('[AI Settings] fetch failed:', err);
+            toast.error('Unable to load AI settings');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
-  useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+    useEffect(() => {
+        fetchSettings();
+    }, [fetchSettings]);
 
-  const handleSave = useCallback(async () => {
-    if (isEnabled && !apiKeyEdited && !hasApiKey) {
-      toast.error('Please provide a Groq API key before enabling AI.');
-      return;
-    }
+    const handleSave = useCallback(async () => {
+        if (isEnabled && !apiKeyEdited && !hasApiKey) {
+            toast.error('Please provide a Groq API key before enabling AI.');
+            return;
+        }
 
-    const docs = trainingDocuments
-      .split(/^\s*---\s*$/m)
-      .map((doc) => doc.trim())
-      .filter(Boolean);
+        const docs = trainingDocuments
+            .split(/^\s*---\s*$/m)
+            .map((doc) => doc.trim())
+            .filter(Boolean);
 
-    const payload: AiSettingsPayload = {
-      system_prompt: systemPrompt.trim() || DEFAULT_PROMPT,
-      training_documents: docs,
-      is_enabled: isEnabled,
-    };
+        const payload: AiSettingsPayload = {
+            system_prompt: systemPrompt.trim() || DEFAULT_PROMPT,
+            training_documents: docs,
+            is_enabled: isEnabled,
+        };
 
-    if (apiKeyEdited) {
-      payload.groq_api_key = apiKey.trim();
-    }
+        if (apiKeyEdited) {
+            payload.groq_api_key = apiKey.trim();
+        }
 
-    try {
-      setSaving(true);
-      const res = await fetch('/api/ai-settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(body.error || 'Failed to save AI settings');
-        return;
-      }
-      toast.success('AI settings saved');
-      await fetchSettings();
-    } catch (err) {
-      console.error('[AI Settings] save failed:', err);
-      toast.error('Failed to save AI settings');
-    } finally {
-      setSaving(false);
-    }
-  }, [apiKey, apiKeyEdited, fetchSettings, hasApiKey, isEnabled, systemPrompt, trainingDocuments]);
+        try {
+            setSaving(true);
+            const res = await fetch('/api/ai-settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) {
+                const message = await getResponseErrorMessage(res, 'Failed to save AI settings');
+                toast.error(message);
+                return;
+            }
+            toast.success('AI settings saved');
+            await fetchSettings();
+        } catch (err) {
+            console.error('[AI Settings] save failed:', err);
+            toast.error(getErrorMessage(err, 'Failed to save AI settings'));
+        } finally {
+            setSaving(false);
+        }
+    }, [apiKey, apiKeyEdited, fetchSettings, hasApiKey, isEnabled, systemPrompt, trainingDocuments]);
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>AI Assistant</CardTitle>
-        <CardDescription>
-          Configure Groq AI for automated WhatsApp replies, training documents, and system prompts.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-center">
-          <Label htmlFor="ai-enabled">Enable AI automation</Label>
-          <div className="flex items-center gap-3">
-            <Switch
-              id="ai-enabled"
-              checked={isEnabled}
-              onCheckedChange={setIsEnabled}
-            />
-            <span className="text-sm text-slate-400">
-              When enabled, automations can send AI-generated responses.
-            </span>
-          </div>
-        </div>
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>AI Assistant</CardTitle>
+                <CardDescription>
+                    Configure Groq AI for automated WhatsApp replies, training documents, and system prompts.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-center">
+                    <Label htmlFor="ai-enabled">Enable AI automation</Label>
+                    <div className="flex items-center gap-3">
+                        <Switch
+                            id="ai-enabled"
+                            checked={isEnabled}
+                            onCheckedChange={setIsEnabled}
+                        />
+                        <span className="text-sm text-slate-400">
+                            When enabled, automations can send AI-generated responses.
+                        </span>
+                    </div>
+                </div>
 
-        <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-start">
-          <Label htmlFor="groq-api-key">Groq API Key</Label>
-          <div className="space-y-2">
-            <Input
-              id="groq-api-key"
-              type="password"
-              value={apiKey}
-              onChange={(e) => {
-                setApiKey(e.target.value);
-                setApiKeyEdited(true);
-              }}
-              placeholder={hasApiKey ? 'Leave blank to keep existing key' : 'Enter your Groq API key'}
-              className="bg-slate-900 text-white"
-            />
-            <p className="text-xs text-slate-500">
-              Your API key is encrypted and stored securely. {hasApiKey ? 'Existing key is already configured.' : 'A valid key is required to enable AI.'}
-            </p>
-          </div>
-        </div>
+                <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-start">
+                    <Label htmlFor="groq-api-key">Groq API Key</Label>
+                    <div className="space-y-2">
+                        <Input
+                            id="groq-api-key"
+                            type="password"
+                            value={apiKey}
+                            onChange={(e) => {
+                                setApiKey(e.target.value);
+                                setApiKeyEdited(true);
+                            }}
+                            placeholder={hasApiKey ? 'Leave blank to keep existing key' : 'Enter your Groq API key'}
+                            className="bg-slate-900 text-white"
+                        />
+                        <p className="text-xs text-slate-500">
+                            Your API key is encrypted and stored securely. {hasApiKey ? 'Existing key is already configured.' : 'A valid key is required to enable AI.'}
+                        </p>
+                    </div>
+                </div>
 
-        <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-start">
-          <Label htmlFor="system-prompt">System prompt</Label>
-          <Textarea
-            id="system-prompt"
-            value={systemPrompt}
-            onChange={(e) => setSystemPrompt(e.target.value)}
-            placeholder={DEFAULT_PROMPT}
-            className="min-h-[140px] bg-slate-900 text-white"
-          />
-        </div>
+                <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-start">
+                    <Label htmlFor="system-prompt">System prompt</Label>
+                    <Textarea
+                        id="system-prompt"
+                        value={systemPrompt}
+                        onChange={(e) => setSystemPrompt(e.target.value)}
+                        placeholder={DEFAULT_PROMPT}
+                        className="min-h-[140px] bg-slate-900 text-white"
+                    />
+                </div>
 
-        <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-start">
-          <Label htmlFor="training-documents">Training documents</Label>
-          <div className="space-y-2">
-            <Textarea
-              id="training-documents"
-              value={trainingDocuments}
-              onChange={(e) => setTrainingDocuments(e.target.value)}
-              placeholder="Enter optional training documents separated by ---"
-              className="min-h-[140px] bg-slate-900 text-white"
-            />
-            <p className="text-xs text-slate-500">
-              Provide long-form context or documents separated by <strong>---</strong>.
-            </p>
-          </div>
-        </div>
+                <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-start">
+                    <Label htmlFor="training-documents">Training documents</Label>
+                    <div className="space-y-2">
+                        <Textarea
+                            id="training-documents"
+                            value={trainingDocuments}
+                            onChange={(e) => setTrainingDocuments(e.target.value)}
+                            placeholder="Enter optional training documents separated by ---"
+                            className="min-h-[140px] bg-slate-900 text-white"
+                        />
+                        <p className="text-xs text-slate-500">
+                            Provide long-form context or documents separated by <strong>---</strong>.
+                        </p>
+                    </div>
+                </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm text-slate-500">
-            {loading ? 'Loading AI settings…' : hasApiKey ? 'Groq key is configured.' : 'AI is not configured.'}
-          </div>
-          <Button
-            onClick={handleSave}
-            disabled={loading || saving}
-          >
-            {saving ? 'Saving…' : 'Save AI settings'}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="text-sm text-slate-500">
+                        {loading ? 'Loading AI settings…' : hasApiKey ? 'Groq key is configured.' : 'AI is not configured.'}
+                    </div>
+                    <Button
+                        onClick={handleSave}
+                        disabled={loading || saving}
+                    >
+                        {saving ? 'Saving…' : 'Save AI settings'}
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+    );
 }
