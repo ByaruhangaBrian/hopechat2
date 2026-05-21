@@ -148,39 +148,83 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
       const value = change.value;
       if (!value) continue;
 
-      // A. Handle Status Updates (sent, delivered, read)
-      if (value.statuses) {
+      const phoneNumberId = String(value.metadata?.phone_number_id || '');
+      const isMessageEvent = Array.isArray(value.messages) && value.messages.length > 0;
+      const isStatusEvent = Array.isArray(value.statuses) && value.statuses.length > 0;
+
+      if (!phoneNumberId) {
+        void logHttpEvent({
+          userId: null,
+          direction: 'incoming',
+          service: 'whatsapp',
+          endpoint: '/api/whatsapp/webhook',
+          payload: { note: 'missing_phone_number_id', value },
+          note: 'webhook_error',
+        });
+        continue;
+      }
+
+      // Lookup config by the destination WhatsApp Business phone number ID.
+      const { data: config, error: configError } = await supabaseAdmin()
+        .from('whatsapp_config')
+        .select('id, user_id, phone_number_id, waba_id, status, access_token')
+        .eq('phone_number_id', phoneNumberId)
+        .single();
+
+      if (configError || !config) {
+        console.error('[webhook] No config found for phone_number_id:', phoneNumberId, configError);
+        try {
+          const { data: configsList } = await supabaseAdmin()
+            .from('whatsapp_config')
+            .select('id, user_id, phone_number_id, waba_id, status');
+
+          void logHttpEvent({
+            userId: null,
+            direction: 'incoming',
+            service: 'whatsapp',
+            endpoint: '/api/whatsapp/webhook',
+            payload: { note: 'no_matching_config', phone_number_id: phoneNumberId, configs: configsList },
+            note: 'no_matching_config',
+          });
+        } catch (err) {
+          console.warn('[webhook] failed to fetch whatsapp_config list for diagnostics:', err);
+        }
+        continue;
+      }
+
+      const userId = config.user_id;
+      const accessToken = decrypt(config.access_token);
+
+      void logHttpEvent({
+        userId,
+        direction: 'incoming',
+        service: 'whatsapp',
+        endpoint: '/api/whatsapp/webhook',
+        payload: { note: 'config_matched', phone_number_id: phoneNumberId, config_id: config.id },
+        note: 'config_matched',
+      });
+
+      if (isStatusEvent) {
         for (const status of value.statuses) {
           await handleStatusUpdate(status);
         }
       }
 
-      // B. Handle Inbound Messages
-      if (value.messages) {
-        const phoneNumberId = String(value.metadata?.phone_number_id);
-        
-        // Lookup Config
-        const { data: config, error: configError } = await supabaseAdmin()
-          .from('whatsapp_config')
-          .select('*')
-          .eq('phone_number_id', phoneNumberId)
-          .single();
-
-        if (configError || !config) {
-          console.error('[webhook] No config found for phone_number_id:', phoneNumberId);
-          continue;
-        }
-
-        const userId = config.user_id;
-        const accessToken = decrypt(config.access_token);
-
+      if (isMessageEvent) {
         for (const message of value.messages) {
-          // Find corresponding contact from contacts array if possible
-          const contactInfo = value.contacts?.find(c => c.wa_id === message.from);
+          const contactInfo = value.contacts?.find((c) => c.wa_id === message.from);
           const contactName = contactInfo?.profile?.name || message.from;
 
           try {
             await processMessage(message, contactName, userId, accessToken);
+            void logHttpEvent({
+              userId,
+              direction: 'incoming',
+              service: 'whatsapp',
+              endpoint: '/api/whatsapp/webhook',
+              payload: { note: 'message_persisted', message_id: message.id, from: message.from },
+              note: 'message_persisted',
+            });
           } catch (err) {
             console.error('[webhook] Error processing message:', message.id, err);
             void logHttpEvent({
@@ -188,7 +232,7 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
               direction: 'incoming',
               service: 'whatsapp',
               endpoint: '/api/whatsapp/webhook',
-              payload: { message_id: message.id, error: String(err) },
+              payload: { message_id: message.id, error: err instanceof Error ? err.message : String(err) },
               note: 'message_process_failed',
             });
           }
@@ -230,8 +274,26 @@ async function processMessage(
       .select()
       .single();
     
-    if (createError) throw new Error(`Contact creation failed: ${createError.message}`);
+    if (createError) {
+      void logHttpEvent({
+        userId,
+        direction: 'incoming',
+        service: 'whatsapp',
+        endpoint: '/api/whatsapp/webhook',
+        payload: { note: 'contact_create_failed', phone: senderPhone, contactName, error: createError.message },
+        note: 'contact_create_failed',
+      });
+      throw new Error(`Contact creation failed: ${createError.message}`);
+    }
     contact = newContact;
+    void logHttpEvent({
+      userId,
+      direction: 'incoming',
+      service: 'whatsapp',
+      endpoint: '/api/whatsapp/webhook',
+      payload: { note: 'contact_created', contact_id: contact.id, phone: senderPhone },
+      note: 'contact_created',
+    });
   }
 
   // 2. Find or Create Conversation
@@ -249,8 +311,26 @@ async function processMessage(
       .select()
       .single();
     
-    if (convError) throw new Error(`Conversation creation failed: ${convError.message}`);
+    if (convError) {
+      void logHttpEvent({
+        userId,
+        direction: 'incoming',
+        service: 'whatsapp',
+        endpoint: '/api/whatsapp/webhook',
+        payload: { note: 'conversation_create_failed', contact_id: contact.id, error: convError.message },
+        note: 'conversation_create_failed',
+      });
+      throw new Error(`Conversation creation failed: ${convError.message}`);
+    }
     conversation = newConv;
+    void logHttpEvent({
+      userId,
+      direction: 'incoming',
+      service: 'whatsapp',
+      endpoint: '/api/whatsapp/webhook',
+      payload: { note: 'conversation_created', conversation_id: conversation.id, contact_id: contact.id },
+      note: 'conversation_created',
+    });
   }
 
   // 3. Parse Content & Media
