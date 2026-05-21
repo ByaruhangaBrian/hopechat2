@@ -222,20 +222,10 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
   for (const entry of body.entry) {
     for (const change of entry.changes) {
       const value = change.value
-
-      // Handle status updates
-      if (value.statuses) {
-        for (const status of value.statuses) {
-          await handleStatusUpdate(status)
-        }
-      }
-
-      // Handle incoming messages
-      if (!value.messages || !value.contacts) continue
-
       const phoneNumberId = value.metadata.phone_number_id
 
-      // Find user's config by phone_number_id
+      // Resolve user_id from phone_number_id FIRST so we can use it for
+      // all subsequent logging and processing.
       const { data: config, error: configError } = await supabaseAdmin()
         .from('whatsapp_config')
         .select('*')
@@ -266,20 +256,29 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
         continue
       }
 
-      // Log a delivery row tied to the user so they can view the
-      // incoming delivery in the UI / http_logs table (user-scoped).
-      // This is best-effort and must not block processing.
+      const userId = config.user_id
+      const decryptedAccessToken = decrypt(config.access_token)
+
+      // Log config match with user_id
       void logHttpEvent({
-        userId: config.user_id,
+        userId,
         direction: 'incoming',
         service: 'whatsapp',
         endpoint: '/api/whatsapp/webhook',
-        payload: value,
+        payload: { phone_number_id: phoneNumberId },
         headers: null,
-        note: 'delivery_matched_config',
+        note: 'config_matched',
       })
 
-      const decryptedAccessToken = decrypt(config.access_token)
+      // Handle status updates with user context
+      if (value.statuses) {
+        for (const status of value.statuses) {
+          await handleStatusUpdate(status)
+        }
+      }
+
+      // Handle incoming messages
+      if (!value.messages || !value.contacts) continue
 
       for (let i = 0; i < value.messages.length; i++) {
         const message = value.messages[i]
@@ -288,7 +287,7 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
         await processMessage(
           message,
           contact,
-          config.user_id,
+          userId,
           decryptedAccessToken
         )
       }
