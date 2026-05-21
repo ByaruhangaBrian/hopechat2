@@ -5,6 +5,7 @@ import { getMediaUrl, downloadMedia } from '@/lib/whatsapp/meta-api'
 import { normalizePhone, phonesMatch } from '@/lib/whatsapp/phone-utils'
 import { verifyMetaWebhookSignature } from '@/lib/whatsapp/webhook-signature'
 import { runAutomationsForTrigger } from '@/lib/automations/engine'
+import { logHttpEvent } from '@/lib/logs/http-logs'
 
 // Lazy-initialized to avoid build-time crash when env vars are missing
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -163,6 +164,32 @@ export async function POST(request: Request) {
       // Swallow errors to avoid impacting webhook handling; log for visibility.
       // eslint-disable-next-line no-console
       console.warn('[webhook] local log failed:', err)
+    }
+  })()
+
+  // Best-effort persistence to `http_logs` for monitoring. We record the
+  // raw payload and headers so admins can inspect deliveries in the DB.
+  void (async () => {
+    try {
+      let parsed: unknown = null
+      try {
+        parsed = JSON.parse(rawBody)
+      } catch {
+        parsed = { raw: rawBody }
+      }
+      const headersObj: Record<string, string> = {}
+      for (const [k, v] of request.headers.entries()) headersObj[k] = String(v)
+      await logHttpEvent({
+        userId: null,
+        direction: 'incoming',
+        service: 'whatsapp',
+        endpoint: '/api/whatsapp/webhook',
+        payload: parsed,
+        headers: headersObj,
+        note: 'raw_delivery',
+      })
+    } catch (err) {
+      console.warn('[webhook] failed to persist incoming http_log:', err)
     }
   })()
 

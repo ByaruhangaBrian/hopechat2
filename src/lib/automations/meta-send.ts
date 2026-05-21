@@ -7,6 +7,7 @@ import {
   isRecipientNotAllowedError,
 } from '@/lib/whatsapp/phone-utils'
 import { supabaseAdmin } from './admin-client'
+import { logHttpEvent } from '@/lib/logs/http-logs'
 
 // ------------------------------------------------------------
 // Automation-side Meta sender.
@@ -88,6 +89,19 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
 
   const attempt = async (phone: string): Promise<string> => {
     if (input.kind === 'template') {
+      // Log outgoing Meta template send
+      void logHttpEvent({
+        userId: input.userId,
+        direction: 'outgoing',
+        service: 'meta',
+        endpoint: `/v21.0/${config.phone_number_id}/messages`,
+        payload: {
+          to: phone,
+          type: 'template',
+          template: { name: input.templateName, language: input.language ?? 'en_US', params: input.params ?? [] },
+        },
+        note: `automation:${input.userId}`,
+      })
       const r = await sendTemplateMessage({
         phoneNumberId: config.phone_number_id,
         accessToken,
@@ -98,6 +112,15 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
       })
       return r.messageId
     }
+    // Log outgoing Meta text send
+    void logHttpEvent({
+      userId: input.userId,
+      direction: 'outgoing',
+      service: 'meta',
+      endpoint: `/v21.0/${config.phone_number_id}/messages`,
+      payload: { to: phone, type: 'text', text: input.text },
+      note: `automation:${input.userId}`,
+    })
     const r = await sendTextMessage({
       phoneNumberId: config.phone_number_id,
       accessToken,

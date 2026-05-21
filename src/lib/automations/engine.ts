@@ -18,6 +18,7 @@ import type {
 import { supabaseAdmin } from './admin-client'
 import { engineSendText, engineSendTemplate } from './meta-send'
 import { generateAiResponse } from './groq-client'
+import { logHttpEvent } from '@/lib/logs/http-logs'
 
 // ------------------------------------------------------------
 // Public API
@@ -431,6 +432,29 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         headers: { 'content-type': 'application/json', ...(cfg.headers ?? {}) },
         body,
       })
+      // Log the outgoing webhook call for monitoring
+      void (async () => {
+        try {
+          let parsedBody: unknown = null
+          try {
+            parsedBody = JSON.parse(body)
+          } catch {
+            parsedBody = { raw: body }
+          }
+          await logHttpEvent({
+            userId: args.automation.user_id,
+            direction: 'outgoing',
+            service: 'send_webhook',
+            endpoint: cfg.url,
+            payload: parsedBody,
+            headers: cfg.headers ?? null,
+            statusCode: res.status,
+            note: `automation:${args.automation.id}`,
+          })
+        } catch (e) {
+          console.warn('[http_logs] failed to log outgoing webhook:', e)
+        }
+      })()
       if (!res.ok) throw new Error(`webhook returned ${res.status}`)
       return `webhook ${res.status}`
     }
