@@ -261,149 +261,216 @@ async function processMessage(
 ) {
   const senderPhone = normalizePhone(message.from);
 
-  // 1. Find or Create Contact
-  let { data: contact, error: contactFetchError } = await supabaseAdmin()
-    .from('contacts')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('phone', senderPhone)
-    .maybeSingle();
-
-  if (contactFetchError) {
-    console.error('[webhook] Contact lookup failed:', contactFetchError);
-    throw new Error(`Contact lookup failed: ${contactFetchError.message}`);
-  }
-
-  if (!contact) {
-    const { data: newContact, error: createError } = await supabaseAdmin()
+  try {
+    // 1. Find or Create Contact
+    let { data: contact, error: contactFetchError } = await supabaseAdmin()
       .from('contacts')
-      .insert({ user_id: userId, phone: senderPhone, name: contactName })
-      .select()
-      .single();
+      .select('*')
+      .eq('user_id', userId)
+      .eq('phone', senderPhone)
+      .maybeSingle();
 
-    if (createError) {
+    if (contactFetchError) {
+      console.error('[webhook] Contact lookup failed:', contactFetchError);
       void logHttpEvent({
         userId,
         direction: 'incoming',
         service: 'whatsapp',
         endpoint: '/api/whatsapp/webhook',
-        payload: { note: 'contact_create_failed', phone: senderPhone, contactName, error: createError.message },
-        note: 'contact_create_failed',
+        payload: { note: 'contact_lookup_failed', phone: senderPhone, error: contactFetchError.message },
+        note: 'contact_lookup_failed',
       });
-      throw new Error(`Contact creation failed: ${createError.message}`);
+      throw new Error(`Contact lookup failed: ${contactFetchError.message}`);
     }
-    contact = newContact;
-    void logHttpEvent({
-      userId,
-      direction: 'incoming',
-      service: 'whatsapp',
-      endpoint: '/api/whatsapp/webhook',
-      payload: { note: 'contact_created', contact_id: contact.id, phone: senderPhone },
-      note: 'contact_created',
-    });
-  }
 
-  // 2. Find or Create Conversation
-  let { data: conversation, error: conversationFetchError } = await supabaseAdmin()
-    .from('conversations')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('contact_id', contact.id)
-    .maybeSingle();
+    if (!contact) {
+      const { data: newContact, error: createError } = await supabaseAdmin()
+        .from('contacts')
+        .insert({ user_id: userId, phone: senderPhone, name: contactName })
+        .select()
+        .single();
 
-  if (conversationFetchError) {
-    console.error('[webhook] Conversation lookup failed:', conversationFetchError);
-    throw new Error(`Conversation lookup failed: ${conversationFetchError.message}`);
-  }
+      if (createError) {
+        console.error('[webhook] Contact creation failed:', createError);
+        void logHttpEvent({
+          userId,
+          direction: 'incoming',
+          service: 'whatsapp',
+          endpoint: '/api/whatsapp/webhook',
+          payload: { note: 'contact_create_failed', phone: senderPhone, contactName, error: createError.message },
+          note: 'contact_create_failed',
+        });
+        throw new Error(`Contact creation failed: ${createError.message}`);
+      }
+      contact = newContact;
+      void logHttpEvent({
+        userId,
+        direction: 'incoming',
+        service: 'whatsapp',
+        endpoint: '/api/whatsapp/webhook',
+        payload: { note: 'contact_created', contact_id: contact.id, phone: senderPhone },
+        note: 'contact_created',
+      });
+    }
 
-  if (!conversation) {
-    const { data: newConv, error: convError } = await supabaseAdmin()
+    // 2. Find or Create Conversation
+    let { data: conversation, error: conversationFetchError } = await supabaseAdmin()
       .from('conversations')
-      .insert({ user_id: userId, contact_id: contact.id })
-      .select()
-      .single();
+      .select('*')
+      .eq('user_id', userId)
+      .eq('contact_id', contact.id)
+      .maybeSingle();
 
-    if (convError) {
+    if (conversationFetchError) {
+      console.error('[webhook] Conversation lookup failed:', conversationFetchError);
       void logHttpEvent({
         userId,
         direction: 'incoming',
         service: 'whatsapp',
         endpoint: '/api/whatsapp/webhook',
-        payload: { note: 'conversation_create_failed', contact_id: contact.id, error: convError.message },
-        note: 'conversation_create_failed',
+        payload: { note: 'conversation_lookup_failed', contact_id: contact.id, error: conversationFetchError.message },
+        note: 'conversation_lookup_failed',
       });
-      throw new Error(`Conversation creation failed: ${convError.message}`);
+      throw new Error(`Conversation lookup failed: ${conversationFetchError.message}`);
     }
-    conversation = newConv;
-    void logHttpEvent({
-      userId,
-      direction: 'incoming',
-      service: 'whatsapp',
-      endpoint: '/api/whatsapp/webhook',
-      payload: { note: 'conversation_created', conversation_id: conversation.id, contact_id: contact.id },
-      note: 'conversation_created',
-    });
-  }
 
-  // 3. Parse Content & Media
-  let contentText = message.text?.body || '';
-  let mediaUrl = null;
-  const contentType = ['image', 'video', 'document', 'audio', 'location'].includes(message.type) 
-    ? message.type 
-    : 'text';
+    if (!conversation) {
+      const { data: newConv, error: convError } = await supabaseAdmin()
+        .from('conversations')
+        .insert({ user_id: userId, contact_id: contact.id })
+        .select()
+        .single();
 
-  if (['image', 'video', 'document', 'audio'].includes(message.type)) {
-    const mediaId = (message as any)[message.type]?.id;
-    if (mediaId) {
-      try {
-        await getMediaUrl({ mediaId, accessToken });
-        mediaUrl = `/api/whatsapp/media/${mediaId}`;
-        contentText = (message as any)[message.type]?.caption || contentText;
-      } catch (err) {
-        console.error('[webhook] Media URL fetch failed:', err);
+      if (convError) {
+        console.error('[webhook] Conversation creation failed:', convError);
+        void logHttpEvent({
+          userId,
+          direction: 'incoming',
+          service: 'whatsapp',
+          endpoint: '/api/whatsapp/webhook',
+          payload: { note: 'conversation_create_failed', contact_id: contact.id, error: convError.message },
+          note: 'conversation_create_failed',
+        });
+        throw new Error(`Conversation creation failed: ${convError.message}`);
+      }
+      conversation = newConv;
+      void logHttpEvent({
+        userId,
+        direction: 'incoming',
+        service: 'whatsapp',
+        endpoint: '/api/whatsapp/webhook',
+        payload: { note: 'conversation_created', conversation_id: conversation.id, contact_id: contact.id },
+        note: 'conversation_created',
+      });
+    }
+
+    // 3. Parse Content & Media
+    let contentText = message.text?.body || '';
+    let mediaUrl = null;
+    const contentType = ['image', 'video', 'document', 'audio', 'location'].includes(message.type)
+      ? message.type
+      : 'text';
+
+    if (['image', 'video', 'document', 'audio'].includes(message.type)) {
+      const mediaId = (message as any)[message.type]?.id;
+      if (mediaId) {
+        try {
+          await getMediaUrl({ mediaId, accessToken });
+          mediaUrl = `/api/whatsapp/media/${mediaId}`;
+          contentText = (message as any)[message.type]?.caption || contentText;
+        } catch (err) {
+          console.error('[webhook] Media URL fetch failed:', err);
+        }
       }
     }
-  }
 
-  if (message.type === 'location' && message.location) {
-    contentText = `Location: ${message.location.latitude}, ${message.location.longitude}`;
-  }
+    if (message.type === 'location' && message.location) {
+      contentText = `Location: ${message.location.latitude}, ${message.location.longitude}`;
+    }
 
-  // 4. Save Message
-  const { error: msgError } = await supabaseAdmin()
-    .from('messages')
-    .insert({
-      conversation_id: conversation.id,
-      sender_type: 'customer',
-      content_type: contentType,
-      content_text: contentText,
-      media_url: mediaUrl,
-      message_id: message.id,
-      status: 'delivered',
-      created_at: new Date(Number(message.timestamp) * 1000).toISOString(),
+    // 4. Save Message
+    const { error: msgError } = await supabaseAdmin()
+      .from('messages')
+      .insert({
+        conversation_id: conversation.id,
+        sender_type: 'customer',
+        content_type: contentType,
+        content_text: contentText,
+        media_url: mediaUrl,
+        message_id: message.id,
+        status: 'delivered',
+        created_at: new Date(Number(message.timestamp) * 1000).toISOString(),
+      });
+
+    if (msgError) {
+      console.error('[webhook] Message insert failed:', msgError);
+      void logHttpEvent({
+        userId,
+        direction: 'incoming',
+        service: 'whatsapp',
+        endpoint: '/api/whatsapp/webhook',
+        payload: { note: 'message_insert_failed', message_id: message.id, error: msgError.message },
+        note: 'message_insert_failed',
+      });
+      throw new Error(`Message insert failed: ${msgError.message}`);
+    }
+
+    void logHttpEvent({
+      userId,
+      direction: 'incoming',
+      service: 'whatsapp',
+      endpoint: '/api/whatsapp/webhook',
+      payload: { note: 'message_persisted', message_id: message.id, from: message.from },
+      note: 'message_persisted',
     });
 
-  if (msgError) {
-    console.error('[webhook] DB Insert Error:', msgError);
-    throw new Error(`Message insert failed: ${msgError.message}`);
+    // 5. Update Conversation Summary (fire-and-forget, don't block)
+    void supabaseAdmin()
+      .from('conversations')
+      .update({
+        last_message_text: contentText || `[${contentType}]`,
+        last_message_at: new Date().toISOString(),
+        unread_count: (conversation.unread_count || 0) + 1,
+      })
+      .eq('id', conversation.id)
+      .then(() => {
+        void logHttpEvent({
+          userId,
+          direction: 'incoming',
+          service: 'whatsapp',
+          endpoint: '/api/whatsapp/webhook',
+          payload: { note: 'conversation_updated', conversation_id: conversation.id },
+          note: 'conversation_updated',
+        });
+      })
+      .catch((err) => {
+        console.error('[webhook] Conversation update failed:', err);
+        void logHttpEvent({
+          userId,
+          direction: 'incoming',
+          service: 'whatsapp',
+          endpoint: '/api/whatsapp/webhook',
+          payload: { note: 'conversation_update_failed', conversation_id: conversation.id, error: String(err) },
+          note: 'conversation_update_failed',
+        });
+      });
+
+    // 6. Run Automations (fire-and-forget)
+    runAutomationsForTrigger({
+      userId,
+      triggerType: 'new_message_received',
+      contactId: contact.id,
+      context: { message_text: contentText, conversation_id: conversation.id }
+    }).catch(err => console.error('[webhook] Automation error:', err));
+  } catch (err) {
+    console.error('[webhook] processMessage exception:', err);
+    void logHttpEvent({
+      userId,
+      direction: 'incoming',
+      service: 'whatsapp',
+      endpoint: '/api/whatsapp/webhook',
+      payload: { note: 'processMessage_exception', error: err instanceof Error ? err.message : String(err) },
+      note: 'webhook_error',
+    });
+    throw err;
   }
-
-  // 5. Update Conversation Summary
-  await supabaseAdmin()
-    .from('conversations')
-    .update({
-      last_message_text: contentText || `[${contentType}]`,
-      last_message_at: new Date().toISOString(),
-      unread_count: (conversation.unread_count || 0) + 1,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', conversation.id);
-
-  // 6. Run Automations
-  runAutomationsForTrigger({
-    userId,
-    triggerType: 'new_message_received',
-    contactId: contact.id,
-    context: { message_text: contentText, conversation_id: conversation.id }
-  }).catch(err => console.error('[webhook] Automation error:', err));
-}
