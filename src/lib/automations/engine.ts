@@ -501,14 +501,42 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       const userMessage = String(args.context.message_text ?? conversationHistory.slice(-1)[0]?.content ?? '').trim()
       if (!userMessage) throw new Error('assign_to_ai has no user message to generate from')
 
-      const replyText = await generateAiResponse(args.automation.user_id, userMessage, conversationHistory)
-      const { whatsapp_message_id } = await engineSendText({
-        userId: args.automation.user_id,
-        conversationId,
-        contactId: args.contactId,
-        text: replyText,
-      })
-      return `AI reply sent via Meta (${whatsapp_message_id})`
+      try {
+        const replyText = await generateAiResponse(args.automation.user_id, userMessage, conversationHistory)
+        const { whatsapp_message_id } = await engineSendText({
+          userId: args.automation.user_id,
+          conversationId,
+          contactId: args.contactId,
+          text: replyText,
+        })
+        return `AI reply sent via Meta (${whatsapp_message_id})`
+      } catch (err: any) {
+        // Log and insert a visible bot message so agents see the failure
+        const errMsg = err instanceof Error ? err.message : String(err)
+        console.error('[automations] assign_to_ai failed:', errMsg)
+        try {
+          await db.from('messages').insert({
+            conversation_id: conversationId,
+            sender_type: 'bot',
+            content_type: 'text',
+            content_text: `AI generation failed: ${errMsg}. Please respond manually.`,
+            status: 'failed',
+            is_ai_response: false,
+            ai_handled: false,
+          })
+        } catch (dbErr) {
+          console.error('[automations] failed to insert fallback bot message:', dbErr)
+        }
+
+        // If fallback to human is enabled, return a non-throwing message so
+        // the automation continues and logs a 'success' for the step.
+        if (cfg.enable_fallback_to_human) {
+          return 'AI generation failed; human takeover requested'
+        }
+
+        // Otherwise rethrow so the automation log marks this as failed.
+        throw err
+      }
     }
 
     case 'close_conversation': {
