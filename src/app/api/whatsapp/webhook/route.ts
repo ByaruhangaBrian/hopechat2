@@ -132,12 +132,26 @@ export async function POST(request: Request) {
     note: 'raw_webhook_received',
   });
 
-  // 4. Process (Async to avoid timeout)
-  processWebhook(body).catch((err) => {
+  // 4. Process webhook immediately to avoid unreliable fire-and-forget behavior
+  try {
+    await processWebhook(body);
+    return NextResponse.json({ status: 'received' }, { status: 200 });
+  } catch (err) {
     console.error('[webhook] Fatal process error:', err);
-  });
-
-  return NextResponse.json({ status: 'received' }, { status: 200 });
+    void logHttpEvent({
+      userId: null,
+      direction: 'incoming',
+      service: 'whatsapp',
+      endpoint: '/api/whatsapp/webhook',
+      payload: {
+        note: 'webhook_processing_failed',
+        error: err instanceof Error ? err.message : String(err),
+        entry_count: Array.isArray(body.entry) ? body.entry.length : 0,
+      },
+      note: 'webhook_processing_failed',
+    });
+    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
+  }
 }
 
 async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
@@ -364,6 +378,38 @@ async function processMessage(
       });
     }
 
+    // Deduplicate repeated webhook deliveries for the same WhatsApp message
+    const { data: existingMsg, error: existingMsgError } = await supabaseAdmin()
+      .from('messages')
+      .select('id, status')
+      .eq('message_id', message.id)
+      .maybeSingle();
+
+    if (existingMsgError) {
+      console.error('[webhook] Existing message lookup failed:', existingMsgError);
+      void logHttpEvent({
+        userId,
+        direction: 'incoming',
+        service: 'whatsapp',
+        endpoint: '/api/whatsapp/webhook',
+        payload: { note: 'message_dedupe_lookup_failed', message_id: message.id, error: existingMsgError.message },
+        note: 'message_dedupe_lookup_failed',
+      });
+      throw new Error(`Existing message lookup failed: ${existingMsgError.message}`);
+    }
+
+    if (existingMsg) {
+      void logHttpEvent({
+        userId,
+        direction: 'incoming',
+        service: 'whatsapp',
+        endpoint: '/api/whatsapp/webhook',
+        payload: { note: 'message_already_exists', message_id: message.id, conversation_id: conversation.id },
+        note: 'message_already_exists',
+      });
+      return;
+    }
+
     // 3. Parse Content & Media
     let contentText = message.text?.body || '';
     let mediaUrl = null;
@@ -429,7 +475,7 @@ async function processMessage(
       .from('conversations')
       .update({
         last_message_text: contentText || `[${contentType}]`,
-        last_message_at: new Date().toISOString(),
+        last_message_at: new Date(Number(message.timestamp) * 1000).toISOString(),
         unread_count: (conversation.unread_count || 0) + 1,
       })
       .eq('id', conversation.id)
