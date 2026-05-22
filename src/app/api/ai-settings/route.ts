@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { encrypt } from '@/lib/whatsapp/encryption'
+import { getAiSettings, saveAiSettings } from '@/lib/automations/groq-client'
 
 export async function GET() {
   try {
@@ -57,31 +57,9 @@ export async function POST(req: Request) {
 
     const { groq_api_key, system_prompt, training_documents, is_enabled } = body
 
-    const { data: existing, error: fetchError } = await supabase
-      .from('ai_settings')
-      .select('groq_api_key')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (fetchError) {
-      console.error('[ai-settings] load existing failed:', fetchError)
-      return NextResponse.json({ error: 'Failed to update AI settings' }, { status: 500 })
-    }
-
-    let keyToSave = existing?.groq_api_key ?? ''
+    const existingSettings = await getAiSettings(user.id)
     const rawKey = String(groq_api_key ?? '').trim()
-    if (rawKey.length > 0) {
-      try {
-        keyToSave = encrypt(rawKey)
-      } catch (err) {
-        console.error('[ai-settings] encrypt failed:', err)
-        const msg = err instanceof Error ? err.message : String(err)
-        return NextResponse.json(
-          { error: `Failed to encrypt Groq API key: ${msg}` },
-          { status: 500 },
-        )
-      }
-    }
+    const keyToSave = rawKey.length > 0 ? rawKey : existingSettings?.groq_api_key ?? ''
 
     if (Boolean(is_enabled) && !keyToSave) {
       return NextResponse.json(
@@ -90,29 +68,23 @@ export async function POST(req: Request) {
       )
     }
 
-    const { data: saved, error: saveError } = await supabase
-      .from('ai_settings')
-      .upsert(
-        {
-          user_id: user.id,
-          groq_api_key: keyToSave,
-          system_prompt:
-            system_prompt ??
-            'You are a helpful customer service AI assistant.',
-          training_documents: Array.isArray(training_documents)
-            ? training_documents
-            : [],
-          is_enabled: Boolean(is_enabled),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' },
-      )
-      .select()
-      .maybeSingle()
-
-    if (saveError) {
+    try {
+      await saveAiSettings(user.id, {
+        groq_api_key: keyToSave,
+        system_prompt:
+          system_prompt ??
+          'You are a helpful customer service AI assistant.',
+        training_documents: Array.isArray(training_documents)
+          ? training_documents
+          : [],
+        is_enabled: Boolean(is_enabled),
+      })
+    } catch (saveError: any) {
       console.error('[ai-settings] save failed:', saveError)
-      return NextResponse.json({ error: 'Failed to save AI settings' }, { status: 500 })
+      return NextResponse.json(
+        { error: saveError?.message || 'Failed to save AI settings' },
+        { status: 500 },
+      )
     }
 
     return NextResponse.json({ success: true })

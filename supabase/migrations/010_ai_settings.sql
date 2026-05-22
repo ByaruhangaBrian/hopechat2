@@ -11,6 +11,13 @@ create table ai_settings (
   unique(user_id)
 );
 
+ALTER TABLE ai_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage own AI settings" ON ai_settings;
+CREATE POLICY "Users can manage own AI settings" ON ai_settings
+  FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 -- Add AI-handled flag to messages table to track which messages were responded to by AI
 alter table messages add column if not exists ai_handled boolean default false;
 alter table messages add column if not exists is_ai_response boolean default false;
