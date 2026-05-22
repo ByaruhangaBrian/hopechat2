@@ -78,15 +78,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to create outbound message' }, { status: 500 });
     }
 
-    // 5. Update Conversation immediately
-    await supabase
-      .from('conversations')
-      .update({
-        last_message_text: content_text,
-        last_message_at: new Date().toISOString(),
-        unread_count: 0,
-      })
-      .eq('id', conversation_id);
+    // 5. Update Conversation asynchronously, after the message is persisted.
+    void (async () => {
+      try {
+        await supabase
+          .from('conversations')
+          .update({
+            last_message_text: content_text,
+            last_message_at: new Date().toISOString(),
+            unread_count: 0,
+          })
+          .eq('id', conversation_id);
+      } catch (error) {
+        console.error('[send] Conversation update failed:', error);
+      }
+    })();
 
     // 6. Log the outgoing send request quickly
     void logHttpEvent({
