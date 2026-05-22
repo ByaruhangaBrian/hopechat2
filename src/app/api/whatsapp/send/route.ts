@@ -78,21 +78,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to create outbound message' }, { status: 500 });
     }
 
-    // 5. Update Conversation asynchronously, after the message is persisted.
-    void (async () => {
-      try {
-        await supabase
-          .from('conversations')
-          .update({
-            last_message_text: content_text,
-            last_message_at: new Date().toISOString(),
-            unread_count: 0,
-          })
-          .eq('id', conversation_id);
-      } catch (error) {
-        console.error('[send] Conversation update failed:', error);
-      }
-    })();
+    // 5. Update conversation metadata immediately.
+    await supabase
+      .from('conversations')
+      .update({
+        last_message_text: content_text,
+        last_message_at: new Date().toISOString(),
+        unread_count: 0,
+      })
+      .eq('id', conversation_id);
 
     // 6. Log the outgoing send request quickly
     void logHttpEvent({
@@ -104,52 +98,52 @@ export async function POST(request: Request) {
       note: 'agent_reply_queued',
     });
 
-    // 7. Send to Meta in the background. The route already returned.
-    void (async () => {
-      try {
-        const result = await sendTextMessage({
-          phoneNumberId: config.phone_number_id,
-          accessToken,
-          to,
-          text: content_text,
-          contextMessageId,
-        });
+    // 6. Send to Meta and update the saved message with the WhatsApp message ID.
+    try {
+      const result = await sendTextMessage({
+        phoneNumberId: config.phone_number_id,
+        accessToken,
+        to,
+        text: content_text,
+        contextMessageId,
+      });
 
-        await supabase
-          .from('messages')
-          .update({
-            message_id: result.messageId,
-            status: 'sent',
-          })
-          .eq('id', msgRecord.id);
+      await supabase
+        .from('messages')
+        .update({
+          message_id: result.messageId,
+          status: 'sent',
+        })
+        .eq('id', msgRecord.id);
 
-        void logHttpEvent({
-          userId: user.id,
-          direction: 'outgoing',
-          service: 'whatsapp',
-          endpoint: '/api/whatsapp/send',
-          payload: { to, text: content_text, wa_message_id: result.messageId },
-          note: 'agent_reply_sent',
-        });
-      } catch (err: any) {
-        console.error('[send] Meta API background error:', err);
-        await supabase
-          .from('messages')
-          .update({
-            status: 'failed',
-          })
-          .eq('id', msgRecord.id);
+      void logHttpEvent({
+        userId: user.id,
+        direction: 'outgoing',
+        service: 'whatsapp',
+        endpoint: '/api/whatsapp/send',
+        payload: { to, text: content_text, wa_message_id: result.messageId },
+        note: 'agent_reply_sent',
+      });
+    } catch (err: any) {
+      console.error('[send] Meta API error:', err);
+      await supabase
+        .from('messages')
+        .update({
+          status: 'failed',
+        })
+        .eq('id', msgRecord.id);
 
-        void logHttpEvent({
-          userId: user.id,
-          direction: 'outgoing',
-          service: 'whatsapp',
-          endpoint: '/api/whatsapp/send',
-          payload: { to, text: content_text, error: err?.message ?? String(err) },
-          note: 'agent_reply_failed',
-        });
-      }
-    })();
+      void logHttpEvent({
+        userId: user.id,
+        direction: 'outgoing',
+        service: 'whatsapp',
+        endpoint: '/api/whatsapp/send',
+        payload: { to, text: content_text, error: err?.message ?? String(err) },
+        note: 'agent_reply_failed',
+      });
+
+      return NextResponse.json({ error: err?.message ?? 'Failed to send message' }, { status: 502 });
+    }
 
     return NextResponse.json({ success: true, message: msgRecord });
   } catch (error: any) {

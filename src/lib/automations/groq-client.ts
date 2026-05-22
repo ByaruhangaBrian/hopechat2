@@ -83,7 +83,11 @@ export async function generateAiResponse(
     content: userMessage,
   })
 
-  try {
+  // Allow selecting model via environment variable for fast remediation
+  const preferredModel = process.env.GROQ_MODEL || 'mixtral-8x7b-32768'
+  const fallbackModel = process.env.GROQ_FALLBACK_MODEL
+
+  async function fetchWithModel(model: string) {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -91,7 +95,7 @@ export async function generateAiResponse(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'mixtral-8x7b-32768', // Fast and capable model
+        model,
         messages: messages,
         temperature: 0.7,
         max_tokens: 1024,
@@ -100,8 +104,8 @@ export async function generateAiResponse(
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Groq API error: ${response.status} - ${error}`)
+      const errorText = await response.text()
+      throw new Error(`Groq API error: ${response.status} - ${errorText}`)
     }
 
     const data = (await response.json()) as GroqResponse
@@ -111,9 +115,31 @@ export async function generateAiResponse(
     }
 
     return data.choices[0].message.content
-  } catch (error) {
-    console.error('[ai] generation failed:', error)
-    throw error
+  }
+
+  try {
+    return await fetchWithModel(preferredModel)
+  } catch (err: any) {
+    console.error(`[ai] generation failed with model ${preferredModel}:`, err)
+    // If the error is a decommissioned-model error, attempt fallback if configured
+    if (err?.message?.includes('model_decommissioned') && fallbackModel) {
+      try {
+        console.info(`[ai] retrying generation with fallback model ${fallbackModel}`)
+        return await fetchWithModel(fallbackModel)
+      } catch (err2) {
+        console.error(`[ai] fallback generation also failed with model ${fallbackModel}:`, err2)
+        throw err2
+      }
+    }
+
+    // Surface a clearer remediation message for operators
+    if (err?.message?.includes('model_decommissioned')) {
+      throw new Error(
+        `${err.message}. Set GROQ_MODEL or GROQ_FALLBACK_MODEL to a supported model and retry.`,
+      )
+    }
+
+    throw err
   }
 }
 
