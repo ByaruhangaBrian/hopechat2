@@ -443,7 +443,7 @@ async function processMessage(
           note: 'conversation_updated',
         });
       })
-      .catch((err) => {
+      .catch((err: any) => {
         console.error('[webhook] Conversation update failed:', err);
         void logHttpEvent({
           userId,
@@ -474,3 +474,4 @@ async function processMessage(
     });
     throw err;
   }
+}
