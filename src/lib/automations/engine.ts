@@ -17,7 +17,7 @@ import type {
 } from '@/types'
 import { supabaseAdmin } from './admin-client'
 import { engineSendText, engineSendTemplate } from './meta-send'
-import { generateAiResponse } from './groq-client'
+import { generateGeminiResponse } from './gemini-client'
 import { logHttpEvent } from '@/lib/logs/http-logs'
 
 // ------------------------------------------------------------
@@ -480,29 +480,40 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         throw new Error('AI is disabled for this conversation')
       }
 
+      const { data: aiSettings } = await db
+        .from('ai_settings')
+        .select('system_prompt, training_documents')
+        .eq('user_id', args.automation.user_id)
+        .single()
+
+      let systemInstruction = aiSettings?.system_prompt ?? 'You are a helpful customer service AI assistant.'
+      if (aiSettings?.training_documents && aiSettings.training_documents.length > 0) {
+        systemInstruction += `\n\nTraining context:\n${aiSettings.training_documents.join('\n\n')}`
+      }
+
       const { data: messages } = await db
         .from('messages')
         .select('sender_type, content_text')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: false })
-        .limit(10)
+        .limit(15)
 
-      const conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = (messages ?? [])
+      const conversationHistory = (messages ?? [])
         .map((message) => {
-          const role = (message.sender_type === 'bot' ? 'assistant' : 'user') as 'assistant' | 'user'
+          const role = (message.sender_type === 'bot' ? 'model' : 'user') as 'model' | 'user'
           return {
             role,
-            content: String(message.content_text ?? ''),
+            parts: [{ text: String(message.content_text ?? '') }],
           }
         })
         .reverse()
-        .filter((item) => item.content.trim())
+        .filter((item) => item.parts[0].text.trim())
 
-      const userMessage = String(args.context.message_text ?? conversationHistory.slice(-1)[0]?.content ?? '').trim()
+      const userMessage = String(args.context.message_text ?? (conversationHistory.slice(-1)[0]?.role === 'user' ? conversationHistory.slice(-1)[0]?.parts[0].text : '')).trim()
       if (!userMessage) throw new Error('assign_to_ai has no user message to generate from')
 
       try {
-        const replyText = await generateAiResponse(args.automation.user_id, userMessage, conversationHistory)
+        const replyText = await generateGeminiResponse(userMessage, systemInstruction, conversationHistory.slice(0, -1))
         const { whatsapp_message_id } = await engineSendText({
           userId: args.automation.user_id,
           conversationId,

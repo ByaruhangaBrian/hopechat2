@@ -121,6 +121,21 @@ export async function POST(request: Request) {
   // 4. Enqueue a background job and return immediately so WhatsApp gets a fast 200.
   try {
     await enqueueWhatsAppAiJobs(body);
+
+    // 5. Fire a non-awaited background fetch to trigger the queue immediately.
+    const queueUrl = new URL('/api/whatsapp/queue', request.url).toString();
+    const queueSecret = process.env.WHATSAPP_AI_QUEUE_SECRET || '';
+
+    // Non-awaited background fetch
+    void fetch(queueUrl, {
+      method: 'GET',
+      headers: {
+        'x-queue-secret': queueSecret,
+      },
+    }).catch((err) => {
+      console.error('[webhook] Background queue trigger failed:', err);
+    });
+
     return NextResponse.json({ status: 'queued' }, { status: 200 });
   } catch (err) {
     console.error('[webhook] Queueing error:', err);

@@ -1,6 +1,62 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getAiSettings, saveAiSettings } from '@/lib/automations/groq-client'
+import { supabaseAdmin } from '@/lib/automations/admin-client'
+import { decrypt, encrypt } from '@/lib/whatsapp/encryption'
+
+async function internalGetAiSettings(userId: string) {
+  const db = supabaseAdmin()
+  const { data, error } = await db
+    .from('ai_settings')
+    .select('*')
+    .eq('user_id', userId)
+    .single()
+
+  if (error || !data) {
+    return null
+  }
+
+  const decryptedApiKey = data.groq_api_key ? decrypt(data.groq_api_key) : ''
+
+  return {
+    ...data,
+    groq_api_key: decryptedApiKey,
+  }
+}
+
+async function internalSaveAiSettings(
+  userId: string,
+  settings: {
+    groq_api_key: string
+    system_prompt: string
+    training_documents: string[]
+    is_enabled: boolean
+  },
+) {
+  const db = supabaseAdmin()
+  const encryptedKey = settings.groq_api_key ? encrypt(settings.groq_api_key) : ''
+
+  const { data, error } = await db
+    .from('ai_settings')
+    .upsert(
+      {
+        user_id: userId,
+        ...settings,
+        groq_api_key: encryptedKey,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: 'user_id',
+      },
+    )
+    .select()
+    .single()
+
+  if (error || !data) {
+    throw new Error(`Failed to save AI settings: ${error?.message}`)
+  }
+
+  return data
+}
 
 export async function GET() {
   try {
@@ -27,7 +83,7 @@ export async function GET() {
 
     return NextResponse.json({
       settings: {
-        groq_api_key: data?.groq_api_key ? '••••••••••••••••••' : '',
+        gemini_api_key: data?.groq_api_key ? '••••••••••••••••••' : '',
         has_api_key: Boolean(data?.groq_api_key),
         system_prompt:
           data?.system_prompt ??
@@ -55,21 +111,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { groq_api_key, system_prompt, training_documents, is_enabled } = body
+    const { gemini_api_key, system_prompt, training_documents, is_enabled } = body
 
-    const existingSettings = await getAiSettings(user.id)
-    const rawKey = String(groq_api_key ?? '').trim()
+    const existingSettings = await internalGetAiSettings(user.id)
+    const rawKey = String(gemini_api_key ?? '').trim()
     const keyToSave = rawKey.length > 0 ? rawKey : existingSettings?.groq_api_key ?? ''
 
     if (Boolean(is_enabled) && !keyToSave) {
       return NextResponse.json(
-        { error: 'AI cannot be enabled without a Groq API key' },
+        { error: 'AI cannot be enabled without a Gemini API key' },
         { status: 400 },
       )
     }
 
     try {
-      await saveAiSettings(user.id, {
+      await internalSaveAiSettings(user.id, {
         groq_api_key: keyToSave,
         system_prompt:
           system_prompt ??

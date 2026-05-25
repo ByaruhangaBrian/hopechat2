@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { getErrorMessage, getResponseErrorMessage } from '@/lib/utils';
 
 interface AiSettingsPayload {
-    groq_api_key?: string;
+    gemini_api_key?: string;
     system_prompt: string;
     training_documents: string[];
     is_enabled: boolean;
@@ -59,7 +59,7 @@ export function AiConfig() {
 
     const handleSave = useCallback(async () => {
         if (isEnabled && !apiKeyEdited && !hasApiKey) {
-            toast.error('Please provide a Groq API key before enabling AI.');
+            toast.error('Please provide a Gemini API key before enabling AI.');
             return;
         }
 
@@ -75,7 +75,7 @@ export function AiConfig() {
         };
 
         if (apiKeyEdited) {
-            payload.groq_api_key = apiKey.trim();
+            payload.gemini_api_key = apiKey.trim();
         }
 
         try {
@@ -105,7 +105,7 @@ export function AiConfig() {
             <CardHeader>
                 <CardTitle>AI Assistant</CardTitle>
                 <CardDescription>
-                    Configure Groq AI for automated WhatsApp replies, training documents, and system prompts.
+                    Configure Gemini AI for automated WhatsApp replies, training documents, and system prompts.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -124,17 +124,17 @@ export function AiConfig() {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-start">
-                    <Label htmlFor="groq-api-key">Groq API Key</Label>
+                    <Label htmlFor="gemini-api-key">Gemini API Key</Label>
                     <div className="space-y-2">
                         <Input
-                            id="groq-api-key"
+                            id="gemini-api-key"
                             type="password"
                             value={apiKey}
                             onChange={(e) => {
                                 setApiKey(e.target.value);
                                 setApiKeyEdited(true);
                             }}
-                            placeholder={hasApiKey ? 'Leave blank to keep existing key' : 'Enter your Groq API key'}
+                            placeholder={hasApiKey ? 'Leave blank to keep existing key' : 'Enter your Gemini API key'}
                             className="bg-slate-900 text-white"
                         />
                         <p className="text-xs text-slate-500">
@@ -172,7 +172,7 @@ export function AiConfig() {
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div className="text-sm text-slate-500">
-                        {loading ? 'Loading AI settings…' : hasApiKey ? 'Groq key is configured.' : 'AI is not configured.'}
+                        {loading ? 'Loading AI settings…' : hasApiKey ? 'Gemini key is configured.' : 'AI is not configured.'}
                     </div>
                     <Button
                         onClick={handleSave}

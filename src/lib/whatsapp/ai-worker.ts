@@ -1,13 +1,10 @@
-import { GoogleGenAI } from '@google/genai';
 import { supabaseAdmin } from '@/lib/automations/admin-client';
 import { normalizePhone } from '@/lib/whatsapp/phone-utils';
 import { sendTextMessage } from '@/lib/whatsapp/meta-api';
 import { logHttpEvent } from '@/lib/logs/http-logs';
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+import { generateGeminiResponse } from '@/lib/automations/gemini-client';
 
 const MAX_HISTORY_MESSAGES = 15;
-const MAX_GEMINI_RETRIES = 3;
 const BASE_BACKOFF_MS = 1000;
 
 interface WhatsAppMessage {
@@ -360,9 +357,9 @@ async function handleIncomingWhatsAppMessage(
   const slidingWindowHistory = (recentMessages ?? [])
     .reverse()
     .map((msg: any) => ({
-      role: msg.sender_type === 'customer' ? 'user' : 'assistant',
+      role: (msg.sender_type === 'customer' ? 'user' : 'model') as 'user' | 'model',
       parts: [{ text: String(msg.content_text || '') }],
-    }) as { role: 'user' | 'assistant'; parts: { text: string }[] })
+    }))
     .filter((item) => item.parts[0].text.trim().length > 0);
 
   const incomingText = contentText || '[WhatsApp message]';
@@ -406,74 +403,4 @@ async function handleIncomingWhatsAppMessage(
     last_message_text: aiText,
     last_message_at: new Date().toISOString(),
   }).eq('id', conversationId);
-}
-
-async function generateGeminiResponse(
-  text: string,
-  systemInstruction: string,
-  history: Array<{ role: 'user' | 'assistant'; parts: Array<{ text: string }> }>
-): Promise<string> {
-  let attempt = 0;
-  let lastError: Error | null = null;
-
-  while (attempt < MAX_GEMINI_RETRIES) {
-    try {
-      const response: any = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [
-          ...history,
-          { role: 'user', parts: [{ text }] },
-        ],
-        config: {
-          systemInstruction,
-          temperature: 0.3,
-        },
-      });
-
-      const textResult = parseGeminiText(response);
-      if (!textResult) {
-        throw new Error('Gemini returned empty response');
-      }
-      return textResult;
-    } catch (error: unknown) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      const message = lastError.message.toLowerCase();
-      if (message.includes('429') || message.includes('rate limit')) {
-        attempt += 1;
-        const backoff = BASE_BACKOFF_MS * 2 ** (attempt - 1);
-        await delay(backoff);
-        continue;
-      }
-      throw lastError;
-    }
-  }
-
-  throw lastError ?? new Error('Gemini generation failed');
-}
-
-function parseGeminiText(response: any): string {
-  const candidates =
-    response?.output?.[0]?.content ??
-    response?.candidates?.[0]?.content ??
-    response?.candidates ?? [];
-
-  if (!Array.isArray(candidates)) return '';
-
-  let result = '';
-  for (const item of candidates) {
-    if (typeof item.text === 'string') {
-      result += item.text;
-    }
-    if (Array.isArray(item.parts)) {
-      for (const part of item.parts) {
-        result += String(part?.text ?? '');
-      }
-    }
-  }
-
-  return result.trim();
-}
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
