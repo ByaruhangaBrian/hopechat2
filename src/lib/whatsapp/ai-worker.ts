@@ -117,11 +117,14 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
 
 export async function processPendingWhatsAppAiJobs(limit = 20): Promise<number> {
   const db = supabaseAdmin();
+  const now = new Date().toISOString();
+  console.log(`[ai-worker] Checking for pending jobs at ${now}...`);
+
   const { data: pendingJobs, error: selectError } = await db
     .from('whatsapp_ai_jobs')
     .select('*')
     .eq('status', 'pending')
-    .lte('next_run_at', new Date().toISOString())
+    .lte('next_run_at', now)
     .order('next_run_at', { ascending: true })
     .limit(limit);
 
@@ -129,10 +132,14 @@ export async function processPendingWhatsAppAiJobs(limit = 20): Promise<number> 
     console.error('[ai-worker] Failed to fetch pending jobs:', selectError);
     return 0;
   }
-  if (!pendingJobs || pendingJobs.length === 0) return 0;
+  
+  const count = pendingJobs?.length ?? 0;
+  console.log(`[ai-worker] Found ${count} pending jobs`);
+  if (count === 0) return 0;
 
   let processed = 0;
   for (const job of pendingJobs as WhatsAppAiJobRow[]) {
+    console.log(`[ai-worker] Attempting to claim job ${job.id}...`);
     const { data: claimedJob } = await db
       .from('whatsapp_ai_jobs')
       .update({ status: 'running', updated_at: new Date().toISOString() })
@@ -141,11 +148,16 @@ export async function processPendingWhatsAppAiJobs(limit = 20): Promise<number> 
       .select('*')
       .single();
 
-    if (!claimedJob) continue;
+    if (!claimedJob) {
+      console.log(`[ai-worker] Job ${job.id} already claimed by another worker`);
+      continue;
+    }
 
+    console.log(`[ai-worker] Processing claimed job ${claimedJob.id} for user ${claimedJob.user_id}`);
     try {
       await handleWhatsAppAiJob(claimedJob as WhatsAppAiJobRow);
       await db.from('whatsapp_ai_jobs').update({ status: 'done', updated_at: new Date().toISOString() }).eq('id', claimedJob.id);
+      console.log(`[ai-worker] Successfully completed job ${claimedJob.id}`);
       processed++;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -242,6 +254,7 @@ async function handleIncomingWhatsAppMessage(
 ): Promise<void> {
   const senderPhone = normalizePhone(message.from);
   const db = supabaseAdmin();
+  console.log(`[ai-worker] Handling message ${message.id} from ${senderPhone} for user ${userId}`);
 
   const { data: contact, error: contactError } = await db
     .from('contacts')
@@ -256,6 +269,7 @@ async function handleIncomingWhatsAppMessage(
 
   let contactId = contact?.id;
   if (!contactId) {
+    console.log(`[ai-worker] Creating new contact for ${senderPhone}`);
     const { data: newContact, error: createContactError } = await db
       .from('contacts')
       .insert({ user_id: userId, phone: senderPhone, name: contactName })
@@ -280,6 +294,7 @@ async function handleIncomingWhatsAppMessage(
   }
 
   if (!conversationId) {
+    console.log(`[ai-worker] Creating new conversation for contact ${contactId}`);
     const { data: newConv, error: convError } = await db
       .from('conversations')
       .insert({ user_id: userId, contact_id: contactId })
@@ -301,6 +316,7 @@ async function handleIncomingWhatsAppMessage(
     throw new Error(`Existing message lookup failed: ${dedupeError.message}`);
   }
   if (existingMsg) {
+    console.log(`[ai-worker] Message ${message.id} already processed, skipping`);
     return;
   }
 
@@ -319,6 +335,7 @@ async function handleIncomingWhatsAppMessage(
   }
 
   const createdAt = new Date(Number(message.timestamp) * 1000).toISOString();
+  console.log(`[ai-worker] Inserting customer message into messages table...`);
   const { error: insertError } = await db.from('messages').insert({
     conversation_id: conversationId,
     sender_type: 'customer',
@@ -334,6 +351,7 @@ async function handleIncomingWhatsAppMessage(
     throw new Error(`Message insert failed: ${insertError.message}`);
   }
 
+  console.log(`[ai-worker] Fetching AI settings for user ${userId}`);
   const { data: aiSettings } = await db
     .from('ai_settings')
     .select('system_prompt')
@@ -343,6 +361,7 @@ async function handleIncomingWhatsAppMessage(
   const systemInstruction = aiSettings?.system_prompt ??
     'You are a helpful customer service AI assistant. Respond to customer inquiries promptly and professionally.';
 
+  console.log(`[ai-worker] Loading history for conversation ${conversationId}`);
   const { data: recentMessages, error: historyError } = await db
     .from('messages')
     .select('sender_type, content_text')
@@ -364,8 +383,10 @@ async function handleIncomingWhatsAppMessage(
     .filter((item) => item.parts[0].text.trim().length > 0);
 
   const incomingText = contentText || '[WhatsApp message]';
+  console.log(`[ai-worker] Generating Gemini response for: "${incomingText}"`);
   const aiText = await generateGeminiResponse(incomingText, systemInstruction, slidingWindowHistory);
 
+  console.log(`[ai-worker] Inserting bot message into messages table...`);
   const { data: aiMessage, error: aiMessageError } = await db.from('messages')
     .insert({
       conversation_id: conversationId,
@@ -384,6 +405,7 @@ async function handleIncomingWhatsAppMessage(
     throw new Error(`AI message insert failed: ${aiMessageError?.message ?? 'unknown'}`);
   }
 
+  console.log(`[ai-worker] Sending Meta API request to ${senderPhone}`);
   const { messageId } = await sendTextMessage({
     phoneNumberId,
     accessToken,
@@ -392,6 +414,7 @@ async function handleIncomingWhatsAppMessage(
     contextMessageId: message.id,
   });
 
+  console.log(`[ai-worker] Meta API success, messageId: ${messageId}. Updating bot message status...`);
   const { error: updateStatusError } = await db.from('messages')
     .update({ status: 'sent', message_id: messageId })
     .eq('id', aiMessage.id);
