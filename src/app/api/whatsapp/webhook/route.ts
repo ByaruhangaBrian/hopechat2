@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from 'next/server';
 import { supabaseAdmin } from '@/lib/automations/admin-client';
 import { decrypt } from '@/lib/whatsapp/encryption';
 import { verifyMetaWebhookSignature } from '@/lib/whatsapp/webhook-signature';
@@ -125,18 +126,11 @@ export async function POST(request: NextRequest) {
     // 5. Use waitUntil (Vercel/Next.js 15+) to trigger processing immediately 
     // without blocking the response to Meta. This is much more reliable in 
     // serverless environments than a non-awaited fetch.
-    if (typeof (request as any).waitUntil === 'function') {
-      (request as any).waitUntil(
-        processPendingWhatsAppAiJobs(5).catch((err) => {
-          console.error('[webhook] Background processing failed:', err);
-        })
-      );
-    } else {
-      // Fallback for environments without waitUntil
-      void processPendingWhatsAppAiJobs(5).catch((err) => {
-        console.error('[webhook] Fallback background processing failed:', err);
-      });
-    }
+    waitUntil(
+      processPendingWhatsAppAiJobs(5).catch((err) => {
+        console.error('[webhook] Background processing failed:', err);
+      })
+    );
 
     return NextResponse.json({ status: 'queued' }, { status: 200 });
   } catch (err) {
