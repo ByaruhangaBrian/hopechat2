@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/automations/admin-client';
 import { decrypt } from '@/lib/whatsapp/encryption';
 import { verifyMetaWebhookSignature } from '@/lib/whatsapp/webhook-signature';
 import { logHttpEvent } from '@/lib/logs/http-logs';
-import { enqueueWhatsAppAiJobs } from '@/lib/whatsapp/ai-worker';
+import { enqueueWhatsAppAiJobs, processPendingWhatsAppAiJobs } from '@/lib/whatsapp/ai-worker';
 
 interface WhatsAppMessage {
   id: string;
@@ -90,7 +90,7 @@ export async function GET(request: Request) {
 }
 
 // POST - Receive messages
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const signature = request.headers.get('x-hub-signature-256');
 
@@ -122,19 +122,21 @@ export async function POST(request: Request) {
   try {
     await enqueueWhatsAppAiJobs(body);
 
-    // 5. Fire a non-awaited background fetch to trigger the queue immediately.
-    const queueUrl = new URL('/api/whatsapp/queue', request.url).toString();
-    const queueSecret = process.env.WHATSAPP_AI_QUEUE_SECRET || '';
-
-    // Non-awaited background fetch
-    void fetch(queueUrl, {
-      method: 'GET',
-      headers: {
-        'x-queue-secret': queueSecret,
-      },
-    }).catch((err) => {
-      console.error('[webhook] Background queue trigger failed:', err);
-    });
+    // 5. Use waitUntil (Vercel/Next.js 15+) to trigger processing immediately 
+    // without blocking the response to Meta. This is much more reliable in 
+    // serverless environments than a non-awaited fetch.
+    if (typeof (request as any).waitUntil === 'function') {
+      (request as any).waitUntil(
+        processPendingWhatsAppAiJobs(5).catch((err) => {
+          console.error('[webhook] Background processing failed:', err);
+        })
+      );
+    } else {
+      // Fallback for environments without waitUntil
+      void processPendingWhatsAppAiJobs(5).catch((err) => {
+        console.error('[webhook] Fallback background processing failed:', err);
+      });
+    }
 
     return NextResponse.json({ status: 'queued' }, { status: 200 });
   } catch (err) {
