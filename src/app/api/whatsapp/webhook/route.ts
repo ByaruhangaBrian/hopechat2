@@ -4,32 +4,7 @@ import { decrypt } from '@/lib/whatsapp/encryption';
 import { verifyMetaWebhookSignature } from '@/lib/whatsapp/webhook-signature';
 import { logHttpEvent } from '@/lib/logs/http-logs';
 import { enqueueWhatsAppAiJobs, processPendingWhatsAppAiJobs } from '@/lib/whatsapp/ai-worker';
-
-interface WhatsAppMessage {
-  id: string;
-  from: string;
-  timestamp: string;
-  type: string;
-  text?: { body: string };
-  image?: { id: string; mime_type: string; caption?: string };
-  video?: { id: string; mime_type: string; caption?: string };
-  document?: {
-    id: string;
-    mime_type: string;
-    filename?: string;
-    caption?: string;
-  };
-  audio?: { id: string; mime_type: string };
-  sticker?: { id: string; mime_type: string };
-  location?: {
-    latitude: number;
-    longitude: number;
-    name?: string;
-    address?: string;
-  };
-  reaction?: { message_id: string; emoji: string };
-  context?: { id: string };
-}
+import { waitUntil } from 'next/server';
 
 interface WhatsAppWebhookEntry {
   id: string;
@@ -44,7 +19,7 @@ interface WhatsAppWebhookEntry {
         profile: { name: string };
         wa_id: string;
       }>;
-      messages?: WhatsAppMessage[];
+      messages?: any[];
       statuses?: Array<{
         id: string;
         status: string;
@@ -65,7 +40,6 @@ export async function GET(request: Request) {
     const verifyToken = searchParams.get('hub.verify_token');
 
     if (mode === 'subscribe' && verifyToken && challenge) {
-      // Check all configs for matching verify token
       const { data: configs } = await supabaseAdmin()
         .from('whatsapp_config')
         .select('verify_token');
@@ -94,13 +68,12 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const signature = request.headers.get('x-hub-signature-256');
 
-  // 1. Verify Signature
+  // 1. Fast Return for Speed
+  // (We'll verify and process, but keep the flow tight)
   if (!verifyMetaWebhookSignature(rawBody, signature)) {
-    console.warn('[webhook] Invalid signature');
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
-  // 2. Parse Body
   let body: { entry?: WhatsAppWebhookEntry[] };
   try {
     body = JSON.parse(rawBody);
@@ -108,44 +81,33 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  // 3. Log Raw Event
+  // Log raw reception for traceability
   void logHttpEvent({
     userId: null,
     direction: 'incoming',
     service: 'whatsapp',
     endpoint: '/api/whatsapp/webhook',
-    payload: body,
-    note: 'raw_webhook_received',
+    payload: { stage: 'webhook_received', body },
+    note: 'webhook_received',
   });
 
-  // 4. Enqueue a background job and return immediately so WhatsApp gets a fast 200.
+  // 2. High-Speed Processing
   try {
+    // Process all enqueuing and saving tasks
     await enqueueWhatsAppAiJobs(body);
 
-    // 5. Use waitUntil (Vercel/Next.js 15+) to trigger processing immediately 
-    // without blocking the response to Meta. This is much more reliable in 
-    // serverless environments than a non-awaited fetch.
+    // 3. Background Orchestration
+    // We trigger the worker to check for overdue jobs (including old pending ones)
+    // The worker now handles the 10s debounce logic.
     (request as any).waitUntil?.(
-      processPendingWhatsAppAiJobs(5).catch((err) => {
+      processPendingWhatsAppAiJobs(10).catch((err) => {
         console.error('[webhook] Background processing failed:', err);
       })
     );
 
     return NextResponse.json({ status: 'queued' }, { status: 200 });
-  } catch (err) {
-    console.error('[webhook] Queueing error:', err);
-    void logHttpEvent({
-      userId: null,
-      direction: 'incoming',
-      service: 'whatsapp',
-      endpoint: '/api/whatsapp/webhook',
-      payload: {
-        note: 'webhook_queue_failed',
-        error: err instanceof Error ? err.message : String(err),
-        entry_count: Array.isArray(body.entry) ? body.entry.length : 0,
-      },
-      note: 'webhook_queue_failed',
-    });
-    return NextResponse.json({ error: 'Webhook queueing failed' }, { status: 500 });
+  } catch (err: any) {
+    console.error('[webhook] Flow error:', err);
+    return NextResponse.json({ error: 'Processing failed' }, { status: 500 });
   }
 }
