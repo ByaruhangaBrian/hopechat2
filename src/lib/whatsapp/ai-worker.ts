@@ -118,13 +118,16 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
 export async function processPendingWhatsAppAiJobs(limit = 20): Promise<number> {
   const db = supabaseAdmin();
   const now = new Date().toISOString();
-  console.log(`[ai-worker] Checking for pending jobs at ${now}...`);
+  
+  // Loosen the filter to handle clock skew: jobs created "now" might have a DB 
+  // timestamp slightly in the future relative to the app server's clock.
+  const queryNow = new Date(Date.now() + 5000).toISOString(); 
 
   const { data: pendingJobs, error: selectError } = await db
     .from('whatsapp_ai_jobs')
     .select('*')
     .eq('status', 'pending')
-    .lte('next_run_at', now)
+    .lte('next_run_at', queryNow)
     .order('next_run_at', { ascending: true })
     .limit(limit);
 
@@ -134,12 +137,19 @@ export async function processPendingWhatsAppAiJobs(limit = 20): Promise<number> 
   }
   
   const count = pendingJobs?.length ?? 0;
-  console.log(`[ai-worker] Found ${count} pending jobs`);
   if (count === 0) return 0;
+
+  void logHttpEvent({
+    userId: null,
+    direction: 'incoming',
+    service: 'whatsapp_worker',
+    endpoint: 'background_process',
+    payload: { note: 'processing_started', job_count: count },
+    note: 'worker_status',
+  });
 
   let processed = 0;
   for (const job of pendingJobs as WhatsAppAiJobRow[]) {
-    console.log(`[ai-worker] Attempting to claim job ${job.id}...`);
     const { data: claimedJob } = await db
       .from('whatsapp_ai_jobs')
       .update({ status: 'running', updated_at: new Date().toISOString() })
@@ -148,16 +158,21 @@ export async function processPendingWhatsAppAiJobs(limit = 20): Promise<number> 
       .select('*')
       .single();
 
-    if (!claimedJob) {
-      console.log(`[ai-worker] Job ${job.id} already claimed by another worker`);
-      continue;
-    }
+    if (!claimedJob) continue;
 
-    console.log(`[ai-worker] Processing claimed job ${claimedJob.id} for user ${claimedJob.user_id}`);
     try {
       await handleWhatsAppAiJob(claimedJob as WhatsAppAiJobRow);
       await db.from('whatsapp_ai_jobs').update({ status: 'done', updated_at: new Date().toISOString() }).eq('id', claimedJob.id);
-      console.log(`[ai-worker] Successfully completed job ${claimedJob.id}`);
+      
+      void logHttpEvent({
+        userId: claimedJob.user_id,
+        direction: 'incoming',
+        service: 'whatsapp_worker',
+        endpoint: 'background_process',
+        payload: { note: 'job_done', job_id: claimedJob.id },
+        note: 'job_success',
+      });
+
       processed++;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -186,10 +201,10 @@ export async function processPendingWhatsAppAiJobs(limit = 20): Promise<number> 
       void logHttpEvent({
         userId: claimedJob.user_id,
         direction: 'incoming',
-        service: 'whatsapp',
-        endpoint: '/api/whatsapp/queue',
+        service: 'whatsapp_worker',
+        endpoint: 'background_process',
         payload: { note: 'job_failed', job_id: claimedJob.id, error: message },
-        note: 'job_failed',
+        note: 'job_error',
       });
     }
   }
