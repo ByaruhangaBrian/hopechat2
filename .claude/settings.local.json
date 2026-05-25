@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(dir)",
+      "Bash(git remote *)",
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'Fix TypeScript errors and missing dependencies *)",
+      "Bash(git commit -m 'Fix signup error handling and add real database integration *)",
+      "Bash(git push *)",
+      "Bash(node scripts/migrate.js)",
+      "Bash(npx tsc *)",
+      "Bash(npx prisma *)",
+      "Bash(git commit *)",
+      "Bash(npx ts-node *)",
+      "Bash(npx tsx *)",
+      "Bash(curl -s http://localhost:3001/api/super-admin/users)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(curl -s http://localhost:3002/api/super-admin/businesses)",
+      "Bash(npx next *)"
+    ]
+  }
+}

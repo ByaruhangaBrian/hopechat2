@@ -1,0 +1,11 @@
+{
+    "env": {
+        "ANTHROPIC_BASE_URL": "https://opencode.ai/zen",
+        "ANTHROPIC_AUTH_TOKEN": "sk-LHbtwNiOburdSe0YEhfMt5MQLDihG8tA7HE4EYmCfqy91FpMvEsiKFrC5P9X3zUS",
+        "ANTHROPIC_CUSTOM_MODEL_OPTION": "minimax-m2.5-free",
+        "ANTHROPIC_CUSTOM_MODEL_OPTION_NAME": "MiniMax M2.5 Free via OpenCode Zen",
+        "ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION": "OpenCode Zen free MiniMax model",
+        "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY": "1"
+    },
+    "model": "minimax-m2.5-free"
+}
