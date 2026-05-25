@@ -27,12 +27,19 @@ export async function generateGeminiResponse(
 ): Promise<string> {
   let attempt = 0;
 
+  // Create a model instance with the specific system instruction for this request
+  const dynamicModel = genAI.getGenerativeModel({ 
+    model: 'gemini-2.5-flash',
+    systemInstruction: systemInstruction,
+    generationConfig: {
+      temperature: 0.3,
+    }
+  });
+
   while (attempt < MAX_RETRIES) {
     try {
-      // Create a fresh chat session for each request to ensure system instruction is applied
-      const chat = model.startChat({
+      const chat = dynamicModel.startChat({
         history: history,
-        systemInstruction: systemInstruction,
       });
 
       const result = await chat.sendMessage(text);
