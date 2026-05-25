@@ -5,6 +5,7 @@ import { logHttpEvent } from '@/lib/logs/http-logs';
 import { generateGeminiResponse } from '@/lib/automations/gemini-client';
 
 const MAX_HISTORY_MESSAGES = 15;
+const MAX_GEMINI_RETRIES = 3;
 const BASE_BACKOFF_MS = 1000;
 
 interface WhatsAppMessage {
