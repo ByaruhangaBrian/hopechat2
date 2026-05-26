@@ -8,6 +8,7 @@ import {
   MessageSquare,
   Activity,
   ArrowUpRight,
+  Settings,
 } from "lucide-react";
 import {
   Card,
