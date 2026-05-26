@@ -4,7 +4,6 @@ import { decrypt } from '@/lib/whatsapp/encryption';
 import { verifyMetaWebhookSignature } from '@/lib/whatsapp/webhook-signature';
 import { logHttpEvent } from '@/lib/logs/http-logs';
 import { enqueueWhatsAppAiJobs, processPendingWhatsAppAiJobs } from '@/lib/whatsapp/ai-worker';
-import { waitUntil } from 'next/server';
 
 interface WhatsAppWebhookEntry {
   id: string;

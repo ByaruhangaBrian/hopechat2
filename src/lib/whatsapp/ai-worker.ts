@@ -93,7 +93,7 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
               retry_count: 0,
               updated_at: new Date().toISOString(),
             },
-            { onConflict: 'conversation_id', where: 'status = \'pending\'' }
+            { onConflict: 'conversation_id' }
           );
 
         if (upsertError) {

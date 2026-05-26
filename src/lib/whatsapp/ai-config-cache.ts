@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './admin-client';
+import { supabaseAdmin } from '../automations/admin-client';
 
 interface AiConfig {
   system_prompt: string;
