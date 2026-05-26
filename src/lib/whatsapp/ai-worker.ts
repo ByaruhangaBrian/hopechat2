@@ -161,14 +161,16 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
  */
 export async function processPendingWhatsAppAiJobs(limit = 10): Promise<number> {
   const db = supabaseAdmin();
-  const now = new Date().toISOString();
+  const now = new Date();
+  // Buffer to pick up jobs scheduled slightly in the future (debounce workaround)
+  const dueTime = new Date(now.getTime() + 7000).toISOString(); 
 
   // Pick jobs that are due
   const { data: jobs, error } = await db
     .from('whatsapp_ai_jobs')
     .select('*')
     .eq('status', 'pending')
-    .lte('next_run_at', now)
+    .lte('next_run_at', dueTime)
     .order('next_run_at', { ascending: true })
     .limit(limit);
 

@@ -204,15 +204,20 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
   const { data: steps, error: stepsErr } = await scoped
 
   if (stepsErr) {
+    console.error('[automations] steps fetch error:', stepsErr)
     await finalizeLog(args.logId, 'failed', stepsErr.message)
     return
   }
+
   if (!steps || steps.length === 0) {
+    console.warn('[automations] no steps found for automation:', args.automation.id, 'parentStepId:', args.parentStepId, 'branch:', args.branch)
     if (args.parentStepId === null && args.logId) {
       await finalizeLog(args.logId, 'success', null)
     }
     return
   }
+
+  console.log(`[automations] executing ${steps.length} steps for automation: ${args.automation.id}`)
 
   const results: AutomationLogStepResult[] = []
   let status: 'success' | 'partial' | 'failed' = 'success'
