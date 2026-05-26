@@ -6,6 +6,7 @@ import { generateGeminiResponse } from '@/lib/automations/gemini-client';
 import { getBusinessAiConfig } from './ai-config-cache';
 import { runAutomationsForTrigger } from '@/lib/automations/engine';
 import { decrypt } from './encryption';
+import { GoogleGenAI } from '@google/genai'; // Strict requirement: import from the new SDK package
 
 const DEBOUNCE_DELAY_MS = 5000; // 5 seconds
 const MAX_HISTORY_MESSAGES = 15;

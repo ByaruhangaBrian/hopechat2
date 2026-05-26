@@ -1,6 +1,6 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
-const MAX_RETRIES = 5;
+const MAX_RETRIES = 3;
 const INITIAL_BACKOFF_MS = 1000;
 
 interface MessageContent {
@@ -10,6 +10,7 @@ interface MessageContent {
 
 /**
  * Unified function to generate Gemini responses with exponential backoff for 429 errors.
+ * Uses the new @google/genai SDK as requested.
  */
 export async function generateGeminiResponse(
   text: string,
@@ -22,64 +23,61 @@ export async function generateGeminiResponse(
     throw new Error('Gemini API key is missing');
   }
 
-  const genAI = new GoogleGenerativeAI(finalApiKey);
+  const ai = new GoogleGenAI({ apiKey: finalApiKey });
   let attempt = 0;
 
-  const modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-pro'];
-  let lastError: any = null;
+  // Standardize model to gemini-2.5-flash as requested
+  const MODEL_NAME = 'gemini-2.5-flash';
 
-  for (const modelName of modelsToTry) {
-    const dynamicModel = genAI.getGenerativeModel({ 
-      model: modelName,
-      systemInstruction: systemInstruction,
-      generationConfig: {
-        temperature: 0.3,
-      }
-    });
+  while (attempt < MAX_RETRIES) {
+    try {
+      console.log(`[gemini] Generating response with @google/genai | model: ${MODEL_NAME} (Attempt ${attempt + 1})`);
 
-    attempt = 0; // Reset attempts for each model
-    while (attempt < 2) { // 2 attempts per model to fail fast and try next
-      try {
-        console.log(`[gemini] Generating response for model: ${modelName} (Attempt ${attempt + 1})`);
-        const chat = dynamicModel.startChat({
-          history: history,
-        });
-
-        const result = await chat.sendMessage(text);
-        const response = await result.response;
-        const responseText = response.text();
-
-        if (!responseText) {
-          throw new Error('Gemini returned an empty response');
+      // The new SDK syntax: ai.models.generateContent
+      // systemInstruction is inside config
+      const response = await ai.models.generateContent({
+        model: MODEL_NAME,
+        contents: [
+          ...history,
+          { role: 'user', parts: [{ text: text }] }
+        ],
+        config: {
+          systemInstruction: systemInstruction,
+          temperature: 0.3,
         }
+      });
 
-        return responseText.trim();
-      } catch (error: any) {
-        attempt++;
-        lastError = error;
-        
-        console.error(`[gemini] Error with model ${modelName}:`, {
-          message: error?.message,
-          status: error?.status,
-        });
+      // The new SDK response structure
+      const responseText = response.text;
 
-        const isRateLimit = 
-          error?.status === 429 || 
-          error?.message?.includes('429') || 
-          error?.message?.toLowerCase().includes('rate limit');
-
-        if (isRateLimit && attempt < 2) {
-          const backoff = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1);
-          await new Promise(resolve => setTimeout(resolve, backoff));
-          continue;
-        }
-
-        // If it's a 404 or other fatal error, break inner loop and try next model
-        break;
+      if (!responseText) {
+        throw new Error('Gemini returned an empty response');
       }
+
+      return responseText.trim();
+    } catch (error: any) {
+      attempt++;
+      
+      console.error(`[gemini] Error with model ${MODEL_NAME}:`, {
+        message: error?.message,
+        status: error?.status,
+      });
+
+      const isRateLimit = 
+        error?.status === 429 || 
+        error?.message?.includes('429') || 
+        error?.message?.toLowerCase().includes('rate limit');
+
+      if (isRateLimit && attempt < MAX_RETRIES) {
+        const backoff = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1);
+        console.warn(`[gemini] Rate limited. Retrying in ${backoff}ms (Attempt ${attempt}/${MAX_RETRIES})`);
+        await new Promise(resolve => setTimeout(resolve, backoff));
+        continue;
+      }
+
+      throw error;
     }
   }
 
-  console.error('[gemini] All models failed. Last error:', lastError);
-  throw lastError || new Error('Gemini generation failed for all attempted models');
+  throw new Error('Gemini generation failed after maximum retries');
 }
