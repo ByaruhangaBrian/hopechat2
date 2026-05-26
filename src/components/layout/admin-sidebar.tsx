@@ -156,16 +156,16 @@ export function AdminSidebar({ open = false, onClose }: AdminSidebarProps) {
               className="min-w-56 bg-slate-900 text-slate-100 ring-slate-700"
             >
               <DropdownMenuItem
-                asChild
-              >
-                <Link
-                  href="/settings?tab=profile"
-                  className="flex items-center gap-2"
-                >
-                  <User className="size-4" />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
+                render={
+                  <Link
+                    href="/settings?tab=profile"
+                    className="flex items-center gap-2"
+                  >
+                    <User className="size-4" />
+                    Profile
+                  </Link>
+                }
+              />
               <DropdownMenuSeparator className="bg-slate-800" />
               <DropdownMenuItem
                 onClick={signOut}

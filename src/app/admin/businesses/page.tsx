@@ -171,11 +171,13 @@ export default function BusinessesPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-800">
-                          <MoreVertical className="h-4 w-4 text-slate-400" />
-                        </Button>
-                      </DropdownMenuTrigger>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-800">
+                            <MoreVertical className="h-4 w-4 text-slate-400" />
+                          </Button>
+                        }
+                      />
                       <DropdownMenuContent align="end" className="bg-slate-900 border-slate-800 text-slate-200">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-slate-800" />

@@ -16,17 +16,24 @@ import {
 import { MessageSquare, CheckCircle } from "lucide-react";
 
 export default function SignupPage() {
+  const [step, setStep] = useState(1);
   const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  
+  // WhatsApp Setup (Step 2)
+  const [phoneNumberId, setPhoneNumberId] = useState("");
+  const [wabaId, setWabaId] = useState("");
+  const [accessToken, setAccessToken] = useState("");
+
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const supabase = createClient();
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -40,6 +47,12 @@ export default function SignupPage() {
       return;
     }
 
+    setStep(2);
+  };
+
+  const handleSignup = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setError(null);
     setLoading(true);
 
     const { error } = await supabase.auth.signUp({
@@ -49,6 +62,12 @@ export default function SignupPage() {
         data: {
           full_name: fullName,
           business_name: businessName,
+          // Store WhatsApp config in metadata for post-confirmation auto-setup
+          onboarding_whatsapp: phoneNumberId ? {
+            phone_number_id: phoneNumberId,
+            waba_id: wabaId,
+            access_token: accessToken,
+          } : null,
         },
       },
     });
@@ -108,96 +127,163 @@ export default function SignupPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSignup} className="flex flex-col gap-4">
-            {error && (
-              <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-                {error}
+          {step === 1 ? (
+            <form onSubmit={handleNextStep} className="flex flex-col gap-4">
+              {error && (
+                <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="fullName" className="text-slate-300">
+                  Full name
+                </Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
+                />
               </div>
-            )}
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="fullName" className="text-slate-300">
-                Full name
-              </Label>
-              <Input
-                id="fullName"
-                type="text"
-                placeholder="John Doe"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
-              />
-            </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="businessName" className="text-slate-300">
+                  Business name
+                </Label>
+                <Input
+                  id="businessName"
+                  type="text"
+                  placeholder="Acme Inc."
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  required
+                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
+                />
+              </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="businessName" className="text-slate-300">
-                Business name
-              </Label>
-              <Input
-                id="businessName"
-                type="text"
-                placeholder="Acme Inc."
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                required
-                className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
-              />
-            </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="email" className="text-slate-300">
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
+                />
+              </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email" className="text-slate-300">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
-              />
-            </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="password" className="text-slate-300">
+                  Password
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="At least 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
+                />
+              </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="password" className="text-slate-300">
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="At least 6 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
-              />
-            </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="confirmPassword" className="text-slate-300">
+                  Confirm password
+                </Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="Repeat your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
+                />
+              </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="confirmPassword" className="text-slate-300">
-                Confirm password
-              </Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Repeat your password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
-              />
-            </div>
+              <Button
+                type="submit"
+                className="mt-2 h-10 w-full bg-violet-600 text-white hover:bg-violet-500"
+              >
+                Continue setup
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleSignup} className="flex flex-col gap-4">
+              <div className="mb-2">
+                <h3 className="text-sm font-semibold text-white">WhatsApp Configuration (Optional)</h3>
+                <p className="text-xs text-slate-400">Link your Meta WhatsApp Business API now or skip to do it later in settings.</p>
+              </div>
 
-            <Button
-              type="submit"
-              disabled={loading}
-              className="mt-2 h-10 w-full bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-50"
-            >
-              {loading ? "Creating account..." : "Create account"}
-            </Button>
-          </form>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="phoneNumberId" className="text-slate-300">
+                  Phone Number ID
+                </Label>
+                <Input
+                  id="phoneNumberId"
+                  placeholder="e.g. 100234567890123"
+                  value={phoneNumberId}
+                  onChange={(e) => setPhoneNumberId(e.target.value)}
+                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="wabaId" className="text-slate-300">
+                  WhatsApp Business Account ID
+                </Label>
+                <Input
+                  id="wabaId"
+                  placeholder="e.g. 100234567890456"
+                  value={wabaId}
+                  onChange={(e) => setWabaId(e.target.value)}
+                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="accessToken" className="text-slate-300">
+                  Permanent Access Token
+                </Label>
+                <Input
+                  id="accessToken"
+                  type="password"
+                  placeholder="Enter your Meta access token"
+                  value={accessToken}
+                  onChange={(e) => setAccessToken(e.target.value)}
+                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500"
+                />
+              </div>
+
+              <div className="mt-4 flex flex-col gap-2">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="h-10 w-full bg-violet-600 text-white hover:bg-violet-500"
+                >
+                  {loading ? "Creating account..." : "Finish setup"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => handleSignup()}
+                  disabled={loading}
+                  className="text-slate-400 hover:bg-slate-800 hover:text-white"
+                >
+                  Skip for now
+                </Button>
+              </div>
+            </form>
+          )}
 
           <p className="mt-6 text-center text-sm text-slate-400">
             Already have an account?{" "}
