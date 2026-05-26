@@ -161,8 +161,8 @@ BEGIN
 
   -- Also set is_superadmin in auth.users app_metadata for middleware efficiency
   UPDATE auth.users 
-  SET raw_app_metadata = jsonb_set(
-    COALESCE(raw_app_metadata, '{}'::jsonb), 
+  SET raw_app_meta_data = jsonb_set(
+    COALESCE(raw_app_meta_data, '{}'::jsonb), 
     '{is_superadmin}', 
     is_admin_email::text::jsonb
   )
