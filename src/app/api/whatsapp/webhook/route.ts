@@ -39,19 +39,15 @@ export async function GET(request: Request) {
     const verifyToken = searchParams.get('hub.verify_token');
 
     if (mode === 'subscribe' && verifyToken && challenge) {
-      const { data: configs } = await supabaseAdmin()
-        .from('whatsapp_config')
-        .select('verify_token');
+      const { data: settings } = await supabaseAdmin()
+        .from('system_settings')
+        .select('value')
+        .eq('id', 'whatsapp_global')
+        .maybeSingle();
 
-      const isMatch = configs?.some((c: any) => {
-        try {
-          return decrypt(c.verify_token) === verifyToken;
-        } catch {
-          return false;
-        }
-      });
+      const globalVerifyToken = settings?.value?.verify_token;
 
-      if (isMatch) {
+      if (globalVerifyToken && globalVerifyToken === verifyToken) {
         return new Response(challenge, { status: 200 });
       }
     }

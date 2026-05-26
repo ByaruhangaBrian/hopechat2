@@ -398,16 +398,13 @@ export function WhatsAppConfig() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-300">Webhook Verify Token</Label>
-              <Input
-                placeholder="Create a custom verify token"
-                value={verifyToken}
-                onChange={(e) => setVerifyToken(e.target.value)}
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
-              />
-              <p className="text-xs text-slate-500">
-                A custom string you create. Must match the token you set in Meta webhook settings.
-              </p>
+              <Label className="text-slate-300 font-medium">System-wide Webhook Config</Label>
+              <Alert className="bg-violet-900/10 border-violet-800/30">
+                <AlertDescription className="text-slate-400 text-xs">
+                  The Webhook Callback URL and Verify Token are now managed globally for all tenants. 
+                  Please use the values below in your Meta App Dashboard.
+                </AlertDescription>
+              </Alert>
             </div>
           </CardContent>
         </Card>
@@ -420,7 +417,7 @@ export function WhatsAppConfig() {
               Use this URL as your webhook callback in the Meta App Dashboard.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label className="text-slate-300">Webhook Callback URL</Label>
               <div className="flex gap-2">
@@ -438,6 +435,19 @@ export function WhatsAppConfig() {
                   <Copy className="size-4" />
                 </Button>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-slate-300">Global Verify Token</Label>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value="Check with your System Admin"
+                  className="bg-slate-800 border-slate-700 text-slate-500 font-mono text-sm italic"
+                />
+              </div>
+              <p className="text-[10px] text-slate-500 italic">
+                Note: Individual verify tokens are deprecated in favor of the system-wide token.
+              </p>
             </div>
           </CardContent>
         </Card>

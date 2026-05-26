@@ -17,6 +17,12 @@ interface Profile {
   email: string;
   avatar_url: string | null;
   role: string | null;
+  business_id: string | null;
+  is_superadmin: boolean;
+  business?: {
+    name: string;
+    features: Record<string, boolean>;
+  };
 }
 
 interface AuthContextValue {
@@ -50,7 +56,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, email, avatar_url, role")
+        .select(`
+          id, 
+          full_name, 
+          email, 
+          avatar_url, 
+          role, 
+          business_id, 
+          is_superadmin,
+          business:businesses (
+            name,
+            features
+          )
+        `)
         .eq("user_id", userId)
         .maybeSingle();
 

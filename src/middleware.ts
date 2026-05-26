@@ -25,6 +25,16 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Admin pages - redirect to dashboard if not superadmin
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    const isSuperadmin = user?.app_metadata?.is_superadmin === true;
+    if (!isSuperadmin) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
+  }
+
   // Auth pages - redirect to dashboard if already logged in
   if (user && (
     request.nextUrl.pathname === '/login' ||

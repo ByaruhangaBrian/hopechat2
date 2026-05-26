@@ -17,6 +17,7 @@ import { MessageSquare, CheckCircle } from "lucide-react";
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState("");
+  const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -47,6 +48,7 @@ export default function SignupPage() {
       options: {
         data: {
           full_name: fullName,
+          business_name: businessName,
         },
       },
     });
@@ -123,6 +125,21 @@ export default function SignupPage() {
                 placeholder="John Doe"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
+                required
+                className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="businessName" className="text-slate-300">
+                Business name
+              </Label>
+              <Input
+                id="businessName"
+                type="text"
+                placeholder="Acme Inc."
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
                 required
                 className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
               />

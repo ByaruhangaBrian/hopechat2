@@ -65,7 +65,7 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
       // 1. Resolve Config (Business)
       const { data: config, error: configError } = await db
         .from('whatsapp_config')
-        .select('user_id, access_token')
+        .select('user_id, business_id, access_token')
         .eq('phone_number_id', phoneNumberId)
         .maybeSingle();
 
@@ -78,6 +78,7 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
         // Log this failure as it's a common configuration issue
         void logHttpEvent({
           userId: null,
+          businessId: null,
           direction: 'incoming',
           service: 'whatsapp',
           endpoint: 'enqueue',
@@ -94,7 +95,7 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
         const contactName = contactInfo?.profile?.name || message.from;
         
         // Save message and resolve conversation
-        const conversationId = await handleIncomingMessageSaving(message, contactName, config.user_id);
+        const conversationId = await handleIncomingMessageSaving(message, contactName, config.user_id, config.business_id);
         if (!conversationId) {
           console.error('[ai-worker] Failed to save message or resolve conversation');
           continue;
@@ -130,6 +131,7 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
             .insert({
               conversation_id: conversationId,
               user_id: config.user_id,
+              business_id: config.business_id,
               phone_number_id: phoneNumberId,
               status: 'pending',
               next_run_at: nextRunAt,
@@ -140,6 +142,7 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
 
         void logHttpEvent({
           userId: config.user_id,
+          businessId: config.business_id,
           direction: 'incoming',
           service: 'whatsapp',
           endpoint: 'enqueue',
@@ -243,6 +246,7 @@ async function executeAiJob(job: any): Promise<void> {
     console.log(`[ai-worker] Guardrail triggered for conv ${job.conversation_id}. Aborting.`);
     void logHttpEvent({
       userId: job.user_id,
+      businessId: job.business_id,
       direction: 'incoming',
       service: 'ai',
       endpoint: 'guardrail',
@@ -285,14 +289,30 @@ async function executeAiJob(job: any): Promise<void> {
   systemInstruction += `RULES:\n1. Be concise.\n2. If user is angry or asks for a refund, say "I am escalating this to a human manager" and end your message with [ESCALATE].\n3. Never repeat yourself.`;
 
   // 4. AI Generation
-  void logHttpEvent({ userId: job.user_id, direction: 'incoming', service: 'ai', endpoint: 'generate', payload: { stage: 'ai_started', conv_id: job.conversation_id }, note: 'ai_started' });
+  void logHttpEvent({ 
+    userId: job.user_id, 
+    businessId: job.business_id,
+    direction: 'incoming', 
+    service: 'ai', 
+    endpoint: 'generate', 
+    payload: { stage: 'ai_started', conv_id: job.conversation_id }, 
+    note: 'ai_started' 
+  });
   
   const aiText = await generateGeminiResponse(lastUserMessage, systemInstruction, history.slice(0, -1), aiConfig.api_key);
 
   // 5. Escalation Check
   if (aiText.includes('[ESCALATE]') || /angry|refund|human|manager/i.test(lastUserMessage)) {
     await db.from('conversations').update({ escalated: true }).eq('id', job.conversation_id);
-    void logHttpEvent({ userId: job.user_id, direction: 'incoming', service: 'ai', endpoint: 'escalate', payload: { stage: 'escalation_triggered', conv_id: job.conversation_id }, note: 'escalation_triggered' });
+    void logHttpEvent({ 
+      userId: job.user_id, 
+      businessId: job.business_id,
+      direction: 'incoming', 
+      service: 'ai', 
+      endpoint: 'escalate', 
+      payload: { stage: 'escalation_triggered', conv_id: job.conversation_id }, 
+      note: 'escalation_triggered' 
+    });
   }
 
   const cleanAiText = aiText.replace('[ESCALATE]', '').trim();
@@ -329,6 +349,7 @@ async function executeAiJob(job: any): Promise<void> {
 
       void logHttpEvent({
         userId: job.user_id,
+        businessId: job.business_id,
         direction: 'outgoing',
         service: 'ai',
         endpoint: 'send',
@@ -346,22 +367,22 @@ async function executeAiJob(job: any): Promise<void> {
   }
 }
 
-async function handleIncomingMessageSaving(message: WhatsAppMessage, contactName: string, userId: string): Promise<string | null> {
+async function handleIncomingMessageSaving(message: WhatsAppMessage, contactName: string, userId: string, businessId: string): Promise<string | null> {
   const db = supabaseAdmin();
   const senderPhone = normalizePhone(message.from);
 
   // Contact lookup/create
-  let { data: contact } = await db.from('contacts').select('id').eq('user_id', userId).eq('phone', senderPhone).maybeSingle();
+  let { data: contact } = await db.from('contacts').select('id').eq('business_id', businessId).eq('phone', senderPhone).maybeSingle();
   if (!contact) {
-    const { data: newContact } = await db.from('contacts').insert({ user_id: userId, phone: senderPhone, name: contactName }).select().single();
+    const { data: newContact } = await db.from('contacts').insert({ user_id: userId, business_id: businessId, phone: senderPhone, name: contactName }).select().single();
     contact = newContact;
   }
   if (!contact) return null;
 
   // Conversation lookup/create
-  let { data: conv } = await db.from('conversations').select('id').eq('user_id', userId).eq('contact_id', contact.id).maybeSingle();
+  let { data: conv } = await db.from('conversations').select('id').eq('business_id', businessId).eq('contact_id', contact.id).maybeSingle();
   if (!conv) {
-    const { data: newConv } = await db.from('conversations').insert({ user_id: userId, contact_id: contact.id, ai_enabled: true }).select().single();
+    const { data: newConv } = await db.from('conversations').insert({ user_id: userId, business_id: businessId, contact_id: contact.id, ai_enabled: true }).select().single();
     conv = newConv;
   }
   if (!conv) return null;
@@ -388,6 +409,7 @@ async function handleIncomingMessageSaving(message: WhatsAppMessage, contactName
   try {
     await runAutomationsForTrigger({
       userId,
+      businessId,
       triggerType: 'new_message_received',
       contactId: contact.id,
       context: {

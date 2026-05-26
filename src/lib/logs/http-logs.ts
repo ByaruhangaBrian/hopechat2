@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/automations/admin-client'
 
 export interface LogEventArgs {
     userId?: string | null
+    businessId?: string | null
     direction: 'incoming' | 'outgoing'
     service: string
     endpoint?: string | null
@@ -16,6 +17,7 @@ export async function logHttpEvent(args: LogEventArgs) {
         const db = supabaseAdmin()
         await db.from('http_logs').insert({
             user_id: args.userId ?? null,
+            business_id: args.businessId ?? null,
             direction: args.direction,
             service: args.service,
             endpoint: args.endpoint ?? null,

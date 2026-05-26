@@ -17,6 +17,7 @@ import {
   LogOut,
   User,
   X,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Avatar,
@@ -62,6 +63,15 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
     // Only pathname drives this — onClose identity doesn't need to re-run it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
+
+  const features = profile?.business?.features || {};
+
+  const filteredNavItems = navItems.filter((item) => {
+    if (item.href === "/broadcasts") return features.broadcasts_enabled !== false;
+    if (item.href === "/automations") return features.automations_enabled !== false;
+    if (item.href === "/pipelines") return features.pipelines_enabled !== false;
+    return true;
+  });
 
   // Lock body scroll and allow Escape to close while the drawer is open on
   // mobile. No-ops on desktop because the sidebar isn't positioned there.
@@ -131,7 +141,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         {/* Main navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <ul className="flex flex-col gap-1">
-            {navItems.map((item) => {
+            {filteredNavItems.map((item) => {
               const isActive =
                 pathname === item.href ||
                 (item.href !== "/dashboard" && pathname.startsWith(item.href));
@@ -166,6 +176,17 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 </li>
               );
             })}
+            {profile?.is_superadmin && (
+              <li>
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-amber-400 hover:bg-slate-800 hover:text-amber-300 transition-colors lg:py-2 mt-4 border border-amber-900/30 bg-amber-900/10"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  <span className="flex-1">Admin Panel</span>
+                </Link>
+              </li>
+            )}
           </ul>
 
           <div className="my-4 border-t border-slate-800" />

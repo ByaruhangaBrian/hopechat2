@@ -41,6 +41,7 @@ export function ProfileForm() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [fullName, setFullName] = useState('');
+  const [businessName, setBusinessName] = useState('');
   const [email, setEmail] = useState('');
   const [pendingAvatar, setPendingAvatar] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -52,6 +53,7 @@ export function ProfileForm() {
   useEffect(() => {
     if (!profile) return;
     setFullName(profile.full_name ?? '');
+    setBusinessName(profile.business?.name ?? '');
     setEmail(profile.email ?? '');
   }, [profile]);
 
@@ -109,6 +111,11 @@ export function ProfileForm() {
       toast.error('Display name is required');
       return;
     }
+    const trimmedBusinessName = businessName.trim();
+    if (!trimmedBusinessName) {
+      toast.error('Business name is required');
+      return;
+    }
     const trimmedEmail = email.trim();
     if (!EMAIL_RE.test(trimmedEmail)) {
       toast.error('Enter a valid email address');
@@ -140,6 +147,15 @@ export function ProfileForm() {
         nextAvatarUrl = publicUrl;
       } else if (removeAvatar) {
         nextAvatarUrl = null;
+      }
+
+      // Update Business Name if owner
+      if (profile.role === 'owner' && trimmedBusinessName !== profile.business?.name) {
+        const { error: bizError } = await supabase
+          .from('businesses')
+          .update({ name: trimmedBusinessName })
+          .eq('id', profile.business_id);
+        if (bizError) throw new Error(`Business update failed: ${bizError.message}`);
       }
 
       // Persist name + avatar to profiles.
@@ -197,6 +213,7 @@ export function ProfileForm() {
   const dirty =
     !!profile &&
     (fullName.trim() !== (profile.full_name ?? '') ||
+      businessName.trim() !== (profile.business?.name ?? '') ||
       email.trim().toLowerCase() !== (profile.email ?? '').toLowerCase() ||
       pendingAvatar !== null ||
       removeAvatar);
@@ -281,6 +298,27 @@ export function ProfileForm() {
               disabled={saving}
               required
             />
+          </div>
+
+          {/* Business Name */}
+          <div className="space-y-2">
+            <Label htmlFor="profile-business-name" className="text-slate-200">
+              Business name
+            </Label>
+            <Input
+              id="profile-business-name"
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+              placeholder="Acme Inc."
+              maxLength={120}
+              disabled={saving || profile?.role !== 'owner'}
+              required
+            />
+            {profile?.role !== 'owner' && (
+              <p className="text-[11px] text-slate-500">
+                Only the business owner can change the business name.
+              </p>
+            )}
           </div>
 
           {/* Email */}

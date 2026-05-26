@@ -40,6 +40,7 @@ export interface AutomationContext {
 
 export interface DispatchInput {
   userId: string
+  businessId: string
   triggerType: AutomationTriggerType
   contactId?: string | null
   context?: AutomationContext
@@ -58,7 +59,7 @@ export async function runAutomationsForTrigger(input: DispatchInput): Promise<vo
     const { data: automations, error } = await db
       .from('automations')
       .select('*')
-      .eq('user_id', input.userId)
+      .eq('business_id', input.businessId)
       .eq('trigger_type', input.triggerType)
       .eq('is_active', true)
 
@@ -89,6 +90,7 @@ export async function resumePendingExecution(pending: {
   id: string
   automation_id: string
   user_id: string
+  business_id: string
   contact_id: string | null
   log_id: string | null
   parent_step_id: string | null
@@ -113,6 +115,7 @@ export async function resumePendingExecution(pending: {
     await executeStepsFrom({
       automation: automation as Automation,
       contactId: pending.contact_id,
+      businessId: pending.business_id,
       context: pending.context ?? {},
       parentStepId: pending.parent_step_id,
       branch: pending.branch,
@@ -139,6 +142,7 @@ async function executeAutomation(automation: Automation, input: DispatchInput) {
     .insert({
       automation_id: automation.id,
       user_id: automation.user_id,
+      business_id: input.businessId,
       contact_id: input.contactId ?? null,
       trigger_event: input.triggerType,
       steps_executed: [],
@@ -155,6 +159,7 @@ async function executeAutomation(automation: Automation, input: DispatchInput) {
   await executeStepsFrom({
     automation,
     contactId: input.contactId ?? null,
+    businessId: input.businessId,
     context: input.context ?? {},
     parentStepId: null,
     branch: null,
@@ -178,6 +183,7 @@ async function executeAutomation(automation: Automation, input: DispatchInput) {
 interface ExecuteArgs {
   automation: Automation
   contactId: string | null
+  businessId: string
   context: AutomationContext
   parentStepId: string | null
   branch: 'yes' | 'no' | null
@@ -232,6 +238,7 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
       await db.from('automation_pending_executions').insert({
         automation_id: args.automation.id,
         user_id: args.automation.user_id,
+        business_id: args.businessId,
         contact_id: args.contactId,
         log_id: args.logId,
         parent_step_id: args.parentStepId,
