@@ -141,7 +141,7 @@ DECLARE
   business_name TEXT;
   is_admin_email BOOLEAN;
 BEGIN
-  is_admin_email := (NEW.email = 'admin@hopechat.net');
+  is_admin_email := (NEW.email = 'hopetechsolutionsltd@gmail.com');
   business_name := COALESCE(NEW.raw_user_meta_data->>'business_name', 'My Business');
 
   -- Create a new business for the user
