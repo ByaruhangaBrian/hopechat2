@@ -27,7 +27,7 @@ export async function generateGeminiResponse(
 
   // Create a model instance with the specific system instruction for this request
   const dynamicModel = genAI.getGenerativeModel({ 
-    model: 'gemini-1.5-flash',
+    model: 'gemini-1.5-flash-latest',
     systemInstruction: systemInstruction,
     generationConfig: {
       temperature: 0.3,
@@ -36,6 +36,7 @@ export async function generateGeminiResponse(
 
   while (attempt < MAX_RETRIES) {
     try {
+      console.log(`[gemini] Generating response for model: gemini-1.5-flash-latest (Attempt ${attempt + 1})`);
       const chat = dynamicModel.startChat({
         history: history,
       });
@@ -52,6 +53,13 @@ export async function generateGeminiResponse(
     } catch (error: any) {
       attempt++;
       
+      console.error('[gemini] Detailed Error:', {
+        message: error?.message,
+        status: error?.status,
+        name: error?.name,
+        stack: error?.stack,
+      });
+
       const isRateLimit = 
         error?.status === 429 || 
         error?.message?.includes('429') || 

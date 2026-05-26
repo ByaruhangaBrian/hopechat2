@@ -7,7 +7,7 @@ import { getBusinessAiConfig } from './ai-config-cache';
 import { runAutomationsForTrigger } from '@/lib/automations/engine';
 import { decrypt } from './encryption';
 
-const DEBOUNCE_DELAY_MS = 10000; // 10 seconds
+const DEBOUNCE_DELAY_MS = 5000; // 5 seconds
 const MAX_HISTORY_MESSAGES = 15;
 
 interface WhatsAppMessage {
@@ -172,7 +172,23 @@ export async function processPendingWhatsAppAiJobs(limit = 10): Promise<number> 
     .order('next_run_at', { ascending: true })
     .limit(limit);
 
-  if (error || !jobs || jobs.length === 0) return 0;
+  if (error) {
+    console.error('[ai-worker] Fetch jobs error:', error);
+    return 0;
+  }
+
+  if (!jobs || jobs.length === 0) {
+    // Optional: Log heartbeat for debugging
+    void logHttpEvent({
+      userId: null,
+      direction: 'incoming',
+      service: 'ai-worker',
+      endpoint: 'heartbeat',
+      payload: { stage: 'no_jobs_found', now },
+      note: 'worker_heartbeat_idle',
+    });
+    return 0;
+  }
 
   let processed = 0;
   for (const job of jobs) {
