@@ -14,11 +14,23 @@ export async function POST(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = supabaseAdmin()
+  
+  // Fetch business_id for scoping
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('business_id')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!profile?.business_id) {
+    return NextResponse.json({ error: 'Business not found' }, { status: 403 })
+  }
+
   const { data: original, error: origErr } = await admin
     .from('automations')
     .select('*')
     .eq('id', id)
-    .eq('user_id', user.id)
+    .eq('business_id', profile.business_id)
     .maybeSingle()
   if (origErr) return NextResponse.json({ error: origErr.message }, { status: 500 })
   if (!original) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -27,6 +39,7 @@ export async function POST(
     .from('automations')
     .insert({
       user_id: user.id,
+      business_id: profile.business_id,
       name: `${original.name} (Copy)`,
       description: original.description,
       trigger_type: original.trigger_type,

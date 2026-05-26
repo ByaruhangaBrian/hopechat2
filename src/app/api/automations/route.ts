@@ -79,10 +79,23 @@ export async function POST(request: Request) {
   }
 
   const admin = supabaseAdmin()
+
+  // Fetch business_id for scoping
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('business_id')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!profile?.business_id) {
+    return NextResponse.json({ error: 'Business not found' }, { status: 403 })
+  }
+
   const { data: automation, error: insertErr } = await admin
     .from('automations')
     .insert({
       user_id: user.id,
+      business_id: profile.business_id,
       name: effectiveName,
       description: effectiveDescription ?? null,
       trigger_type: effectiveTriggerType,
