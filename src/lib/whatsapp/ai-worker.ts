@@ -4,6 +4,7 @@ import { sendTextMessage } from '@/lib/whatsapp/meta-api';
 import { logHttpEvent } from '@/lib/logs/http-logs';
 import { generateGeminiResponse } from '@/lib/automations/gemini-client';
 import { getBusinessAiConfig } from './ai-config-cache';
+import { runAutomationsForTrigger } from '@/lib/automations/engine';
 
 const DEBOUNCE_DELAY_MS = 10000; // 10 seconds
 const MAX_HISTORY_MESSAGES = 15;
@@ -254,7 +255,7 @@ async function executeAiJob(job: any): Promise<void> {
   // 4. AI Generation
   void logHttpEvent({ userId: job.user_id, direction: 'incoming', service: 'ai', endpoint: 'generate', payload: { stage: 'ai_started', conv_id: job.conversation_id }, note: 'ai_started' });
   
-  const aiText = await generateGeminiResponse(lastUserMessage, systemInstruction, history.slice(0, -1));
+  const aiText = await generateGeminiResponse(lastUserMessage, systemInstruction, history.slice(0, -1), aiConfig.api_key);
 
   // 5. Escalation Check
   if (aiText.includes('[ESCALATE]') || /angry|refund|human|manager/i.test(lastUserMessage)) {
@@ -338,6 +339,17 @@ async function handleIncomingMessageSaving(message: WhatsAppMessage, contactName
     last_message_at: new Date().toISOString(),
     unread_count: 1 // In a real app, this would be an increment
   }).eq('id', conv.id);
+
+  // 3. Fire Automations
+  void runAutomationsForTrigger({
+    userId,
+    triggerType: 'new_message_received',
+    contactId: contact.id,
+    context: {
+      message_text: message.text?.body || '',
+      conversation_id: conv.id,
+    },
+  });
 
   return conv.id;
 }

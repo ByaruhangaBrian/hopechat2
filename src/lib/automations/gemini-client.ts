@@ -1,14 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Initialize the Gemini client once at the top level
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ 
-  model: 'gemini-2.5-flash',
-  generationConfig: {
-    temperature: 0.3,
-  }
-});
-
 const MAX_RETRIES = 5;
 const INITIAL_BACKOFF_MS = 1000;
 
@@ -23,13 +14,20 @@ interface MessageContent {
 export async function generateGeminiResponse(
   text: string,
   systemInstruction: string,
-  history: MessageContent[] = []
+  history: MessageContent[] = [],
+  apiKey?: string
 ): Promise<string> {
+  const finalApiKey = apiKey || process.env.GEMINI_API_KEY || '';
+  if (!finalApiKey) {
+    throw new Error('Gemini API key is missing');
+  }
+
+  const genAI = new GoogleGenerativeAI(finalApiKey);
   let attempt = 0;
 
   // Create a model instance with the specific system instruction for this request
   const dynamicModel = genAI.getGenerativeModel({ 
-    model: 'gemini-2.5-flash',
+    model: 'gemini-1.5-flash',
     systemInstruction: systemInstruction,
     generationConfig: {
       temperature: 0.3,

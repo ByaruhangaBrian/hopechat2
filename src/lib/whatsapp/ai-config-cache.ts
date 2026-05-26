@@ -1,9 +1,11 @@
 import { supabaseAdmin } from '../automations/admin-client';
+import { decrypt } from './encryption';
 
 interface AiConfig {
   system_prompt: string;
   training_documents: string[];
   is_enabled: boolean;
+  api_key: string;
   expires_at: number;
 }
 
@@ -20,7 +22,7 @@ export async function getBusinessAiConfig(userId: string): Promise<Omit<AiConfig
 
   const { data, error } = await supabaseAdmin()
     .from('ai_settings')
-    .select('system_prompt, training_documents, is_enabled')
+    .select('system_prompt, training_documents, is_enabled, groq_api_key')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -32,6 +34,7 @@ export async function getBusinessAiConfig(userId: string): Promise<Omit<AiConfig
     system_prompt: data.system_prompt,
     training_documents: data.training_documents || [],
     is_enabled: data.is_enabled,
+    api_key: data.groq_api_key ? decrypt(data.groq_api_key) : '',
   };
 
   aiConfigCache.set(userId, {

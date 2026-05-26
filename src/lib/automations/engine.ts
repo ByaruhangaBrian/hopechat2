@@ -19,6 +19,7 @@ import { supabaseAdmin } from './admin-client'
 import { engineSendText, engineSendTemplate } from './meta-send'
 import { generateGeminiResponse } from './gemini-client'
 import { logHttpEvent } from '@/lib/logs/http-logs'
+import { decrypt } from '@/lib/whatsapp/encryption'
 
 // ------------------------------------------------------------
 // Public API
@@ -473,18 +474,28 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       if (conversationErr) throw new Error(`conversation lookup failed: ${conversationErr.message}`)
       if (!conversation) throw new Error('conversation not found')
 
+      // If AI is disabled for this conversation, we enable it as part of "Assigning to AI"
       if (conversation.ai_enabled === false) {
-        if (cfg.enable_fallback_to_human) {
-          return 'AI disabled for this conversation; human takeover preserved'
-        }
-        throw new Error('AI is disabled for this conversation')
+        await db
+          .from('conversations')
+          .update({ ai_enabled: true })
+          .eq('id', conversationId)
       }
 
       const { data: aiSettings } = await db
         .from('ai_settings')
-        .select('system_prompt, training_documents')
+        .select('system_prompt, training_documents, groq_api_key, is_enabled')
         .eq('user_id', args.automation.user_id)
         .single()
+
+      if (!aiSettings?.is_enabled) {
+        if (cfg.enable_fallback_to_human) {
+          return 'AI settings are disabled for this user; human takeover preserved'
+        }
+        throw new Error('AI settings are disabled for this user')
+      }
+
+      const apiKey = aiSettings.groq_api_key ? decrypt(aiSettings.groq_api_key) : ''
 
       let systemInstruction = aiSettings?.system_prompt ?? 'You are a helpful customer service AI assistant.'
       if (aiSettings?.training_documents && aiSettings.training_documents.length > 0) {
@@ -500,7 +511,7 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
 
       const conversationHistory = (messages ?? [])
         .map((message) => {
-          const role = (message.sender_type === 'bot' ? 'model' : 'user') as 'model' | 'user'
+          const role = (message.sender_type === 'customer' ? 'user' : 'model') as 'model' | 'user'
           return {
             role,
             parts: [{ text: String(message.content_text ?? '') }],
@@ -513,7 +524,7 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       if (!userMessage) throw new Error('assign_to_ai has no user message to generate from')
 
       try {
-        const replyText = await generateGeminiResponse(userMessage, systemInstruction, conversationHistory.slice(0, -1))
+        const replyText = await generateGeminiResponse(userMessage, systemInstruction, conversationHistory.slice(0, -1), apiKey)
         const { whatsapp_message_id } = await engineSendText({
           userId: args.automation.user_id,
           conversationId,
