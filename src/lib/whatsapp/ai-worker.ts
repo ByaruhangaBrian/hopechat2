@@ -54,16 +54,35 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
       if (!value) continue;
 
       const phoneNumberId = String(value.metadata?.phone_number_id || '');
-      if (!phoneNumberId) continue;
+      if (!phoneNumberId) {
+        console.warn('[ai-worker] Missing phone_number_id in metadata');
+        continue;
+      }
 
       // 1. Resolve Config (Business)
-      const { data: config } = await db
+      const { data: config, error: configError } = await db
         .from('whatsapp_config')
         .select('user_id, access_token')
         .eq('phone_number_id', phoneNumberId)
-        .single();
+        .maybeSingle();
 
-      if (!config) continue;
+      if (configError) {
+        console.error('[ai-worker] Config lookup error:', configError);
+        continue;
+      }
+
+      if (!config) {
+        // Log this failure as it's a common configuration issue
+        void logHttpEvent({
+          userId: null,
+          direction: 'incoming',
+          service: 'whatsapp',
+          endpoint: 'enqueue',
+          payload: { stage: 'config_missing', phone_number_id: phoneNumberId },
+          note: 'whatsapp_config_not_found',
+        });
+        continue;
+      }
 
       // 2. Process Messages
       const messages = value.messages || [];
@@ -73,34 +92,47 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
         
         // Save message and resolve conversation
         const conversationId = await handleIncomingMessageSaving(message, contactName, config.user_id);
-        if (!conversationId) continue;
+        if (!conversationId) {
+          console.error('[ai-worker] Failed to save message or resolve conversation');
+          continue;
+        }
 
-        // 3. Upsert AI Job with Debounce
-        // If a pending job exists for this conversation, we update its next_run_at to reset the timer.
-        // This effectively cancels the old timer and starts a new 10s wait.
+        // 3. Schedule AI Job with Debounce
+        // We use a manual check-then-upsert-like flow because partial indexes 
+        // don't work with standard Supabase upsert onConflict.
         const nextRunAt = new Date(Date.now() + DEBOUNCE_DELAY_MS).toISOString();
 
-        const { error: upsertError } = await db
+        // Check for existing pending job
+        const { data: existingJob } = await db
           .from('whatsapp_ai_jobs')
-          .upsert(
-            {
+          .select('id')
+          .eq('conversation_id', conversationId)
+          .eq('status', 'pending')
+          .maybeSingle();
+
+        if (existingJob) {
+          // Update existing job's timer (reset debounce)
+          await db
+            .from('whatsapp_ai_jobs')
+            .update({
+              next_run_at: nextRunAt,
+              payload: message,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existingJob.id);
+        } else {
+          // Create new pending job
+          await db
+            .from('whatsapp_ai_jobs')
+            .insert({
               conversation_id: conversationId,
               user_id: config.user_id,
               phone_number_id: phoneNumberId,
               status: 'pending',
               next_run_at: nextRunAt,
-              payload: message, // Store the last message that triggered it
+              payload: message,
               retry_count: 0,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'conversation_id' }
-          );
-
-        if (upsertError) {
-          // If update failed (maybe because it's already 'running'), we create a new one
-          // But with our unique index on (conversation_id) WHERE status='pending', 
-          // upsert handles the 'reset timer' logic perfectly.
-          console.error('[ai-worker] Upsert error:', upsertError);
+            });
         }
 
         void logHttpEvent({
@@ -108,7 +140,7 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
           direction: 'incoming',
           service: 'whatsapp',
           endpoint: 'enqueue',
-          payload: { stage: 'ai_job_created_or_reset', conversation_id: conversationId, next_run_at: nextRunAt },
+          payload: { stage: 'ai_job_scheduled', conversation_id: conversationId, next_run_at: nextRunAt },
           note: 'ai_job_scheduled',
         });
       }
@@ -252,6 +284,21 @@ async function executeAiJob(job: any): Promise<void> {
       text: cleanAiText
     });
     await db.from('messages').update({ status: 'sent', message_id: messageId }).eq('id', msg.id);
+
+    // Update conversation with AI response
+    await db.from('conversations').update({
+      last_message_text: cleanAiText,
+      last_message_at: new Date().toISOString(),
+    }).eq('id', job.conversation_id);
+
+    void logHttpEvent({
+      userId: job.user_id,
+      direction: 'outgoing',
+      service: 'ai',
+      endpoint: 'send',
+      payload: { stage: 'ai_response_sent', conv_id: job.conversation_id, message_id: messageId },
+      note: 'ai_response_sent',
+    });
   }
 }
 

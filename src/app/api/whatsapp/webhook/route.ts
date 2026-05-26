@@ -98,15 +98,36 @@ export async function POST(request: NextRequest) {
     // 3. Background Orchestration
     // We trigger the worker to check for overdue jobs (including old pending ones)
     // The worker now handles the 10s debounce logic.
-    (request as any).waitUntil?.(
-      processPendingWhatsAppAiJobs(10).catch((err) => {
-        console.error('[webhook] Background processing failed:', err);
-      })
-    );
+    if ((request as any).waitUntil) {
+      (request as any).waitUntil(
+        processPendingWhatsAppAiJobs(10).catch((err) => {
+          console.error('[webhook] Background processing failed:', err);
+        })
+      );
+    } else {
+      // Fallback for environments without waitUntil (like local dev)
+      // We don't await it to keep the response fast, but it might be killed
+      // if the platform doesn't support background work.
+      void processPendingWhatsAppAiJobs(10).catch((err) => {
+        console.error('[webhook] Background processing failed (no waitUntil):', err);
+      });
+    }
 
     return NextResponse.json({ status: 'queued' }, { status: 200 });
   } catch (err: any) {
     console.error('[webhook] Flow error:', err);
+    
+    // Log fatal flow errors
+    void logHttpEvent({
+      userId: null,
+      direction: 'incoming',
+      service: 'whatsapp',
+      endpoint: 'webhook_fatal',
+      payload: { error: err.message, stack: err.stack },
+      statusCode: 500,
+      note: 'webhook_flow_crashed',
+    });
+
     return NextResponse.json({ error: 'Processing failed' }, { status: 500 });
   }
 }
