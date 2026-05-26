@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Background Orchestration
     // We trigger the worker to check for overdue jobs (including old pending ones)
-    // The worker now handles the 10s debounce logic.
+    // The worker now handles the debounce logic.
     if ((request as any).waitUntil) {
       (request as any).waitUntil(
         processPendingWhatsAppAiJobs(10).catch((err) => {
@@ -105,11 +105,9 @@ export async function POST(request: NextRequest) {
         })
       );
     } else {
-      // Fallback for environments without waitUntil (like local dev)
-      // We don't await it to keep the response fast, but it might be killed
-      // if the platform doesn't support background work.
-      void processPendingWhatsAppAiJobs(10).catch((err) => {
-        console.error('[webhook] Background processing failed (no waitUntil):', err);
+      // For instant production-ready feel, we await the worker
+      await processPendingWhatsAppAiJobs(10).catch((err) => {
+        console.error('[webhook] Background processing failed:', err);
       });
     }
 

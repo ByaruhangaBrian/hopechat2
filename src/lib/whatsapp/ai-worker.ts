@@ -383,15 +383,20 @@ async function handleIncomingMessageSaving(message: WhatsAppMessage, contactName
   }).eq('id', conv.id);
 
   // 3. Fire Automations
-  void runAutomationsForTrigger({
-    userId,
-    triggerType: 'new_message_received',
-    contactId: contact.id,
-    context: {
-      message_text: message.text?.body || '',
-      conversation_id: conv.id,
-    },
-  });
+  // We await this now to ensure it completes within the webhook request (instant response)
+  try {
+    await runAutomationsForTrigger({
+      userId,
+      triggerType: 'new_message_received',
+      contactId: contact.id,
+      context: {
+        message_text: message.text?.body || '',
+        conversation_id: conv.id,
+      },
+    });
+  } catch (err) {
+    console.error('[ai-worker] Automation trigger failed:', err);
+  }
 
   return conv.id;
 }

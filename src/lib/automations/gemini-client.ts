@@ -25,57 +25,61 @@ export async function generateGeminiResponse(
   const genAI = new GoogleGenerativeAI(finalApiKey);
   let attempt = 0;
 
-  // Create a model instance with the specific system instruction for this request
-  const dynamicModel = genAI.getGenerativeModel({ 
-    model: 'gemini-1.5-flash-latest',
-    systemInstruction: systemInstruction,
-    generationConfig: {
-      temperature: 0.3,
-    }
-  });
+  const modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-pro'];
+  let lastError: any = null;
 
-  while (attempt < MAX_RETRIES) {
-    try {
-      console.log(`[gemini] Generating response for model: gemini-1.5-flash-latest (Attempt ${attempt + 1})`);
-      const chat = dynamicModel.startChat({
-        history: history,
-      });
-
-      const result = await chat.sendMessage(text);
-      const response = await result.response;
-      const responseText = response.text();
-
-      if (!responseText) {
-        throw new Error('Gemini returned an empty response');
+  for (const modelName of modelsToTry) {
+    const dynamicModel = genAI.getGenerativeModel({ 
+      model: modelName,
+      systemInstruction: systemInstruction,
+      generationConfig: {
+        temperature: 0.3,
       }
+    });
 
-      return responseText.trim();
-    } catch (error: any) {
-      attempt++;
-      
-      console.error('[gemini] Detailed Error:', {
-        message: error?.message,
-        status: error?.status,
-        name: error?.name,
-        stack: error?.stack,
-      });
+    attempt = 0; // Reset attempts for each model
+    while (attempt < 2) { // 2 attempts per model to fail fast and try next
+      try {
+        console.log(`[gemini] Generating response for model: ${modelName} (Attempt ${attempt + 1})`);
+        const chat = dynamicModel.startChat({
+          history: history,
+        });
 
-      const isRateLimit = 
-        error?.status === 429 || 
-        error?.message?.includes('429') || 
-        error?.message?.toLowerCase().includes('rate limit');
+        const result = await chat.sendMessage(text);
+        const response = await result.response;
+        const responseText = response.text();
 
-      if (isRateLimit && attempt < MAX_RETRIES) {
-        const backoff = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1);
-        console.warn(`[gemini] Rate limited. Retrying in ${backoff}ms (Attempt ${attempt}/${MAX_RETRIES})`);
-        await new Promise(resolve => setTimeout(resolve, backoff));
-        continue;
+        if (!responseText) {
+          throw new Error('Gemini returned an empty response');
+        }
+
+        return responseText.trim();
+      } catch (error: any) {
+        attempt++;
+        lastError = error;
+        
+        console.error(`[gemini] Error with model ${modelName}:`, {
+          message: error?.message,
+          status: error?.status,
+        });
+
+        const isRateLimit = 
+          error?.status === 429 || 
+          error?.message?.includes('429') || 
+          error?.message?.toLowerCase().includes('rate limit');
+
+        if (isRateLimit && attempt < 2) {
+          const backoff = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1);
+          await new Promise(resolve => setTimeout(resolve, backoff));
+          continue;
+        }
+
+        // If it's a 404 or other fatal error, break inner loop and try next model
+        break;
       }
-
-      console.error('[gemini] Generation failed:', error);
-      throw error;
     }
   }
 
-  throw new Error('Gemini generation failed after maximum retries');
+  console.error('[gemini] All models failed. Last error:', lastError);
+  throw lastError || new Error('Gemini generation failed for all attempted models');
 }
