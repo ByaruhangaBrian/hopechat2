@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (data) setProfile(data);
+      if (data) setProfile(data as unknown as Profile);
     } catch (err) {
       console.error("[AuthProvider] fetchProfile threw:", err);
     }

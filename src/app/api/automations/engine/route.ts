@@ -15,6 +15,17 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // Fetch business_id for scoping
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('business_id')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!profile?.business_id) {
+    return NextResponse.json({ error: 'Business not found' }, { status: 403 })
+  }
+
   const body = await request.json().catch(() => null)
   if (!body?.trigger_type) {
     return NextResponse.json({ error: 'trigger_type required' }, { status: 400 })
@@ -22,6 +33,7 @@ export async function POST(request: Request) {
 
   await runAutomationsForTrigger({
     userId: user.id,
+    businessId: profile.business_id,
     triggerType: body.trigger_type as AutomationTriggerType,
     contactId: body.contact_id ?? null,
     context: body.context ?? {},
