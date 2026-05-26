@@ -496,6 +496,10 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       }
 
       const apiKey = aiSettings.groq_api_key ? decrypt(aiSettings.groq_api_key) : ''
+      if (!apiKey) {
+        console.warn('[automations] No API key found in ai_settings for user:', args.automation.user_id)
+        throw new Error('Gemini API key is missing in AI settings')
+      }
 
       let systemInstruction = aiSettings?.system_prompt ?? 'You are a helpful customer service AI assistant.'
       if (aiSettings?.training_documents && aiSettings.training_documents.length > 0) {
@@ -524,13 +528,33 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       if (!userMessage) throw new Error('assign_to_ai has no user message to generate from')
 
       try {
+        void logHttpEvent({
+          userId: args.automation.user_id,
+          direction: 'incoming',
+          service: 'ai',
+          endpoint: 'automation:generate',
+          payload: { stage: 'automation_ai_started', conv_id: conversationId },
+          note: 'automation_ai_started',
+        })
+
         const replyText = await generateGeminiResponse(userMessage, systemInstruction, conversationHistory.slice(0, -1), apiKey)
+        
         const { whatsapp_message_id } = await engineSendText({
           userId: args.automation.user_id,
           conversationId,
           contactId: args.contactId,
           text: replyText,
         })
+
+        void logHttpEvent({
+          userId: args.automation.user_id,
+          direction: 'outgoing',
+          service: 'ai',
+          endpoint: 'automation:send',
+          payload: { stage: 'automation_ai_sent', conv_id: conversationId, wa_id: whatsapp_message_id },
+          note: 'automation_ai_sent',
+        })
+
         return `AI reply sent via Meta (${whatsapp_message_id})`
       } catch (err: any) {
         // Log and insert a visible bot message so agents see the failure

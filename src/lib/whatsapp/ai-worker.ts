@@ -5,6 +5,7 @@ import { logHttpEvent } from '@/lib/logs/http-logs';
 import { generateGeminiResponse } from '@/lib/automations/gemini-client';
 import { getBusinessAiConfig } from './ai-config-cache';
 import { runAutomationsForTrigger } from '@/lib/automations/engine';
+import { decrypt } from './encryption';
 
 const DEBOUNCE_DELAY_MS = 10000; // 10 seconds
 const MAX_HISTORY_MESSAGES = 15;
@@ -221,6 +222,18 @@ async function executeAiJob(job: any): Promise<void> {
 
   if (!conv || !conv.ai_enabled || conv.human_takeover || conv.escalated || conv.paused) {
     console.log(`[ai-worker] Guardrail triggered for conv ${job.conversation_id}. Aborting.`);
+    void logHttpEvent({
+      userId: job.user_id,
+      direction: 'incoming',
+      service: 'ai',
+      endpoint: 'guardrail',
+      payload: { 
+        stage: 'ai_aborted', 
+        conv_id: job.conversation_id,
+        reason: !conv ? 'conv_not_found' : !conv.ai_enabled ? 'ai_disabled' : conv.human_takeover ? 'human_takeover' : conv.escalated ? 'escalated' : 'paused'
+      },
+      note: 'ai_job_aborted_guardrail',
+    });
     return;
   }
 
@@ -278,28 +291,39 @@ async function executeAiJob(job: any): Promise<void> {
   const { data: contact } = await db.from('contacts').select('phone').eq('id', conv.contact_id).single();
 
   if (whatsappConfig && contact) {
-    const { messageId } = await sendTextMessage({
-      phoneNumberId: job.phone_number_id,
-      accessToken: whatsappConfig.access_token,
-      to: contact.phone,
-      text: cleanAiText
-    });
-    await db.from('messages').update({ status: 'sent', message_id: messageId }).eq('id', msg.id);
+    try {
+      const accessToken = decrypt(whatsappConfig.access_token);
+      const { messageId } = await sendTextMessage({
+        phoneNumberId: job.phone_number_id,
+        accessToken,
+        to: contact.phone,
+        text: cleanAiText
+      });
+      
+      await db.from('messages').update({ status: 'sent', message_id: messageId }).eq('id', msg.id);
 
-    // Update conversation with AI response
-    await db.from('conversations').update({
-      last_message_text: cleanAiText,
-      last_message_at: new Date().toISOString(),
-    }).eq('id', job.conversation_id);
+      // Update conversation with AI response
+      await db.from('conversations').update({
+        last_message_text: cleanAiText,
+        last_message_at: new Date().toISOString(),
+      }).eq('id', job.conversation_id);
 
-    void logHttpEvent({
-      userId: job.user_id,
-      direction: 'outgoing',
-      service: 'ai',
-      endpoint: 'send',
-      payload: { stage: 'ai_response_sent', conv_id: job.conversation_id, message_id: messageId },
-      note: 'ai_response_sent',
-    });
+      void logHttpEvent({
+        userId: job.user_id,
+        direction: 'outgoing',
+        service: 'ai',
+        endpoint: 'send',
+        payload: { stage: 'ai_response_sent', conv_id: job.conversation_id, message_id: messageId },
+        note: 'ai_response_sent',
+      });
+    } catch (sendErr: any) {
+      console.error('[ai-worker] Failed to send AI response:', sendErr);
+      await db.from('messages').update({ status: 'failed' }).eq('id', msg.id);
+      throw sendErr; // Rethrow to mark job as failed
+    }
+  } else {
+    console.warn('[ai-worker] Missing whatsappConfig or contact for sending. Config found:', !!whatsappConfig, 'Contact found:', !!contact);
+    throw new Error('Missing configuration or contact for sending AI response');
   }
 }
 
