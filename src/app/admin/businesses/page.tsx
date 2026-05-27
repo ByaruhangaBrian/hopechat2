@@ -174,22 +174,22 @@ export default function BusinessesPage() {
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         render={
-                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-800">
-                            <MoreVertical className="h-4 w-4 text-slate-400" />
-                          </Button>
+                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-800" />
                         }
-                      />
+                      >
+                        <MoreVertical className="h-4 w-4 text-slate-400" />
+                      </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-slate-900 border-slate-800 text-slate-200">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-slate-800" />
                         <DropdownMenuItem
                           render={
-                            <Link href={`/admin/businesses/${biz.id}`} className="flex items-center w-full cursor-pointer">
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </Link>
+                            <Link href={`/admin/businesses/${biz.id}`} className="flex items-center w-full cursor-pointer" />
                           }
-                        />
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           render={
                             <Link 
@@ -198,12 +198,12 @@ export default function BusinessesPage() {
                                 toast.info(`Viewing dashboard as Superadmin. All tenant data for ${biz.name} is accessible due to your elevation.`);
                               }}
                               className="flex items-center w-full cursor-pointer"
-                            >
-                              <ShieldAlert className="mr-2 h-4 w-4" />
-                              Login as Tenant
-                            </Link>
+                            />
                           }
-                        />
+                        >
+                          <ShieldAlert className="mr-2 h-4 w-4" />
+                          Login as Tenant
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

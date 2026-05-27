@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import {
   Building2,
   Users,
@@ -15,6 +16,8 @@ import {
   Shield,
   CreditCard,
   Zap,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import {
   Card,
@@ -69,22 +72,30 @@ export default function BusinessDetailsPage() {
 
       setBusiness(biz);
 
-      // Fetch related stats (using service role bypass or superadmin elevation)
+      // Fetch conversation IDs first to get message count
+      const { data: conversations } = await supabase
+        .from("conversations")
+        .select("id")
+        .eq("business_id", id);
+      
+      const conversationIds = conversations?.map(c => c.id) || [];
+
+      // Fetch related stats
       const [
         { count: userCount },
-        { count: msgCount },
+        messageCountResult,
         { count: contactCount },
       ] = await Promise.all([
         supabase.from("profiles").select("*", { count: "exact", head: true }).eq("business_id", id),
-        supabase.from("messages").select("*", { count: "exact", head: true }).filter("conversation_id", "in", 
-          supabase.from("conversations").select("id").eq("business_id", id)
-        ),
+        conversationIds.length > 0 
+          ? supabase.from("messages").select("*", { count: "exact", head: true }).in("conversation_id", conversationIds)
+          : Promise.resolve({ count: 0 }),
         supabase.from("contacts").select("*", { count: "exact", head: true }).eq("business_id", id),
       ]);
 
       setStats({
         userCount: userCount || 0,
-        messageCount: msgCount || 0,
+        messageCount: (messageCountResult as any).count || 0,
         contactCount: contactCount || 0,
       });
 
@@ -217,9 +228,3 @@ export default function BusinessDetailsPage() {
     </div>
   );
 }
-
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(' ');
-}
-
-import { CheckCircle2, XCircle } from "lucide-react";
