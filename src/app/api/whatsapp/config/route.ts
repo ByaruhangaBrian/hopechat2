@@ -164,6 +164,17 @@ export async function POST(request: Request) {
       )
     }
 
+    // Fetch business_id for scoping
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('business_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!profile?.business_id) {
+      return NextResponse.json({ error: 'Business not found' }, { status: 403 })
+    }
+
     // Upsert — overwrite any existing (possibly corrupted) config
     const { data: existing } = await supabase
       .from('whatsapp_config')
@@ -175,6 +186,7 @@ export async function POST(request: Request) {
       const { error: updateError } = await supabase
         .from('whatsapp_config')
         .update({
+          business_id: profile.business_id,
           phone_number_id,
           waba_id: waba_id || null,
           access_token: encryptedAccessToken,
@@ -197,6 +209,7 @@ export async function POST(request: Request) {
         .from('whatsapp_config')
         .insert({
           user_id: user.id,
+          business_id: profile.business_id,
           phone_number_id,
           waba_id: waba_id || null,
           access_token: encryptedAccessToken,

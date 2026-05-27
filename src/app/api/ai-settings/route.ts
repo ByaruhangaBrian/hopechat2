@@ -35,11 +35,23 @@ async function internalSaveAiSettings(
   const db = supabaseAdmin()
   const encryptedKey = settings.groq_api_key ? encrypt(settings.groq_api_key) : ''
 
+  // Fetch business_id for scoping
+  const { data: profile } = await db
+    .from('profiles')
+    .select('business_id')
+    .eq('user_id', userId)
+    .single()
+
+  if (!profile?.business_id) {
+    throw new Error('Business not found for user')
+  }
+
   const { data, error } = await db
     .from('ai_settings')
     .upsert(
       {
         user_id: userId,
+        business_id: profile.business_id,
         ...settings,
         groq_api_key: encryptedKey,
         updated_at: new Date().toISOString(),
