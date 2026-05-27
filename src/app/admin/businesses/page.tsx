@@ -259,7 +259,7 @@ export default function BusinessesPage() {
                           }
                         />
                         <DropdownMenuItem
-                          onClick={() => {
+                          onSelect={() => {
                             setEditingBusiness(biz);
                             setIsFormOpen(true);
                           }}
@@ -284,19 +284,19 @@ export default function BusinessesPage() {
                         />
                         <DropdownMenuSeparator className="bg-slate-800" />
                         {biz.status !== 'active' && (
-                          <DropdownMenuItem onClick={() => updateStatus(biz.id, 'active')} className="cursor-pointer">
+                          <DropdownMenuItem onSelect={() => updateStatus(biz.id, 'active')} className="cursor-pointer">
                             Mark as Active
                           </DropdownMenuItem>
                         )}
                         {biz.status !== 'past_due' && (
-                          <DropdownMenuItem onClick={() => updateStatus(biz.id, 'past_due')} className="cursor-pointer">
+                          <DropdownMenuItem onSelect={() => updateStatus(biz.id, 'past_due')} className="cursor-pointer">
                             Mark as Past Due
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator className="bg-slate-800" />
                         <DropdownMenuItem 
                           variant="destructive"
-                          onClick={() => {
+                          onSelect={() => {
                             if (confirm(`Permanently delete ${biz.name}?`)) {
                               deleteBusiness(biz.id);
                             }
