@@ -81,7 +81,7 @@ export function BusinessForm({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-slate-300">Initial Status</Label>
-              <Select value={status} onValueChange={setStatus}>
+              <Select value={status} onValueChange={(val) => val && setStatus(val)}>
                 <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
@@ -95,7 +95,7 @@ export function BusinessForm({
             </div>
             <div className="space-y-2">
               <Label className="text-slate-300">Plan Tier</Label>
-              <Select value={planTier} onValueChange={setPlanTier}>
+              <Select value={planTier} onValueChange={(val) => val && setPlanTier(val)}>
                 <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
                   <SelectValue placeholder="Select plan" />
                 </SelectTrigger>
