@@ -12,6 +12,8 @@ import {
   XCircle,
   Eye,
   ShieldAlert,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import {
   Table,
@@ -31,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BusinessForm } from "@/components/admin/business-form";
 
 interface Business {
   id: string;
@@ -44,6 +47,8 @@ interface Business {
 export default function BusinessesPage() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
   const supabase = createClient();
 
   async function fetchBusinesses() {
@@ -70,7 +75,7 @@ export default function BusinessesPage() {
     if (!biz) return;
 
     const newFeatures = { ...biz.features, [feature]: !currentValue };
-    
+
     const { error } = await supabase
       .from("businesses")
       .update({ features: newFeatures })
@@ -85,10 +90,6 @@ export default function BusinessesPage() {
   }
 
   async function deleteBusiness(businessId: string) {
-    if (!confirm("Are you sure you want to delete this business? All related data (contacts, messages, etc.) will be permanently erased.")) {
-      return;
-    }
-
     const { error } = await supabase
       .from("businesses")
       .delete()
@@ -116,21 +117,32 @@ export default function BusinessesPage() {
     }
   }
 
-  async function createBusiness() {
-    const name = prompt("Enter new business name:");
-    if (!name) return;
+  async function handleFormSubmit(data: { name: string; status: string; plan_tier: string }) {
+    if (editingBusiness) {
+      const { error } = await supabase
+        .from("businesses")
+        .update(data)
+        .eq("id", editingBusiness.id);
 
-    const { data, error } = await supabase
-      .from("businesses")
-      .insert({ name, status: 'trialing', plan_tier: 'basic' })
-      .select()
-      .single();
-
-    if (error) {
-      toast.error("Failed to create business");
+      if (error) {
+        toast.error("Failed to update business");
+        throw error;
+      }
+      toast.success("Business updated");
+      setBusinesses(prev => prev.map(b => b.id === editingBusiness.id ? { ...b, ...data } : b));
     } else {
+      const { data: newBiz, error } = await supabase
+        .from("businesses")
+        .insert(data)
+        .select()
+        .single();
+
+      if (error) {
+        toast.error("Failed to create business");
+        throw error;
+      }
       toast.success("Business created");
-      setBusinesses(prev => [data, ...prev]);
+      setBusinesses(prev => [newBiz, ...prev]);
     }
   }
 
@@ -155,10 +167,13 @@ export default function BusinessesPage() {
           <p className="text-slate-400">Manage tenants and their subscription features.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="border-slate-800" onClick={fetchBusinesses} disabled={loading}>
+          <Button variant="outline" className="border-slate-800 text-slate-300" onClick={fetchBusinesses} disabled={loading}>
             Refresh
           </Button>
-          <Button className="bg-violet-600 hover:bg-violet-500" onClick={createBusiness}>
+          <Button className="bg-violet-600 hover:bg-violet-500 text-white" onClick={() => {
+            setEditingBusiness(null);
+            setIsFormOpen(true);
+          }}>
             Create Business
           </Button>
         </div>
@@ -228,27 +243,37 @@ export default function BusinessesPage() {
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger
-                        className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 focus:outline-none transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 hover:text-white focus:outline-none transition-colors"
                       >
                         <MoreVertical className="h-4 w-4" />
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-slate-900 border-slate-800 text-slate-200">
+                      <DropdownMenuContent align="end" className="bg-slate-900 border-slate-800 text-slate-200 min-w-48">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-slate-800" />
                         <DropdownMenuItem
                           render={
                             <Link href={`/admin/businesses/${biz.id}`} className="flex items-center w-full cursor-pointer">
                               <Eye className="mr-2 h-4 w-4" />
-                              View Details
+                              View Intelligence
                             </Link>
                           }
                         />
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setEditingBusiness(biz);
+                            setIsFormOpen(true);
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit Settings
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           render={
                             <Link 
                               href="/dashboard" 
                               onClick={() => {
-                                toast.info(`Viewing dashboard as Superadmin. All tenant data for ${biz.name} is accessible due to your elevation.`);
+                                toast.info(`Viewing dashboard as Superadmin. All tenant data for ${biz.name} is accessible.`);
                               }}
                               className="flex items-center w-full cursor-pointer"
                             >
@@ -259,20 +284,26 @@ export default function BusinessesPage() {
                         />
                         <DropdownMenuSeparator className="bg-slate-800" />
                         {biz.status !== 'active' && (
-                          <DropdownMenuItem onClick={() => updateStatus(biz.id, 'active')}>
+                          <DropdownMenuItem onClick={() => updateStatus(biz.id, 'active')} className="cursor-pointer">
                             Mark as Active
                           </DropdownMenuItem>
                         )}
                         {biz.status !== 'past_due' && (
-                          <DropdownMenuItem onClick={() => updateStatus(biz.id, 'past_due')}>
+                          <DropdownMenuItem onClick={() => updateStatus(biz.id, 'past_due')} className="cursor-pointer">
                             Mark as Past Due
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator className="bg-slate-800" />
                         <DropdownMenuItem 
                           variant="destructive"
-                          onClick={() => deleteBusiness(biz.id)}
+                          onClick={() => {
+                            if (confirm(`Permanently delete ${biz.name}?`)) {
+                              deleteBusiness(biz.id);
+                            }
+                          }}
+                          className="cursor-pointer"
                         >
+                          <Trash2 className="mr-2 h-4 w-4" />
                           Delete Business
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -284,6 +315,19 @@ export default function BusinessesPage() {
           </TableBody>
         </Table>
       </div>
+
+      <BusinessForm
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        onSubmit={handleFormSubmit}
+        initialData={editingBusiness ? {
+          name: editingBusiness.name,
+          status: editingBusiness.status,
+          plan_tier: editingBusiness.plan_tier,
+        } : undefined}
+        title={editingBusiness ? "Edit Business" : "Create Business"}
+        description={editingBusiness ? "Update tenant configuration." : "Provision a new tenant environment."}
+      />
     </div>
   );
 }
