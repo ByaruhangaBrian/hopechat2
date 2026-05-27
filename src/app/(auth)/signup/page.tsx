@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/card";
 import { MessageSquare, CheckCircle } from "lucide-react";
 
+import { logHttpEvent } from "@/lib/logs/http-logs";
+
 export default function SignupPage() {
   const [step, setStep] = useState(1);
   const [fullName, setFullName] = useState("");
@@ -55,7 +57,7 @@ export default function SignupPage() {
     setError(null);
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -75,8 +77,27 @@ export default function SignupPage() {
     if (error) {
       setError(error.message);
       setLoading(false);
+
+      void logHttpEvent({
+        direction: 'system',
+        service: 'auth',
+        endpoint: 'signup',
+        payload: { email, businessName, error: error.message },
+        statusCode: 400,
+        note: 'signup_failed'
+      });
       return;
     }
+
+    void logHttpEvent({
+      userId: data.user?.id,
+      direction: 'system',
+      service: 'auth',
+      endpoint: 'signup',
+      payload: { email, businessName },
+      statusCode: 201,
+      note: 'signup_success'
+    });
 
     setSuccess(true);
     setLoading(false);

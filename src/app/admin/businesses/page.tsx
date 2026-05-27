@@ -1,5 +1,4 @@
-"use client";
-
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -9,7 +8,7 @@ import {
   MoreVertical,
   CheckCircle2,
   XCircle,
-  Settings,
+  Eye,
   ShieldAlert,
 } from "lucide-react";
 import {
@@ -172,22 +171,32 @@ export default function BusinessesPage() {
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger
-                        render={
-                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-800">
-                            <MoreVertical className="h-4 w-4 text-slate-400" />
-                          </Button>
-                        }
-                      />
+                        asChild
+                      >
+                        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-800">
+                          <MoreVertical className="h-4 w-4 text-slate-400" />
+                        </Button>
+                      </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-slate-900 border-slate-800 text-slate-200">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-slate-800" />
-                        <DropdownMenuItem className="focus:bg-slate-800 focus:text-white cursor-pointer">
-                          <Settings className="mr-2 h-4 w-4" />
-                          View Details
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/businesses/${biz.id}`} className="flex items-center w-full cursor-pointer">
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="focus:bg-slate-800 focus:text-white cursor-pointer">
-                          <ShieldAlert className="mr-2 h-4 w-4" />
-                          Login as Tenant
+                        <DropdownMenuItem asChild>
+                          <Link 
+                            href="/dashboard" 
+                            onClick={() => {
+                              toast.info(`Viewing dashboard as Superadmin. All tenant data for ${biz.name} is accessible due to your elevation.`);
+                            }}
+                            className="flex items-center w-full cursor-pointer"
+                          >
+                            <ShieldAlert className="mr-2 h-4 w-4" />
+                            Login as Tenant
+                          </Link>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

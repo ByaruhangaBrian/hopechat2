@@ -3,8 +3,8 @@ import { supabaseAdmin } from '@/lib/automations/admin-client'
 export interface LogEventArgs {
     userId?: string | null
     businessId?: string | null
-    direction: 'incoming' | 'outgoing'
-    service: string
+    direction: 'incoming' | 'outgoing' | 'system'
+    service: 'whatsapp' | 'ai' | 'automation' | 'auth' | 'system' | 'broadcast' | string
     endpoint?: string | null
     payload?: unknown
     headers?: Record<string, unknown> | null

@@ -1,5 +1,4 @@
-"use client";
-
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -30,21 +29,28 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     async function fetchStats() {
+      const yesterday = new Date();
+      yesterday.setHours(yesterday.getHours() - 24);
+
       const [
         { count: bizCount },
         { count: userCount },
         { count: msgCount },
+        { count: activeCount },
       ] = await Promise.all([
         supabase.from("businesses").select("*", { count: "exact", head: true }),
         supabase.from("profiles").select("*", { count: "exact", head: true }),
         supabase.from("messages").select("*", { count: "exact", head: true }),
+        supabase.from("messages")
+          .select("*", { count: "exact", head: true })
+          .gt("created_at", yesterday.toISOString()),
       ]);
 
       setStats({
         businesses: bizCount || 0,
         users: userCount || 0,
         messages: msgCount || 0,
-        activeToday: bizCount || 0, // Placeholder
+        activeToday: activeCount || 0,
       });
       setLoading(false);
     }
@@ -71,10 +77,10 @@ export default function AdminDashboard() {
       description: "WhatsApp interactions",
     },
     {
-      title: "Active Tenants",
+      title: "Active Today",
       value: stats.activeToday,
       icon: Activity,
-      description: "Active in last 24h",
+      description: "Messages in last 24h",
     },
   ];
 
@@ -111,20 +117,26 @@ export default function AdminDashboard() {
             <CardDescription>Common administrative tasks.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2">
-            <button className="flex items-center justify-between rounded-lg border border-slate-800 p-3 hover:bg-slate-800 transition-colors">
+            <Link 
+              href="/admin/businesses"
+              className="flex items-center justify-between rounded-lg border border-slate-800 p-3 hover:bg-slate-800 transition-colors"
+            >
               <div className="flex items-center gap-3">
                 <Building2 className="h-4 w-4 text-violet-500" />
                 <span className="text-sm text-slate-200">Review new signups</span>
               </div>
               <ArrowUpRight className="h-4 w-4 text-slate-500" />
-            </button>
-            <button className="flex items-center justify-between rounded-lg border border-slate-800 p-3 hover:bg-slate-800 transition-colors">
+            </Link>
+            <Link 
+              href="/admin/settings"
+              className="flex items-center justify-between rounded-lg border border-slate-800 p-3 hover:bg-slate-800 transition-colors"
+            >
               <div className="flex items-center gap-3">
                 <Settings className="h-4 w-4 text-violet-500" />
                 <span className="text-sm text-slate-200">Configure global webhooks</span>
               </div>
               <ArrowUpRight className="h-4 w-4 text-slate-500" />
-            </button>
+            </Link>
           </CardContent>
         </Card>
 

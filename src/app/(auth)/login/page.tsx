@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/card";
 import { MessageSquare } from "lucide-react";
 
+import { logHttpEvent } from "@/lib/logs/http-logs";
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,7 +31,7 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -37,8 +39,27 @@ export default function LoginPage() {
     if (error) {
       setError(error.message);
       setLoading(false);
+      
+      void logHttpEvent({
+        direction: 'system',
+        service: 'auth',
+        endpoint: 'login',
+        payload: { email, error: error.message },
+        statusCode: 401,
+        note: 'login_failed'
+      });
       return;
     }
+
+    void logHttpEvent({
+      userId: data.user.id,
+      direction: 'system',
+      service: 'auth',
+      endpoint: 'login',
+      payload: { email },
+      statusCode: 200,
+      note: 'login_success'
+    });
 
     router.push("/dashboard");
   };
