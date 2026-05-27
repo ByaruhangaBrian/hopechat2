@@ -84,6 +84,56 @@ export default function BusinessesPage() {
     }
   }
 
+  async function deleteBusiness(businessId: string) {
+    if (!confirm("Are you sure you want to delete this business? All related data (contacts, messages, etc.) will be permanently erased.")) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("businesses")
+      .delete()
+      .eq("id", businessId);
+
+    if (error) {
+      toast.error("Failed to delete business");
+    } else {
+      toast.success("Business deleted successfully");
+      setBusinesses(prev => prev.filter(b => b.id !== businessId));
+    }
+  }
+
+  async function updateStatus(businessId: string, newStatus: string) {
+    const { error } = await supabase
+      .from("businesses")
+      .update({ status: newStatus })
+      .eq("id", businessId);
+
+    if (error) {
+      toast.error("Failed to update status");
+    } else {
+      toast.success("Status updated to " + newStatus);
+      setBusinesses(prev => prev.map(b => b.id === businessId ? { ...b, status: newStatus } : b));
+    }
+  }
+
+  async function createBusiness() {
+    const name = prompt("Enter new business name:");
+    if (!name) return;
+
+    const { data, error } = await supabase
+      .from("businesses")
+      .insert({ name, status: 'trialing', plan_tier: 'basic' })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error("Failed to create business");
+    } else {
+      toast.success("Business created");
+      setBusinesses(prev => [data, ...prev]);
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -104,9 +154,14 @@ export default function BusinessesPage() {
           <h1 className="text-2xl font-bold text-white">Businesses</h1>
           <p className="text-slate-400">Manage tenants and their subscription features.</p>
         </div>
-        <Button variant="outline" className="border-slate-800" onClick={fetchBusinesses} disabled={loading}>
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="border-slate-800" onClick={fetchBusinesses} disabled={loading}>
+            Refresh
+          </Button>
+          <Button className="bg-violet-600 hover:bg-violet-500" onClick={createBusiness}>
+            Create Business
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
@@ -173,23 +228,21 @@ export default function BusinessesPage() {
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger
-                        render={
-                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-800" />
-                        }
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 focus:outline-none transition-colors"
                       >
-                        <MoreVertical className="h-4 w-4 text-slate-400" />
+                        <MoreVertical className="h-4 w-4" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-slate-900 border-slate-800 text-slate-200">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-slate-800" />
                         <DropdownMenuItem
                           render={
-                            <Link href={`/admin/businesses/${biz.id}`} className="flex items-center w-full cursor-pointer" />
+                            <Link href={`/admin/businesses/${biz.id}`} className="flex items-center w-full cursor-pointer">
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </Link>
                           }
-                        >
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
+                        />
                         <DropdownMenuItem
                           render={
                             <Link 
@@ -198,11 +251,29 @@ export default function BusinessesPage() {
                                 toast.info(`Viewing dashboard as Superadmin. All tenant data for ${biz.name} is accessible due to your elevation.`);
                               }}
                               className="flex items-center w-full cursor-pointer"
-                            />
+                            >
+                              <ShieldAlert className="mr-2 h-4 w-4" />
+                              Login as Tenant
+                            </Link>
                           }
+                        />
+                        <DropdownMenuSeparator className="bg-slate-800" />
+                        {biz.status !== 'active' && (
+                          <DropdownMenuItem onClick={() => updateStatus(biz.id, 'active')}>
+                            Mark as Active
+                          </DropdownMenuItem>
+                        )}
+                        {biz.status !== 'past_due' && (
+                          <DropdownMenuItem onClick={() => updateStatus(biz.id, 'past_due')}>
+                            Mark as Past Due
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator className="bg-slate-800" />
+                        <DropdownMenuItem 
+                          variant="destructive"
+                          onClick={() => deleteBusiness(biz.id)}
                         >
-                          <ShieldAlert className="mr-2 h-4 w-4" />
-                          Login as Tenant
+                          Delete Business
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

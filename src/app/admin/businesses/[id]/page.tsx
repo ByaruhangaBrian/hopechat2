@@ -122,10 +122,10 @@ export default function BusinessDetailsPage() {
           <div className="flex items-center gap-2 text-sm text-slate-400">
             <span className="font-mono text-xs">{business.id}</span>
             <span>•</span>
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              Joined {format(new Date(business.created_at), "MMM yyyy")}
-            </span>
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                Joined {business.created_at ? format(new Date(business.created_at), "MMM yyyy") : "Unknown"}
+              </span>
           </div>
         </div>
       </div>
