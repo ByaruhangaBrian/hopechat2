@@ -173,33 +173,37 @@ export default function BusinessesPage() {
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger
-                        asChild
-                      >
-                        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-800">
-                          <MoreVertical className="h-4 w-4 text-slate-400" />
-                        </Button>
-                      </DropdownMenuTrigger>
+                        render={
+                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-800">
+                            <MoreVertical className="h-4 w-4 text-slate-400" />
+                          </Button>
+                        }
+                      />
                       <DropdownMenuContent align="end" className="bg-slate-900 border-slate-800 text-slate-200">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-slate-800" />
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/businesses/${biz.id}`} className="flex items-center w-full cursor-pointer">
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link 
-                            href="/dashboard" 
-                            onClick={() => {
-                              toast.info(`Viewing dashboard as Superadmin. All tenant data for ${biz.name} is accessible due to your elevation.`);
-                            }}
-                            className="flex items-center w-full cursor-pointer"
-                          >
-                            <ShieldAlert className="mr-2 h-4 w-4" />
-                            Login as Tenant
-                          </Link>
-                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          render={
+                            <Link href={`/admin/businesses/${biz.id}`} className="flex items-center w-full cursor-pointer">
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </Link>
+                          }
+                        />
+                        <DropdownMenuItem
+                          render={
+                            <Link 
+                              href="/dashboard" 
+                              onClick={() => {
+                                toast.info(`Viewing dashboard as Superadmin. All tenant data for ${biz.name} is accessible due to your elevation.`);
+                              }}
+                              className="flex items-center w-full cursor-pointer"
+                            >
+                              <ShieldAlert className="mr-2 h-4 w-4" />
+                              Login as Tenant
+                            </Link>
+                          }
+                        />
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
