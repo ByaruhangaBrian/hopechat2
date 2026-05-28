@@ -20,11 +20,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function AdminSettingsPage() {
   const [whatsappSettings, setWhatsappSettings] = useState({
     verify_token: "",
     webhook_url: "",
+  });
+  const [systemConfig, setSystemConfig] = useState({
+    maintenance_mode: false,
+    announcement: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -32,15 +38,17 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     async function fetchSettings() {
-      const { data, error } = await supabase
-        .from("system_settings")
-        .select("*")
-        .eq("id", "whatsapp_global")
-        .maybeSingle();
+      const [
+        { data: wa },
+        { data: sys }
+      ] = await Promise.all([
+        supabase.from("system_settings").select("*").eq("id", "whatsapp_global").maybeSingle(),
+        supabase.from("system_settings").select("*").eq("id", "system_config").maybeSingle(),
+      ]);
 
-      if (data) {
-        setWhatsappSettings(data.value);
-      }
+      if (wa) setWhatsappSettings(wa.value);
+      if (sys) setSystemConfig(sys.value);
+      
       setLoading(false);
     }
     fetchSettings();
@@ -57,9 +65,27 @@ export default function AdminSettingsPage() {
       });
 
     if (error) {
-      toast.error("Failed to save settings");
+      toast.error("Failed to save WhatsApp settings");
     } else {
-      toast.success("System settings updated");
+      toast.success("WhatsApp settings updated");
+    }
+    setSaving(false);
+  }
+
+  async function handleSaveSystem() {
+    setSaving(true);
+    const { error } = await supabase
+      .from("system_settings")
+      .upsert({
+        id: "system_config",
+        value: systemConfig,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (error) {
+      toast.error("Failed to save system config");
+    } else {
+      toast.success("Platform configuration updated");
     }
     setSaving(false);
   }
@@ -133,19 +159,48 @@ export default function AdminSettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900 border-slate-800 border-dashed">
+        <Card className="bg-slate-900 border-slate-800">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white/50">
-              <ShieldCheck className="h-5 w-5" />
-              Security & Compliance (Future)
+            <CardTitle className="flex items-center gap-2 text-white">
+              <ShieldCheck className="h-5 w-5 text-amber-500" />
+              Platform Control
             </CardTitle>
             <CardDescription>
-              Future settings for data retention, global maintenance mode, and audit logging.
+              Manage application availability and global communications.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-center py-8 text-slate-600 italic text-sm">
-              More system-wide controls coming soon.
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-slate-800/50 border border-slate-800">
+              <div className="space-y-0.5">
+                <Label className="text-base text-white">Maintenance Mode</Label>
+                <p className="text-xs text-slate-400">
+                  Block all non-admin access to the application.
+                </p>
+              </div>
+              <Switch 
+                checked={systemConfig.maintenance_mode}
+                onCheckedChange={(val) => setSystemConfig(prev => ({ ...prev, maintenance_mode: val }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-slate-300">System Announcement</Label>
+              <Textarea 
+                value={systemConfig.announcement}
+                onChange={(e) => setSystemConfig(prev => ({ ...prev, announcement: e.target.value }))}
+                placeholder="Message for all tenant dashboards..."
+                className="bg-slate-800 border-slate-700 text-slate-200 min-h-[100px]"
+              />
+              <p className="text-[11px] text-slate-500">
+                This will be displayed as a banner on every business dashboard.
+              </p>
+            </div>
+
+            <div className="flex justify-end border-t border-slate-800 pt-6">
+              <Button onClick={handleSaveSystem} disabled={saving || loading} className="bg-violet-600 hover:bg-violet-500">
+                <Save className="mr-2 h-4 w-4" />
+                {saving ? "Saving..." : "Save Platform Config"}
+              </Button>
             </div>
           </CardContent>
         </Card>
