@@ -48,6 +48,16 @@ export function BusinessForm({
   const [status, setStatus] = useState(initialData?.status ?? "active");
   const [planTier, setPlanTier] = useState(initialData?.plan_tier ?? "basic");
 
+  // Reset form when initialData changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      setName(initialData?.name ?? "");
+      setStatus(initialData?.status ?? "active");
+      setPlanTier(initialData?.plan_tier ?? "basic");
+      setStep(1);
+    }
+  }, [initialData, open]);
+
   // Step 2: Owner (only for new businesses)
   const [ownerName, setOwnerName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");

@@ -13,14 +13,8 @@ export async function POST(req: Request) {
       whatsapp 
     } = await req.json();
 
-    // 1. Check if superadmin (already handled by middleware, but good to double check)
-    const { data: { user: adminUser } } = await adminSupabase.auth.getUser(
-      req.headers.get('Authorization')?.split('Bearer ')[1] || ''
-    );
-    
-    // Note: We use the adminSupabase client which bypasses RLS, 
-    // but we still want to ensure the requester is a superadmin.
-    // The middleware already protects /api/admin, but let's be safe.
+    // Note: We use the adminSupabase client which bypasses RLS.
+    // The middleware already protects /api/admin by checking superadmin status.
 
     // 2. Create Business
     const { data: business, error: bizError } = await adminSupabase

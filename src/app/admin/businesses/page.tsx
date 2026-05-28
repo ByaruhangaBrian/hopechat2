@@ -264,13 +264,12 @@ export default function BusinessesPage() {
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-slate-800" />
                         <DropdownMenuItem
-                          render={
-                            <Link href={`/admin/businesses/${biz.id}`} className="flex items-center w-full cursor-pointer">
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Intelligence
-                            </Link>
-                          }
-                        />
+                          className="cursor-pointer"
+                          onSelect={() => window.location.href = `/admin/businesses/${biz.id}`}
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Intelligence
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           onSelect={() => {
                             setEditingBusiness(biz);
@@ -291,11 +290,13 @@ export default function BusinessesPage() {
                         <DropdownMenuSeparator className="bg-slate-800" />
                         {biz.status !== 'active' && (
                           <DropdownMenuItem onSelect={() => updateStatus(biz.id, 'active')} className="cursor-pointer">
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
                             Mark as Active
                           </DropdownMenuItem>
                         )}
                         {biz.status !== 'past_due' && (
                           <DropdownMenuItem onSelect={() => updateStatus(biz.id, 'past_due')} className="cursor-pointer">
+                            <ShieldAlert className="mr-2 h-4 w-4" />
                             Mark as Past Due
                           </DropdownMenuItem>
                         )}
