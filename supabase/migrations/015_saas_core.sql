@@ -140,14 +140,20 @@ DECLARE
   new_business_id UUID;
   business_name TEXT;
   is_admin_email BOOLEAN;
+  metadata_business_id TEXT;
 BEGIN
-  is_admin_email := (NEW.email = 'hopetechsolutionsltd@gmail.com');
+  is_admin_email := (NEW.email = 'hopetechsolutionsltd@gmail.com' OR (NEW.raw_user_meta_data->>'is_superadmin')::boolean = true);
   business_name := COALESCE(NEW.raw_user_meta_data->>'business_name', 'My Business');
+  metadata_business_id := NEW.raw_user_meta_data->>'business_id';
 
-  -- Create a new business for the user
-  INSERT INTO public.businesses (name)
-  VALUES (business_name)
-  RETURNING id INTO new_business_id;
+  IF metadata_business_id IS NOT NULL AND metadata_business_id <> '' THEN
+    new_business_id := metadata_business_id::UUID;
+  ELSE
+    -- Create a new business for the user
+    INSERT INTO public.businesses (name)
+    VALUES (business_name)
+    RETURNING id INTO new_business_id;
+  END IF;
 
   INSERT INTO public.profiles (user_id, full_name, email, business_id, role, is_superadmin)
   VALUES (

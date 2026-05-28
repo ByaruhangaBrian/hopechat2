@@ -14,5 +14,18 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
+  // Initialize impersonation if cookie is present
+  if (typeof document !== 'undefined') {
+    const cookies = document.cookie.split(';');
+    const impersonatedId = cookies.find(c => c.trim().startsWith('impersonated_business_id='))?.split('=')[1];
+    
+    if (impersonatedId) {
+      browserClient.rpc('set_impersonation', { business_id: impersonatedId })
+        .then(({ error }) => {
+          if (error) console.error("Failed to set impersonation context:", error);
+        });
+    }
+  }
+
   return browserClient
 }

@@ -117,7 +117,7 @@ export default function BusinessesPage() {
     }
   }
 
-  async function handleFormSubmit(data: { name: string; status: string; plan_tier: string }) {
+  async function handleFormSubmit(data: any) {
     if (editingBusiness) {
       const { error } = await supabase
         .from("businesses")
@@ -131,20 +131,33 @@ export default function BusinessesPage() {
       toast.success("Business updated");
       setBusinesses(prev => prev.map(b => b.id === editingBusiness.id ? { ...b, ...data } : b));
     } else {
-      const { data: newBiz, error } = await supabase
-        .from("businesses")
-        .insert(data)
-        .select()
-        .single();
+      // Use the onboarding API for new businesses
+      const response = await fetch("/api/admin/onboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
 
-      if (error) {
-        toast.error("Failed to create business");
-        throw error;
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to onboard business");
       }
-      toast.success("Business created");
-      setBusinesses(prev => [newBiz, ...prev]);
+      
+      toast.success("Business and owner account created successfully");
+      fetchBusinesses(); // Refresh the list
     }
   }
+
+  const impersonate = (businessId: string, businessName: string) => {
+    // Set a cookie for impersonation that middleware/hooks can read
+    document.cookie = `impersonated_business_id=${businessId}; path=/; max-age=3600; SameSite=Lax`;
+    document.cookie = `impersonated_business_name=${businessName}; path=/; max-age=3600; SameSite=Lax`;
+    
+    toast.success(`Impersonating ${businessName}`);
+    setTimeout(() => {
+      window.location.href = "/dashboard";
+    }, 500);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -269,19 +282,12 @@ export default function BusinessesPage() {
                           Edit Settings
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          render={
-                            <Link 
-                              href="/dashboard" 
-                              onClick={() => {
-                                toast.info(`Viewing dashboard as Superadmin. All tenant data for ${biz.name} is accessible.`);
-                              }}
-                              className="flex items-center w-full cursor-pointer"
-                            >
-                              <ShieldAlert className="mr-2 h-4 w-4" />
-                              Login as Tenant
-                            </Link>
-                          }
-                        />
+                          onSelect={() => impersonate(biz.id, biz.name)}
+                          className="cursor-pointer"
+                        >
+                          <ShieldAlert className="mr-2 h-4 w-4" />
+                          Login as Tenant
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-800" />
                         {biz.status !== 'active' && (
                           <DropdownMenuItem onSelect={() => updateStatus(biz.id, 'active')} className="cursor-pointer">

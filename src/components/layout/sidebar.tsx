@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useTotalUnread } from "@/hooks/use-total-unread";
@@ -31,6 +30,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useState, useEffect } from "react";
+import { ShieldAlert } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -55,6 +56,22 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
   const totalUnread = useTotalUnread();
+
+  const [impersonatedName, setImpersonatedName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const cookies = document.cookie.split(';');
+    const nameCookie = cookies.find(c => c.trim().startsWith('impersonated_business_name='));
+    if (nameCookie) {
+      setImpersonatedName(decodeURIComponent(nameCookie.split('=')[1]));
+    }
+  }, []);
+
+  const stopImpersonating = () => {
+    document.cookie = "impersonated_business_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = "impersonated_business_name=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    window.location.href = "/admin/businesses";
+  };
 
   // Close the drawer when route changes — users opened it to navigate,
   // so once they pick a destination the drawer should get out of the way.
@@ -137,6 +154,25 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {impersonatedName && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-3">
+            <div className="flex items-start gap-3">
+              <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-medium text-amber-500 leading-tight">
+                  Impersonating: <span className="text-white">{impersonatedName}</span>
+                </p>
+                <button 
+                  onClick={stopImpersonating}
+                  className="text-[10px] text-amber-500/70 hover:text-amber-500 underline underline-offset-2 transition-colors"
+                >
+                  Stop Impersonating
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Main navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
