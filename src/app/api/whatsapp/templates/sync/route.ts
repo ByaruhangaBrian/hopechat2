@@ -96,11 +96,21 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get profile to access business_id
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('business_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!profile?.business_id) {
+      return NextResponse.json({ error: 'Business not found' }, { status: 400 })
+    }
+
     // whatsapp_config holds waba_id + encrypted access_token.
     const { data: config, error: configError } = await supabase
       .from('whatsapp_config')
       .select('*')
-      .eq('user_id', user.id)
       .single()
 
     if (configError || !config) {
@@ -161,7 +171,7 @@ export async function POST() {
       nextUrl = metaBody.paging?.next ?? null
     }
 
-    // For each Meta template: upsert by (user_id, name, language).
+    // For each Meta template: upsert by (business_id, name, language).
     // No UNIQUE constraint on that triple, so we match manually.
     let inserted = 0
     let updated = 0
@@ -174,6 +184,7 @@ export async function POST() {
 
       const row = {
         user_id: user.id,
+        business_id: profile.business_id,
         name: t.name,
         category: normalizeCategory(t.category),
         language: t.language,
@@ -188,7 +199,6 @@ export async function POST() {
       const { data: existing, error: lookupErr } = await supabase
         .from('message_templates')
         .select('id')
-        .eq('user_id', user.id)
         .eq('name', t.name)
         .eq('language', t.language)
         .maybeSingle()

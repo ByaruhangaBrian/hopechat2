@@ -3,11 +3,20 @@ import { cookies } from 'next/headers'
 
 export async function createClient() {
   const cookieStore = await cookies()
+  const impersonatedId = cookieStore.get('impersonated_business_id')?.value
+
+  const headers: Record<string, string> = {}
+  if (impersonatedId) {
+    headers['x-impersonated-business-id'] = impersonatedId
+  }
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: {
+        headers,
+      },
       cookies: {
         getAll() {
           return cookieStore.getAll()

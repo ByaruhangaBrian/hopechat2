@@ -80,7 +80,15 @@ export function BusinessForm({
     setLoading(true);
     try {
       const data = isEdit 
-        ? { name, status, plan_tier: planTier }
+        ? { 
+            name, 
+            status, 
+            plan_tier: planTier,
+            usage_quotas: {
+              max_contacts: Number(maxContacts),
+              max_messages: Number(maxMessages)
+            }
+          }
         : {
             business_name: name,
             plan_tier: planTier,

@@ -9,23 +9,25 @@ let browserClient: SupabaseClient | undefined
 export function createClient() {
   if (browserClient) return browserClient
 
-  browserClient = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-
-  // Initialize impersonation if cookie is present
+  const headers: Record<string, string> = {};
+  
   if (typeof document !== 'undefined') {
     const cookies = document.cookie.split(';');
     const impersonatedId = cookies.find(c => c.trim().startsWith('impersonated_business_id='))?.split('=')[1];
-    
     if (impersonatedId) {
-      browserClient.rpc('set_impersonation', { business_id: impersonatedId })
-        .then(({ error }) => {
-          if (error) console.error("Failed to set impersonation context:", error);
-        });
+      headers['x-impersonated-business-id'] = impersonatedId;
     }
   }
+
+  browserClient = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers,
+      }
+    }
+  )
 
   return browserClient
 }

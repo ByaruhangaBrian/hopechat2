@@ -207,7 +207,11 @@ export default function BusinessDetailsPage() {
         <div className="flex gap-2">
            <Button variant="outline" className="border-slate-800 text-slate-300" onClick={() => {
               document.cookie = `impersonated_business_id=${business.id}; path=/; max-age=3600; SameSite=Lax`;
-              window.location.href = "/dashboard";
+              document.cookie = `impersonated_business_name=${encodeURIComponent(business.name)}; path=/; max-age=3600; SameSite=Lax`;
+              toast.success(`Impersonating ${business.name}`);
+              setTimeout(() => {
+                window.location.href = "/dashboard";
+              }, 500);
            }}>
              <Shield className="mr-2 h-4 w-4" />
              Login as Tenant
@@ -288,10 +292,21 @@ export default function BusinessDetailsPage() {
               <CardContent>
                 <div className="grid grid-cols-2 gap-3">
                   {Object.entries(business.features || {}).map(([feature, enabled]) => (
-                    <div key={feature} className="flex items-center justify-between p-2 rounded bg-slate-800/50">
+                    <button 
+                      key={feature} 
+                      onClick={async () => {
+                        const newFeatures = { ...business.features, [feature]: !enabled };
+                        const { error } = await supabase.from("businesses").update({ features: newFeatures }).eq("id", business.id);
+                        if (!error) {
+                          setBusiness({ ...business, features: newFeatures });
+                          toast.success(`${feature.replace('_enabled', '')} toggled`);
+                        }
+                      }}
+                      className="flex items-center justify-between p-2 rounded bg-slate-800/50 hover:bg-slate-800 transition-colors text-left"
+                    >
                       <span className="text-xs text-slate-300 capitalize">{feature.replace('_enabled', '').replace('_', ' ')}</span>
                       {enabled ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <XCircle className="h-3.5 w-3.5 text-slate-600" />}
-                    </div>
+                    </button>
                   ))}
                 </div>
               </CardContent>
@@ -422,18 +437,30 @@ export default function BusinessDetailsPage() {
               <CardDescription>Hard limits and resource consumption.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
-              {Object.entries(business.usage_quotas || {}).map(([key, value]) => (
-                <div key={key} className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400 capitalize">{key.replace('max_', '').replace('_', ' ')}</span>
-                    <span className="text-white font-medium">{value.toLocaleString()} Max</span>
+              {Object.entries(business.usage_quotas || {}).map(([key, value]) => {
+                const current = key === 'max_contacts' ? stats.contactCount : 
+                               key === 'max_messages' ? stats.messageCount : 0;
+                const percentage = Math.min(100, Math.round((current / value) * 100));
+                
+                return (
+                  <div key={key} className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-400 capitalize">{key.replace('max_', '').replace('_', ' ')}</span>
+                      <span className="text-white font-medium">{current.toLocaleString()} / {value.toLocaleString()} Max</span>
+                    </div>
+                    <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                       <div 
+                         className={cn(
+                           "h-full transition-all duration-500",
+                           percentage > 90 ? "bg-red-500" : percentage > 70 ? "bg-amber-500" : "bg-violet-600"
+                         )} 
+                         style={{ width: `${percentage}%` }}
+                       ></div>
+                    </div>
+                    <p className="text-[10px] text-slate-500">Currently using {percentage}% of total capacity.</p>
                   </div>
-                  <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                     <div className="h-full bg-violet-600" style={{ width: '15%' }}></div>
-                  </div>
-                  <p className="text-[10px] text-slate-500">Currently using 15% of total capacity.</p>
-                </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
         </TabsContent>

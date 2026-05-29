@@ -149,9 +149,9 @@ export default function BusinessesPage() {
   }
 
   const impersonate = (businessId: string, businessName: string) => {
-    // Set a cookie for impersonation that middleware/hooks can read
+    // Set cookies for impersonation that middleware/hooks/database can read
     document.cookie = `impersonated_business_id=${businessId}; path=/; max-age=3600; SameSite=Lax`;
-    document.cookie = `impersonated_business_name=${businessName}; path=/; max-age=3600; SameSite=Lax`;
+    document.cookie = `impersonated_business_name=${encodeURIComponent(businessName)}; path=/; max-age=3600; SameSite=Lax`;
     
     toast.success(`Impersonating ${businessName}`);
     setTimeout(() => {

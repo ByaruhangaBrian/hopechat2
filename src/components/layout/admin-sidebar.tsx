@@ -45,6 +45,22 @@ export function AdminSidebar({ open = false, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
 
+  const [impersonatedName, setImpersonatedName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const cookies = document.cookie.split(';');
+    const nameCookie = cookies.find(c => c.trim().startsWith('impersonated_business_name='));
+    if (nameCookie) {
+      setImpersonatedName(decodeURIComponent(nameCookie.split('=')[1]));
+    }
+  }, []);
+
+  const stopImpersonating = () => {
+    document.cookie = "impersonated_business_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = "impersonated_business_name=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    window.location.reload();
+  };
+
   useEffect(() => {
     onClose?.();
   }, [pathname, onClose]);
@@ -168,6 +184,16 @@ export function AdminSidebar({ open = false, onClose }: AdminSidebarProps) {
                 className="flex items-center gap-2 cursor-pointer"
               >
                 <LogOut className="size-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </aside>
+    </>
+  );
+}
+       <LogOut className="size-4" />
                 Sign out
               </DropdownMenuItem>
             </DropdownMenuContent>
