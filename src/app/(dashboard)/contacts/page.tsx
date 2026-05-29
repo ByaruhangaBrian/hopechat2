@@ -366,7 +366,7 @@ export default function ContactsPage() {
                         className="bg-slate-900 border-slate-700"
                       >
                         <DropdownMenuItem
-                          onClick={(e) => {
+                          onClick={(e: React.MouseEvent) => {
                             e.stopPropagation();
                             openEditForm(contact);
                           }}

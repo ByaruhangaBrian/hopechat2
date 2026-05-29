@@ -173,7 +173,7 @@ export function AdminSidebar({ open = false, onClose }: AdminSidebarProps) {
             >
               <DropdownMenuItem
                 className="flex items-center gap-2 cursor-pointer"
-                onSelect={() => window.location.href = "/settings?tab=profile"}
+                onClick={() => window.location.href = "/settings?tab=profile"}
               >
                 <User className="size-4" />
                 Profile

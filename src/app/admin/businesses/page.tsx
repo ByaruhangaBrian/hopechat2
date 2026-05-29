@@ -26,6 +26,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -261,58 +262,68 @@ export default function BusinessesPage() {
                         <MoreVertical className="h-4 w-4" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-slate-900 border-slate-800 text-slate-200 min-w-48">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator className="bg-slate-800" />
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          onSelect={() => window.location.href = `/admin/businesses/${biz.id}`}
-                        >
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Intelligence
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onSelect={() => {
-                            setEditingBusiness(biz);
-                            setIsFormOpen(true);
-                          }}
-                          className="cursor-pointer"
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit Settings
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onSelect={() => impersonate(biz.id, biz.name)}
-                          className="cursor-pointer"
-                        >
-                          <ShieldAlert className="mr-2 h-4 w-4" />
-                          Login as Tenant
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-slate-800" />
-                        {biz.status !== 'active' && (
-                          <DropdownMenuItem onSelect={() => updateStatus(biz.id, 'active')} className="cursor-pointer">
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Mark as Active
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator className="bg-slate-800" />
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => window.location.href = `/admin/businesses/${biz.id}`}
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Intelligence
                           </DropdownMenuItem>
-                        )}
-                        {biz.status !== 'past_due' && (
-                          <DropdownMenuItem onSelect={() => updateStatus(biz.id, 'past_due')} className="cursor-pointer">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setEditingBusiness(biz);
+                              setIsFormOpen(true);
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit Settings
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => impersonate(biz.id, biz.name)}
+                            className="cursor-pointer"
+                          >
                             <ShieldAlert className="mr-2 h-4 w-4" />
-                            Mark as Past Due
+                            Login as Tenant
                           </DropdownMenuItem>
-                        )}
+                        </DropdownMenuGroup>
+                        
                         <DropdownMenuSeparator className="bg-slate-800" />
-                        <DropdownMenuItem 
-                          variant="destructive"
-                          onSelect={() => {
-                            if (confirm(`Permanently delete ${biz.name}?`)) {
-                              deleteBusiness(biz.id);
-                            }
-                          }}
-                          className="cursor-pointer"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete Business
-                        </DropdownMenuItem>
+                        
+                        <DropdownMenuGroup>
+                          {biz.status !== 'active' && (
+                            <DropdownMenuItem onClick={() => updateStatus(biz.id, 'active')} className="cursor-pointer">
+                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                              Mark as Active
+                            </DropdownMenuItem>
+                          )}
+                          {biz.status !== 'past_due' && (
+                            <DropdownMenuItem onClick={() => updateStatus(biz.id, 'past_due')} className="cursor-pointer">
+                              <ShieldAlert className="mr-2 h-4 w-4" />
+                              Mark as Past Due
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuGroup>
+                        
+                        <DropdownMenuSeparator className="bg-slate-800" />
+                        
+                        <DropdownMenuGroup>
+                          <DropdownMenuItem 
+                            variant="destructive"
+                            onClick={() => {
+                              if (confirm(`Permanently delete ${biz.name}?`)) {
+                                deleteBusiness(biz.id);
+                              }
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Business
+                          </DropdownMenuItem>
+                        </DropdownMenuGroup>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
