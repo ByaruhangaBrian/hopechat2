@@ -83,11 +83,7 @@ export function BusinessForm({
         ? { 
             name, 
             status, 
-            plan_tier: planTier,
-            usage_quotas: {
-              max_contacts: Number(maxContacts),
-              max_messages: Number(maxMessages)
-            }
+            plan_tier: planTier
           }
         : {
             business_name: name,

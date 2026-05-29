@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -193,13 +193,4 @@ export function AdminSidebar({ open = false, onClose }: AdminSidebarProps) {
     </>
   );
 }
-       <LogOut className="size-4" />
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </aside>
-    </>
-  );
-}
+
