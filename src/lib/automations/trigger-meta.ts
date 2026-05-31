@@ -17,11 +17,11 @@ export const TRIGGER_META: Record<AutomationTriggerType, TriggerMeta> = {
   },
   keyword_match: {
     label: 'Keyword Match',
-    pillClass: 'border-purple-500/30 bg-purple-500/10 text-purple-300',
+    pillClass: 'border-primary/30 bg-primary/10 text-primary',
   },
   new_contact_created: {
     label: 'New Contact',
-    pillClass: 'border-violet-500/30 bg-violet-500/10 text-violet-300',
+    pillClass: 'border-primary/30 bg-primary/10 text-primary',
   },
   conversation_assigned: {
     label: 'Conversation Assigned',
@@ -57,3 +57,4 @@ export function formatRelative(iso: string | null | undefined): string {
   if (diffSec < 2_592_000) return `${Math.floor(diffSec / 86400)}d ago`
   return new Date(iso).toLocaleDateString()
 }
+

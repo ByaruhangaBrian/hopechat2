@@ -183,7 +183,7 @@ export function ImportModal({ open, onOpenChange, onImported }: ImportModalProps
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-slate-900 border-slate-700 text-slate-200 sm:max-w-lg">
+      <DialogContent className="bg-card border-slate-700 text-slate-200 sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-white">Import Contacts</DialogTitle>
           <DialogDescription className="text-slate-400">
@@ -196,11 +196,11 @@ export function ImportModal({ open, onOpenChange, onImported }: ImportModalProps
           {/* Upload area */}
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-700 p-6 cursor-pointer hover:border-violet-500/50 transition-colors"
+            className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-700 p-6 cursor-pointer hover:border-primary/50 transition-colors"
           >
             {file ? (
               <>
-                <FileText className="size-8 text-violet-400" />
+                <FileText className="size-8 text-primary" />
                 <p className="text-sm text-slate-300">{file.name}</p>
                 <p className="text-xs text-slate-500">
                   {parsedRows.length} row{parsedRows.length !== 1 ? 's' : ''} detected
@@ -236,7 +236,7 @@ export function ImportModal({ open, onOpenChange, onImported }: ImportModalProps
               <div className="rounded-lg border border-slate-700 overflow-hidden">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="bg-slate-800">
+                    <tr className="bg-muted">
                       <th className="px-3 py-1.5 text-left text-slate-400 font-medium">Phone</th>
                       <th className="px-3 py-1.5 text-left text-slate-400 font-medium">Name</th>
                       <th className="px-3 py-1.5 text-left text-slate-400 font-medium">Email</th>
@@ -269,7 +269,7 @@ export function ImportModal({ open, onOpenChange, onImported }: ImportModalProps
               <p className="text-sm font-medium text-white">Import Complete</p>
               <div className="flex items-center gap-4">
                 {result.imported > 0 && (
-                  <div className="flex items-center gap-1.5 text-violet-400 text-sm">
+                  <div className="flex items-center gap-1.5 text-primary text-sm">
                     <CheckCircle className="size-4" />
                     {result.imported} imported
                   </div>
@@ -285,12 +285,12 @@ export function ImportModal({ open, onOpenChange, onImported }: ImportModalProps
           )}
         </div>
 
-        <DialogFooter className="bg-slate-900 border-slate-700">
+        <DialogFooter className="bg-card border-slate-700">
           <Button
             type="button"
             variant="outline"
             onClick={() => handleOpenChange(false)}
-            className="border-slate-700 text-slate-300 hover:bg-slate-800"
+            className="border-slate-700 text-slate-300 hover:bg-muted"
           >
             {result ? 'Close' : 'Cancel'}
           </Button>
@@ -299,7 +299,7 @@ export function ImportModal({ open, onOpenChange, onImported }: ImportModalProps
               type="button"
               disabled={parsedRows.length === 0 || importing}
               onClick={handleImport}
-              className="bg-violet-600 hover:bg-violet-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-white"
             >
               {importing && <Loader2 className="size-4 animate-spin" />}
               Import {parsedRows.length > 0 ? `${parsedRows.length} Contacts` : ''}
@@ -310,3 +310,4 @@ export function ImportModal({ open, onOpenChange, onImported }: ImportModalProps
     </Dialog>
   );
 }
+

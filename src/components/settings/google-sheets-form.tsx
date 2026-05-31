@@ -90,7 +90,7 @@ export function GoogleSheetsForm() {
 
   return (
     <div className="space-y-6">
-      <Card className="bg-slate-900 border-slate-800">
+      <Card className="bg-card border-border">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -122,7 +122,7 @@ export function GoogleSheetsForm() {
               <Input 
                 value={globalBotEmail || 'Not configured by admin'} 
                 readOnly 
-                className="bg-slate-800 border-slate-700 text-slate-400 font-mono text-xs" 
+                className="bg-muted border-slate-700 text-slate-400 font-mono text-xs" 
               />
               <Button 
                 variant="outline" 
@@ -138,20 +138,20 @@ export function GoogleSheetsForm() {
             </div>
           </div>
 
-          <div className="space-y-2 pt-4 border-t border-slate-800">
+          <div className="space-y-2 pt-4 border-t border-border">
             <Label className="text-slate-300">Spreadsheet ID</Label>
             <Input
               value={config.spreadsheet_id}
               onChange={(e) => setConfig({ ...config, spreadsheet_id: e.target.value })}
               placeholder="e.g. 1aBCDeFGhIJKlMnOpqRStUvWxYz1234567890"
-              className="bg-slate-800 border-slate-700 text-white"
+              className="bg-muted border-slate-700 text-white"
             />
             <p className="text-[10px] text-slate-500 italic">
               Found in the URL: docs.google.com/spreadsheets/d/<strong>[SPREADSHEET_ID]</strong>/edit
             </p>
           </div>
 
-          <div className="space-y-4 pt-4 border-t border-slate-800">
+          <div className="space-y-4 pt-4 border-t border-border">
             <div className="flex items-center justify-between">
               <Label className="text-slate-300">Custom Service Account (Advanced)</Label>
             </div>
@@ -163,7 +163,7 @@ export function GoogleSheetsForm() {
                   value={config.client_email}
                   onChange={(e) => setConfig({ ...config, client_email: e.target.value })}
                   placeholder="my-bot@project.iam.gserviceaccount.com"
-                  className="bg-slate-800 border-slate-700 text-slate-200"
+                  className="bg-muted border-slate-700 text-slate-200"
                 />
               </div>
               <div className="space-y-2">
@@ -173,7 +173,7 @@ export function GoogleSheetsForm() {
                   value={config.private_key}
                   onChange={(e) => setConfig({ ...config, private_key: e.target.value })}
                   placeholder={hasLocalKeys ? '••••••••••••••••' : 'Paste private key here'}
-                  className="bg-slate-800 border-slate-700 text-slate-200"
+                  className="bg-muted border-slate-700 text-slate-200"
                 />
               </div>
             </div>
@@ -186,7 +186,7 @@ export function GoogleSheetsForm() {
             <Button 
               onClick={handleSave} 
               disabled={saving}
-              className="bg-violet-600 hover:bg-violet-500"
+              className="bg-primary hover:bg-primary"
             >
               <Save className="mr-2 size-4" />
               {saving ? 'Saving...' : 'Save Configuration'}
@@ -197,3 +197,4 @@ export function GoogleSheetsForm() {
     </div>
   );
 }
+

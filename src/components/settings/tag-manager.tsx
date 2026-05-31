@@ -27,7 +27,7 @@ const PRESET_COLORS = [
   { name: 'Emerald', value: '#10b981' },
   { name: 'Cyan', value: '#06b6d4' },
   { name: 'Blue', value: '#3b82f6' },
-  { name: 'Violet', value: '#8b5cf6' },
+  { name: 'Teal', value: '#14b8a6' },
   { name: 'Pink', value: '#ec4899' },
 ];
 
@@ -143,7 +143,7 @@ export function TagManager() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="size-6 animate-spin text-violet-500" />
+        <Loader2 className="size-6 animate-spin text-primary" />
       </div>
     );
   }
@@ -161,7 +161,7 @@ export function TagManager() {
             setSelectedColor(PRESET_COLORS[3].value);
             setDialogOpen(true);
           }}
-          className="bg-violet-600 hover:bg-violet-700 text-white"
+          className="bg-primary hover:bg-primary/90 text-white"
         >
           <Plus className="size-4" />
           New Tag
@@ -169,14 +169,14 @@ export function TagManager() {
       </div>
 
       {tags.length === 0 ? (
-        <Card className="bg-slate-900 border-slate-700 ring-0 ring-transparent">
+        <Card className="bg-card border-slate-700 ring-0 ring-transparent">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-slate-400 text-sm">No tags yet.</p>
             <p className="text-slate-500 text-xs mt-1">Create tags to categorize your contacts.</p>
           </CardContent>
         </Card>
       ) : (
-        <Card className="bg-slate-900 border-slate-700 ring-0 ring-transparent">
+        <Card className="bg-card border-slate-700 ring-0 ring-transparent">
           <CardContent className="pt-4">
             <div className="flex flex-wrap gap-2">
               {tags.map((tag) => (
@@ -209,7 +209,7 @@ export function TagManager() {
 
       {/* New Tag Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-700 sm:max-w-sm">
+        <DialogContent className="bg-card border-slate-700 sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-white">New Tag</DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -224,7 +224,7 @@ export function TagManager() {
                 placeholder="e.g. VIP Customer"
                 value={newTagName}
                 onChange={(e) => setNewTagName(e.target.value)}
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                className="bg-muted border-slate-700 text-white placeholder:text-slate-500"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleCreate();
                 }}
@@ -271,18 +271,18 @@ export function TagManager() {
             </div>
           </div>
 
-          <DialogFooter className="bg-slate-900 border-slate-700">
+          <DialogFooter className="bg-card border-slate-700">
             <Button
               variant="outline"
               onClick={() => setDialogOpen(false)}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              className="border-slate-700 text-slate-300 hover:bg-muted"
             >
               Cancel
             </Button>
             <Button
               onClick={handleCreate}
               disabled={saving}
-              className="bg-violet-600 hover:bg-violet-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-white"
             >
               {saving ? (
                 <>
@@ -299,7 +299,7 @@ export function TagManager() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-700 sm:max-w-sm">
+        <DialogContent className="bg-card border-slate-700 sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-white">Delete Tag</DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -307,11 +307,11 @@ export function TagManager() {
               it from all contacts. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="bg-slate-900 border-slate-700">
+          <DialogFooter className="bg-card border-slate-700">
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              className="border-slate-700 text-slate-300 hover:bg-muted"
             >
               Cancel
             </Button>
@@ -335,3 +335,4 @@ export function TagManager() {
     </div>
   );
 }
+

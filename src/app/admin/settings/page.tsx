@@ -137,10 +137,10 @@ export default function AdminSettingsPage() {
       </div>
 
       <div className="grid gap-6">
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-white">
-              <Webhook className="h-5 w-5 text-violet-500" />
+              <Webhook className="h-5 w-5 text-primary" />
               Global WhatsApp Webhook
             </CardTitle>
             <CardDescription>
@@ -154,7 +154,7 @@ export default function AdminSettingsPage() {
                 <Input
                   value={currentWebhookUrl}
                   readOnly
-                  className="bg-slate-800 border-slate-700 text-slate-400 font-mono text-xs"
+                  className="bg-muted border-slate-700 text-slate-400 font-mono text-xs"
                 />
                 <Button variant="outline" className="border-slate-700" onClick={() => copyToClipboard(currentWebhookUrl)}>
                   <Copy className="h-4 w-4" />
@@ -172,7 +172,7 @@ export default function AdminSettingsPage() {
                   value={whatsappSettings.verify_token}
                   onChange={(e) => setWhatsappSettings(prev => ({ ...prev, verify_token: e.target.value }))}
                   placeholder="Enter verify token"
-                  className="bg-slate-800 border-slate-700 text-slate-200"
+                  className="bg-muted border-slate-700 text-slate-200"
                 />
               </div>
               <p className="text-[11px] text-slate-500">
@@ -180,8 +180,8 @@ export default function AdminSettingsPage() {
               </p>
             </div>
 
-            <div className="flex justify-end border-t border-slate-800 pt-6">
-              <Button onClick={handleSaveWhatsapp} disabled={saving || loading} className="bg-violet-600 hover:bg-violet-500">
+            <div className="flex justify-end border-t border-border pt-6">
+              <Button onClick={handleSaveWhatsapp} disabled={saving || loading} className="bg-primary hover:bg-primary">
                 <Save className="mr-2 h-4 w-4" />
                 {saving ? "Saving..." : "Save Settings"}
               </Button>
@@ -189,7 +189,7 @@ export default function AdminSettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-white">
               <ShieldCheck className="h-5 w-5 text-amber-500" />
@@ -200,7 +200,7 @@ export default function AdminSettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between p-4 rounded-lg bg-slate-800/50 border border-slate-800">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border">
               <div className="space-y-0.5">
                 <Label className="text-base text-white">Maintenance Mode</Label>
                 <p className="text-xs text-slate-400">
@@ -219,15 +219,15 @@ export default function AdminSettingsPage() {
                 value={systemConfig.announcement}
                 onChange={(e) => setSystemConfig(prev => ({ ...prev, announcement: e.target.value }))}
                 placeholder="Message for all tenant dashboards..."
-                className="bg-slate-800 border-slate-700 text-slate-200 min-h-[100px]"
+                className="bg-muted border-slate-700 text-slate-200 min-h-[100px]"
               />
               <p className="text-[11px] text-slate-500">
                 This will be displayed as a banner on every business dashboard.
               </p>
             </div>
 
-            <div className="flex justify-end border-t border-slate-800 pt-6">
-              <Button onClick={handleSaveSystem} disabled={saving || loading} className="bg-violet-600 hover:bg-violet-500">
+            <div className="flex justify-end border-t border-border pt-6">
+              <Button onClick={handleSaveSystem} disabled={saving || loading} className="bg-primary hover:bg-primary">
                 <Save className="mr-2 h-4 w-4" />
                 {saving ? "Saving..." : "Save Platform Config"}
               </Button>
@@ -235,7 +235,7 @@ export default function AdminSettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-white">
               <Settings className="h-5 w-5 text-emerald-500" />
@@ -246,7 +246,7 @@ export default function AdminSettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between p-4 rounded-lg bg-slate-800/50 border border-slate-800">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border">
               <div className="space-y-0.5">
                 <Label className="text-base text-white">Google Sheets Integration</Label>
                 <p className="text-xs text-slate-400">
@@ -262,7 +262,7 @@ export default function AdminSettingsPage() {
               />
             </div>
 
-            <div className="space-y-4 border-t border-slate-800 pt-6">
+            <div className="space-y-4 border-t border-border pt-6">
               <h3 className="text-sm font-medium text-slate-200">Default Service Account (Fallback)</h3>
               <p className="text-xs text-slate-400">
                 Optional: If provided, businesses only need to share their sheet with this email.
@@ -280,7 +280,7 @@ export default function AdminSettingsPage() {
                     } 
                   }))}
                   placeholder="e.g. hopechat-bot@project.iam.gserviceaccount.com"
-                  className="bg-slate-800 border-slate-700 text-slate-200"
+                  className="bg-muted border-slate-700 text-slate-200"
                 />
               </div>
 
@@ -296,13 +296,13 @@ export default function AdminSettingsPage() {
                     } 
                   }))}
                   placeholder="-----BEGIN PRIVATE KEY-----\n..."
-                  className="bg-slate-800 border-slate-700 text-slate-200 font-mono text-xs min-h-[120px]"
+                  className="bg-muted border-slate-700 text-slate-200 font-mono text-xs min-h-[120px]"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end border-t border-slate-800 pt-6">
-              <Button onClick={handleSaveIntegrations} disabled={saving || loading} className="bg-violet-600 hover:bg-violet-500">
+            <div className="flex justify-end border-t border-border pt-6">
+              <Button onClick={handleSaveIntegrations} disabled={saving || loading} className="bg-primary hover:bg-primary">
                 <Save className="mr-2 h-4 w-4" />
                 {saving ? "Saving..." : "Save Integrations"}
               </Button>
@@ -313,3 +313,4 @@ export default function AdminSettingsPage() {
     </div>
   );
 }
+

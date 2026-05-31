@@ -77,7 +77,7 @@ export default function LogsPage() {
 
   const getServiceIcon = (service: string) => {
     switch (service) {
-      case 'auth': return <ShieldCheck className="h-4 w-4 text-violet-400" />;
+      case 'auth': return <ShieldCheck className="h-4 w-4 text-primary" />;
       case 'system': return <ActivityIcon className="h-4 w-4 text-blue-400" />;
       case 'whatsapp': return <FileCode className="h-4 w-4 text-emerald-400" />;
       default: return <FileCode className="h-4 w-4 text-slate-400" />;
@@ -85,7 +85,7 @@ export default function LogsPage() {
   };
 
   const getStatusBadge = (code: number) => {
-    if (!code) return <Badge variant="outline" className="text-slate-500 border-slate-800">N/A</Badge>;
+    if (!code) return <Badge variant="outline" className="text-slate-500 border-border">N/A</Badge>;
     if (code >= 200 && code < 300) return <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">{code}</Badge>;
     if (code >= 400) return <Badge className="bg-red-500/10 text-red-500 border-red-500/20">{code}</Badge>;
     return <Badge variant="outline">{code}</Badge>;
@@ -99,7 +99,7 @@ export default function LogsPage() {
           <p className="text-slate-400">Monitor all platform activity including auth, messages, and system events.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center rounded-lg border border-slate-800 bg-slate-900 p-1">
+          <div className="flex items-center rounded-lg border border-border bg-card p-1">
             <Button
               variant={timeRange === "1d" ? "secondary" : "ghost"}
               size="sm"
@@ -124,19 +124,19 @@ export default function LogsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && fetchLogs()}
-              className="w-full sm:w-64 border-slate-800 bg-slate-900 pl-9 text-slate-200"
+              className="w-full sm:w-64 border-border bg-card pl-9 text-slate-200"
             />
           </div>
-          <Button variant="outline" className="border-slate-800" onClick={fetchLogs} disabled={loading}>
+          <Button variant="outline" className="border-border" onClick={fetchLogs} disabled={loading}>
             Refresh
           </Button>
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
         <Table>
-          <TableHeader className="bg-slate-800/50">
-            <TableRow className="hover:bg-transparent border-slate-800">
+          <TableHeader className="bg-muted/50">
+            <TableRow className="hover:bg-transparent border-border">
               <TableHead className="text-slate-300 w-[160px]">Timestamp</TableHead>
               <TableHead className="text-slate-300">Tenant/User</TableHead>
               <TableHead className="text-slate-300">Event</TableHead>
@@ -163,7 +163,7 @@ export default function LogsPage() {
               </TableRow>
             ) : (
               logs.map((log) => (
-                <TableRow key={log.id} className="border-slate-800 hover:bg-slate-800/30 group">
+                <TableRow key={log.id} className="border-border hover:bg-muted/30 group">
                   <TableCell className="text-slate-400 text-[10px] font-mono">
                     {format(new Date(log.created_at), "MMM d, HH:mm:ss")}
                   </TableCell>
@@ -187,7 +187,7 @@ export default function LogsPage() {
                   </TableCell>
                   <TableCell>{getStatusBadge(log.status_code)}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 group-hover:bg-slate-800" onClick={() => {
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 group-hover:bg-muted" onClick={() => {
                        console.log("Log Detail:", log.payload);
                        toast.info("Payload logged to console for inspection");
                     }}>
@@ -203,3 +203,4 @@ export default function LogsPage() {
     </div>
   );
 }
+

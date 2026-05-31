@@ -20,9 +20,9 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-950">
+      <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           <p className="text-sm text-slate-400">Verifying Admin Access...</p>
         </div>
       </div>
@@ -32,11 +32,11 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
   if (!user || !user.app_metadata?.is_superadmin) return null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-950">
+    <div className="flex h-screen overflow-hidden bg-background">
       <AdminSidebar open={sidebarOpen} onClose={closeSidebar} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-950">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-background">
           <div className="mx-auto max-w-7xl">
             {children}
           </div>
@@ -57,3 +57,4 @@ export default function AdminLayout({
     </AuthProvider>
   );
 }
+

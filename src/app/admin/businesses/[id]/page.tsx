@@ -284,7 +284,7 @@ export default function BusinessDetailsPage() {
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-violet-500" />
+                  <Zap className="h-5 w-5 text-emerald-500" />
                   Enabled Features
                 </CardTitle>
                 <CardDescription>Tenant capabilities and modules.</CardDescription>
@@ -315,7 +315,7 @@ export default function BusinessDetailsPage() {
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-violet-500" />
+                  <CreditCard className="h-5 w-5 text-emerald-500" />
                   Subscription Summary
                 </CardTitle>
                 <CardDescription>Billing and tier details.</CardDescription>
@@ -346,7 +346,7 @@ export default function BusinessDetailsPage() {
                 <CardTitle className="text-white">Team Members</CardTitle>
                 <CardDescription>Manage users and permissions for this business.</CardDescription>
               </div>
-              <Button size="sm" className="bg-violet-600">Add User</Button>
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">Add User</Button>
             </CardHeader>
             <CardContent>
               <Table>
@@ -423,7 +423,7 @@ export default function BusinessDetailsPage() {
                   )}>
                     Status: {waConfig?.status || "Not Configured"}
                   </Badge>
-                  <Button type="submit" className="bg-violet-600">Save Credentials</Button>
+                  <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">Save Credentials</Button>
                 </div>
               </form>
             </CardContent>
@@ -452,7 +452,7 @@ export default function BusinessDetailsPage() {
                        <div 
                          className={cn(
                            "h-full transition-all duration-500",
-                           percentage > 90 ? "bg-red-500" : percentage > 70 ? "bg-amber-500" : "bg-violet-600"
+                           percentage > 90 ? "bg-red-500" : percentage > 70 ? "bg-amber-500" : "bg-emerald-600"
                          )} 
                          style={{ width: `${percentage}%` }}
                        ></div>

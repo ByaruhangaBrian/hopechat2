@@ -134,10 +134,10 @@ export function TemplatePicker({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="border-slate-700 bg-slate-900 sm:max-w-lg">
+      <DialogContent className="border-slate-700 bg-card sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
-            <LayoutTemplate className="h-4 w-4 text-violet-400" />
+            <LayoutTemplate className="h-4 w-4 text-primary" />
             {selected ? selected.name : "Send template"}
           </DialogTitle>
           <DialogDescription className="text-slate-400">
@@ -151,10 +151,10 @@ export function TemplatePicker({
           <div className="max-h-[60vh] space-y-2 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-5 w-5 animate-spin text-violet-400" />
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
               </div>
             ) : templates.length === 0 ? (
-              <div className="rounded-md border border-slate-800 bg-slate-950/50 p-6 text-center">
+              <div className="rounded-md border border-border bg-background/50 p-6 text-center">
                 <p className="text-sm text-slate-300">No approved templates</p>
                 <p className="mt-1 text-xs text-slate-500">
                   Approve a template in Meta WhatsApp Manager, then sync it
@@ -167,7 +167,7 @@ export function TemplatePicker({
                   key={t.id}
                   type="button"
                   onClick={() => pickTemplate(t)}
-                  className="w-full rounded-md border border-slate-800 bg-slate-950/50 p-3 text-left transition-colors hover:border-violet-500/40 hover:bg-slate-900"
+                  className="w-full rounded-md border border-border bg-background/50 p-3 text-left transition-colors hover:border-primary/40 hover:bg-card"
                 >
                   <div className="flex items-start gap-2">
                     <div className="min-w-0 flex-1">
@@ -175,7 +175,7 @@ export function TemplatePicker({
                         <p className="truncate text-sm font-medium text-white">
                           {t.name}
                         </p>
-                        <Badge className="border border-violet-600/30 bg-violet-600/20 text-[10px] text-violet-400">
+                        <Badge className="border border-primary/30 bg-primary/20 text-[10px] text-primary">
                           {t.category}
                         </Badge>
                         {t.language && (
@@ -196,7 +196,7 @@ export function TemplatePicker({
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="rounded-md border border-slate-800 bg-slate-950/50 p-3">
+            <div className="rounded-md border border-border bg-background/50 p-3">
               <p className="mb-1 text-xs text-slate-400">Preview</p>
               <p className="whitespace-pre-wrap text-sm text-slate-200">
                 {renderBodyPreview(selected.body_text, params)}
@@ -218,7 +218,7 @@ export function TemplatePicker({
                     setParams(next);
                   }}
                   placeholder={`Value for {{${v}}}`}
-                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500"
+                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500"
                 />
               </div>
             ))}
@@ -234,7 +234,7 @@ export function TemplatePicker({
                   setSelected(null);
                   setParams([]);
                 }}
-                className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                className="border-slate-700 text-slate-300 hover:bg-muted"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back
@@ -242,7 +242,7 @@ export function TemplatePicker({
               <Button
                 disabled={!canConfirm}
                 onClick={confirm}
-                className="bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50"
+                className="bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
               >
                 Send template
               </Button>
@@ -251,7 +251,7 @@ export function TemplatePicker({
             <Button
               variant="outline"
               onClick={() => handleOpenChange(false)}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              className="border-slate-700 text-slate-300 hover:bg-muted"
             >
               Cancel
             </Button>
@@ -261,3 +261,4 @@ export function TemplatePicker({
     </Dialog>
   );
 }
+

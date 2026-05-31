@@ -49,10 +49,10 @@ export function SessionsCard() {
 
   return (
     <>
-      <Card className="bg-slate-900/40 border-slate-800">
+      <Card className="bg-card/40 border-border">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
-            <LogOut className="size-4 text-violet-400" />
+            <LogOut className="size-4 text-primary" />
             Active sessions
           </CardTitle>
           <CardDescription className="text-slate-400">
@@ -107,3 +107,4 @@ export function SessionsCard() {
     </>
   );
 }
+

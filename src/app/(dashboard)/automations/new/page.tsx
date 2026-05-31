@@ -52,8 +52,8 @@ function NewAutomationContent() {
 export default function NewAutomationPage() {
   return (
     <Suspense fallback={
-      <div className="flex h-full items-center justify-center bg-slate-950 p-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
+      <div className="flex h-full items-center justify-center bg-background p-8">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     }>
       <NewAutomationContent />
@@ -100,3 +100,4 @@ function expandFromSeeds(rows: SeedRow[]): BuilderStep[] {
   })
   return roots
 }
+

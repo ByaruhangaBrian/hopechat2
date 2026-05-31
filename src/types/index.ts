@@ -5,6 +5,8 @@ export interface Profile {
   email: string;
   avatar_url?: string;
   role: string;
+  business_id?: string;
+  is_superadmin?: boolean;
   created_at: string;
 }
 

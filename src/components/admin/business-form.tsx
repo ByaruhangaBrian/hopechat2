@@ -132,7 +132,7 @@ export function BusinessForm({
       onOpenChange(val);
       if (!val) setTimeout(resetForm, 300);
     }}>
-      <DialogContent className="bg-slate-900 border-slate-800 text-slate-100 sm:max-w-[500px]">
+      <DialogContent className="bg-card border-border text-slate-100 sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-white">{title}</DialogTitle>
           <DialogDescription className="text-slate-400">
@@ -146,15 +146,15 @@ export function BusinessForm({
               <div key={s.id} className="flex items-center flex-1 last:flex-none">
                 <div className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors",
-                  step === s.id ? "border-violet-500 bg-violet-500/10 text-violet-500" :
-                  step > s.id ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-800 text-slate-500"
+                  step === s.id ? "border-primary bg-primary/10 text-primary" :
+                  step > s.id ? "border-emerald-500 bg-emerald-500 text-white" : "border-border text-slate-500"
                 )}>
                   {step > s.id ? <CheckCircle2 className="h-5 w-5" /> : <s.icon className="h-4 w-4" />}
                 </div>
                 {i < steps.length - 1 && (
                   <div className={cn(
                     "h-0.5 flex-1 mx-2",
-                    step > s.id ? "bg-emerald-500" : "bg-slate-800"
+                    step > s.id ? "bg-emerald-500" : "bg-muted"
                   )} />
                 )}
               </div>
@@ -173,17 +173,17 @@ export function BusinessForm({
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Acme Corp"
                   required
-                  className="bg-slate-800 border-slate-700 text-white focus:ring-violet-500"
+                  className="bg-muted border-slate-700 text-white focus:ring-primary"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-slate-300">Status</Label>
                   <Select value={status} onValueChange={setStatus}>
-                    <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                    <SelectTrigger className="bg-muted border-slate-700 text-white">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                    <SelectContent className="bg-muted border-slate-700 text-white">
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="trialing">Trialing</SelectItem>
                       <SelectItem value="past_due">Past Due</SelectItem>
@@ -194,10 +194,10 @@ export function BusinessForm({
                 <div className="space-y-2">
                   <Label className="text-slate-300">Plan Tier</Label>
                   <Select value={planTier} onValueChange={setPlanTier}>
-                    <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                    <SelectTrigger className="bg-muted border-slate-700 text-white">
                       <SelectValue placeholder="Select plan" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                    <SelectContent className="bg-muted border-slate-700 text-white">
                       <SelectItem value="basic">Basic</SelectItem>
                       <SelectItem value="pro">Pro</SelectItem>
                       <SelectItem value="enterprise">Enterprise</SelectItem>
@@ -218,7 +218,7 @@ export function BusinessForm({
                   onChange={(e) => setOwnerName(e.target.value)}
                   placeholder="John Doe"
                   required
-                  className="bg-slate-800 border-slate-700 text-white"
+                  className="bg-muted border-slate-700 text-white"
                 />
               </div>
               <div className="space-y-2">
@@ -230,7 +230,7 @@ export function BusinessForm({
                   onChange={(e) => setOwnerEmail(e.target.value)}
                   placeholder="john@example.com"
                   required
-                  className="bg-slate-800 border-slate-700 text-white"
+                  className="bg-muted border-slate-700 text-white"
                 />
               </div>
               <div className="space-y-2">
@@ -242,7 +242,7 @@ export function BusinessForm({
                   onChange={(e) => setOwnerPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="bg-slate-800 border-slate-700 text-white"
+                  className="bg-muted border-slate-700 text-white"
                 />
               </div>
             </div>
@@ -260,7 +260,7 @@ export function BusinessForm({
                   value={waPhoneId}
                   onChange={(e) => setWaPhoneId(e.target.value)}
                   placeholder="e.g. 1029384756..."
-                  className="bg-slate-800 border-slate-700 text-white font-mono text-xs"
+                  className="bg-muted border-slate-700 text-white font-mono text-xs"
                 />
               </div>
               <div className="space-y-2">
@@ -270,7 +270,7 @@ export function BusinessForm({
                   value={waWabaId}
                   onChange={(e) => setWaWabaId(e.target.value)}
                   placeholder="e.g. 5647382910..."
-                  className="bg-slate-800 border-slate-700 text-white font-mono text-xs"
+                  className="bg-muted border-slate-700 text-white font-mono text-xs"
                 />
               </div>
               <div className="space-y-2">
@@ -281,7 +281,7 @@ export function BusinessForm({
                   value={waToken}
                   onChange={(e) => setWaToken(e.target.value)}
                   placeholder="EAAB..."
-                  className="bg-slate-800 border-slate-700 text-white font-mono text-xs"
+                  className="bg-muted border-slate-700 text-white font-mono text-xs"
                 />
               </div>
             </div>
@@ -294,7 +294,7 @@ export function BusinessForm({
                   type="button"
                   variant="outline"
                   onClick={() => setStep(step - 1)}
-                  className="border-slate-800 text-slate-400 hover:text-white"
+                  className="border-border text-slate-400 hover:text-white"
                 >
                   <ChevronLeft className="mr-2 h-4 w-4" />
                   Back
@@ -313,7 +313,7 @@ export function BusinessForm({
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-violet-600 hover:bg-violet-500 text-white min-w-[100px]"
+                className="bg-primary hover:bg-primary text-white min-w-[100px]"
               >
                 {loading ? "Processing..." : (
                   step < (isEdit ? 1 : 3) ? (
@@ -331,3 +331,4 @@ export function BusinessForm({
     </Dialog>
   );
 }
+

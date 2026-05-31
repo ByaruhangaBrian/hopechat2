@@ -105,11 +105,11 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
-        <Card className="w-full max-w-md border-slate-800 bg-slate-900">
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md border-border bg-card">
           <CardHeader className="items-center text-center">
-            <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10">
-              <CheckCircle className="h-6 w-6 text-violet-500" />
+            <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+              <CheckCircle className="h-6 w-6 text-primary" />
             </div>
             <CardTitle className="text-xl text-white">
               Check your email
@@ -124,7 +124,7 @@ export default function SignupPage() {
             <Link href="/login">
               <Button
                 variant="outline"
-                className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+                className="w-full border-slate-700 text-slate-300 hover:bg-muted hover:text-white"
               >
                 Back to sign in
               </Button>
@@ -136,11 +136,11 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
-      <Card className="w-full max-w-md border-slate-800 bg-slate-900">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <Card className="w-full max-w-md border-border bg-card">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10">
-            <MessageSquare className="h-6 w-6 text-violet-500" />
+          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+            <MessageSquare className="h-6 w-6 text-primary" />
           </div>
           <CardTitle className="text-xl text-white">Create account</CardTitle>
           <CardDescription className="text-slate-400">
@@ -167,7 +167,7 @@ export default function SignupPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
-                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
+                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500 focus-visible:border-primary focus-visible:ring-primary/20"
                 />
               </div>
 
@@ -182,7 +182,7 @@ export default function SignupPage() {
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   required
-                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
+                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500 focus-visible:border-primary focus-visible:ring-primary/20"
                 />
               </div>
 
@@ -197,7 +197,7 @@ export default function SignupPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
+                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500 focus-visible:border-primary focus-visible:ring-primary/20"
                 />
               </div>
 
@@ -212,7 +212,7 @@ export default function SignupPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
+                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500 focus-visible:border-primary focus-visible:ring-primary/20"
                 />
               </div>
 
@@ -227,13 +227,13 @@ export default function SignupPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
+                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500 focus-visible:border-primary focus-visible:ring-primary/20"
                 />
               </div>
 
               <Button
                 type="submit"
-                className="mt-2 h-10 w-full bg-violet-600 text-white hover:bg-violet-500"
+                className="mt-2 h-10 w-full bg-primary text-white hover:bg-primary"
               >
                 Continue setup
               </Button>
@@ -254,7 +254,7 @@ export default function SignupPage() {
                   placeholder="e.g. 100234567890123"
                   value={phoneNumberId}
                   onChange={(e) => setPhoneNumberId(e.target.value)}
-                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500"
+                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500"
                 />
               </div>
 
@@ -267,7 +267,7 @@ export default function SignupPage() {
                   placeholder="e.g. 100234567890456"
                   value={wabaId}
                   onChange={(e) => setWabaId(e.target.value)}
-                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500"
+                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500"
                 />
               </div>
 
@@ -281,7 +281,7 @@ export default function SignupPage() {
                   placeholder="Enter your Meta access token"
                   value={accessToken}
                   onChange={(e) => setAccessToken(e.target.value)}
-                  className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500"
+                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500"
                 />
               </div>
 
@@ -289,7 +289,7 @@ export default function SignupPage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="h-10 w-full bg-violet-600 text-white hover:bg-violet-500"
+                  className="h-10 w-full bg-primary text-white hover:bg-primary"
                 >
                   {loading ? "Creating account..." : "Finish setup"}
                 </Button>
@@ -298,7 +298,7 @@ export default function SignupPage() {
                   variant="ghost"
                   onClick={() => handleSignup()}
                   disabled={loading}
-                  className="text-slate-400 hover:bg-slate-800 hover:text-white"
+                  className="text-slate-400 hover:bg-muted hover:text-white"
                 >
                   Skip for now
                 </Button>
@@ -310,7 +310,7 @@ export default function SignupPage() {
             Already have an account?{" "}
             <Link
               href="/login"
-              className="text-violet-500 hover:text-violet-400"
+              className="text-primary hover:text-primary"
             >
               Sign in
             </Link>
@@ -320,3 +320,4 @@ export default function SignupPage() {
     </div>
   );
 }
+

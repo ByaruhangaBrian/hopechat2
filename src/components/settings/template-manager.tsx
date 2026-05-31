@@ -33,7 +33,7 @@ const CATEGORIES = ['Marketing', 'Utility', 'Authentication'] as const;
 const HEADER_TYPES = ['text', 'image', 'video', 'document'] as const;
 
 const categoryColors: Record<string, string> = {
-  Marketing: 'bg-purple-600/20 text-purple-400 border-purple-600/30',
+  Marketing: 'bg-primary/20 text-primary border-primary/30',
   Utility: 'bg-blue-600/20 text-blue-400 border-blue-600/30',
   Authentication: 'bg-amber-600/20 text-amber-400 border-amber-600/30',
 };
@@ -41,7 +41,7 @@ const categoryColors: Record<string, string> = {
 const statusColors: Record<string, string> = {
   Draft: 'bg-slate-600/20 text-slate-400 border-slate-600/30',
   Pending: 'bg-yellow-600/20 text-yellow-400 border-yellow-600/30',
-  Approved: 'bg-violet-600/20 text-violet-400 border-violet-600/30',
+  Approved: 'bg-primary/20 text-primary border-primary/30',
   Rejected: 'bg-red-600/20 text-red-400 border-red-600/30',
 };
 
@@ -247,7 +247,7 @@ export function TemplateManager() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="size-6 animate-spin text-violet-500" />
+        <Loader2 className="size-6 animate-spin text-primary" />
       </div>
     );
   }
@@ -268,7 +268,7 @@ export function TemplateManager() {
             variant="outline"
             onClick={handleSyncFromMeta}
             disabled={syncing}
-            className="border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800"
+            className="border-slate-700 bg-transparent text-slate-300 hover:bg-muted"
             title="Pull approved templates from your Meta WhatsApp Business Account"
           >
             <RefreshCw
@@ -281,7 +281,7 @@ export function TemplateManager() {
               setForm(emptyForm);
               setDialogOpen(true);
             }}
-            className="bg-violet-600 hover:bg-violet-700 text-white"
+            className="bg-primary hover:bg-primary/90 text-white"
           >
             <Plus className="size-4" />
             New Template
@@ -290,7 +290,7 @@ export function TemplateManager() {
       </div>
 
       {templates.length === 0 ? (
-        <Card className="bg-slate-900 border-slate-700 ring-0 ring-transparent">
+        <Card className="bg-card border-slate-700 ring-0 ring-transparent">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-slate-400 text-sm">No templates yet.</p>
             <p className="text-slate-500 text-xs mt-1">Create your first message template to get started.</p>
@@ -299,7 +299,7 @@ export function TemplateManager() {
       ) : (
         <div className="grid gap-3">
           {templates.map((template) => (
-            <Card key={template.id} className="bg-slate-900 border-slate-700 ring-0 ring-transparent">
+            <Card key={template.id} className="bg-card border-slate-700 ring-0 ring-transparent">
               <CardContent className="flex items-start justify-between pt-4">
                 <div className="space-y-2 min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -339,7 +339,7 @@ export function TemplateManager() {
 
       {/* New Template Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-700 sm:max-w-lg">
+        <DialogContent className="bg-card border-slate-700 sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-white">New Message Template</DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -354,7 +354,7 @@ export function TemplateManager() {
                 placeholder="e.g. order_confirmation"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                className="bg-muted border-slate-700 text-white placeholder:text-slate-500"
               />
             </div>
 
@@ -367,10 +367,10 @@ export function TemplateManager() {
                     setForm({ ...form, category: val as MessageTemplate['category'] })
                   }
                 >
-                  <SelectTrigger className="w-full bg-slate-800 border-slate-700 text-white">
+                  <SelectTrigger className="w-full bg-muted border-slate-700 text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectContent className="bg-muted border-slate-700">
                     {CATEGORIES.map((cat) => (
                       <SelectItem key={cat} value={cat} className="text-white focus:bg-slate-700 focus:text-white">
                         {cat}
@@ -387,7 +387,7 @@ export function TemplateManager() {
                   placeholder="en_US"
                   value={form.language}
                   onChange={(e) => setForm({ ...form, language: e.target.value })}
-                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                  className="bg-muted border-slate-700 text-white placeholder:text-slate-500"
                 />
                 <datalist id="template-language-codes">
                   {COMMON_LANGUAGE_CODES.map((code) => (
@@ -408,10 +408,10 @@ export function TemplateManager() {
                 value={form.header_type}
                 onValueChange={(val) => setForm({ ...form, header_type: val || '' })}
               >
-                <SelectTrigger className="w-full bg-slate-800 border-slate-700 text-white">
+                <SelectTrigger className="w-full bg-muted border-slate-700 text-white">
                   <SelectValue placeholder="None" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
+                <SelectContent className="bg-muted border-slate-700">
                   <SelectItem value="none" className="text-white focus:bg-slate-700 focus:text-white">
                     None
                   </SelectItem>
@@ -431,7 +431,7 @@ export function TemplateManager() {
                 value={form.body_text}
                 onChange={(e) => setForm({ ...form, body_text: e.target.value })}
                 rows={4}
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 resize-none"
+                className="bg-muted border-slate-700 text-white placeholder:text-slate-500 resize-none"
               />
             </div>
 
@@ -441,23 +441,23 @@ export function TemplateManager() {
                 placeholder="Optional footer text"
                 value={form.footer_text}
                 onChange={(e) => setForm({ ...form, footer_text: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                className="bg-muted border-slate-700 text-white placeholder:text-slate-500"
               />
             </div>
           </div>
 
-          <DialogFooter className="bg-slate-900 border-slate-700">
+          <DialogFooter className="bg-card border-slate-700">
             <Button
               variant="outline"
               onClick={() => setDialogOpen(false)}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              className="border-slate-700 text-slate-300 hover:bg-muted"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="bg-violet-600 hover:bg-violet-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-white"
             >
               {saving ? (
                 <>
@@ -474,3 +474,4 @@ export function TemplateManager() {
     </div>
   );
 }
+

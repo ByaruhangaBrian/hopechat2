@@ -25,14 +25,14 @@ export function ReplyQuote({
   return (
     <div
       className={cn(
-        "flex items-start gap-2 border-l-2 border-violet-400 px-2 py-1",
+        "flex items-start gap-2 border-l-2 border-primary px-2 py-1",
         isChip
-          ? "rounded-md bg-slate-800/80"
+          ? "rounded-md bg-muted/80"
           : "mb-1.5 rounded-md bg-black/20",
       )}
     >
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[11px] font-medium text-violet-300">
+        <div className="truncate text-[11px] font-medium text-primary">
           {authorLabel}
         </div>
         <div className="truncate text-xs text-slate-200/80">{preview}</div>
@@ -71,3 +71,4 @@ export function buildReplyPreview(message: Message): string {
       return "[Message]";
   }
 }
+

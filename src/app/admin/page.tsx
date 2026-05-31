@@ -95,12 +95,12 @@ export default function AdminDashboard() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((card) => (
-          <Card key={card.title} className="bg-slate-900 border-slate-800">
+          <Card key={card.title} className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-slate-400">
                 {card.title}
               </CardTitle>
-              <card.icon className="h-4 w-4 text-violet-500" />
+              <card.icon className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-white">
@@ -113,7 +113,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-white">Quick Actions</CardTitle>
             <CardDescription>Common administrative tasks.</CardDescription>
@@ -121,20 +121,20 @@ export default function AdminDashboard() {
           <CardContent className="grid gap-2">
             <Link 
               href="/admin/businesses"
-              className="flex items-center justify-between rounded-lg border border-slate-800 p-3 hover:bg-slate-800 transition-colors"
+              className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted transition-colors"
             >
               <div className="flex items-center gap-3">
-                <Building2 className="h-4 w-4 text-violet-500" />
+                <Building2 className="h-4 w-4 text-primary" />
                 <span className="text-sm text-slate-200">Review new signups</span>
               </div>
               <ArrowUpRight className="h-4 w-4 text-slate-500" />
             </Link>
             <Link 
               href="/admin/settings"
-              className="flex items-center justify-between rounded-lg border border-slate-800 p-3 hover:bg-slate-800 transition-colors"
+              className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted transition-colors"
             >
               <div className="flex items-center gap-3">
-                <Settings className="h-4 w-4 text-violet-500" />
+                <Settings className="h-4 w-4 text-primary" />
                 <span className="text-sm text-slate-200">Configure global webhooks</span>
               </div>
               <ArrowUpRight className="h-4 w-4 text-slate-500" />
@@ -142,7 +142,7 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-white">System Health</CardTitle>
             <CardDescription>Real-time status of critical services.</CardDescription>
@@ -175,3 +175,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

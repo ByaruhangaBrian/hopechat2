@@ -181,10 +181,10 @@ export default function BusinessesPage() {
           <p className="text-slate-400">Manage tenants and their subscription features.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="border-slate-800 text-slate-300" onClick={fetchBusinesses} disabled={loading}>
+          <Button variant="outline" className="border-border text-slate-300" onClick={fetchBusinesses} disabled={loading}>
             Refresh
           </Button>
-          <Button className="bg-violet-600 hover:bg-violet-500 text-white" onClick={() => {
+          <Button className="bg-primary hover:bg-primary text-white" onClick={() => {
             setEditingBusiness(null);
             setIsFormOpen(true);
           }}>
@@ -193,10 +193,10 @@ export default function BusinessesPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
         <Table>
-          <TableHeader className="bg-slate-800/50">
-            <TableRow className="hover:bg-transparent border-slate-800">
+          <TableHeader className="bg-muted/50">
+            <TableRow className="hover:bg-transparent border-border">
               <TableHead className="text-slate-300">Business Name</TableHead>
               <TableHead className="text-slate-300">Status</TableHead>
               <TableHead className="text-slate-300">Plan</TableHead>
@@ -219,11 +219,11 @@ export default function BusinessesPage() {
               </TableRow>
             ) : (
               businesses.map((biz) => (
-                <TableRow key={biz.id} className="border-slate-800 hover:bg-slate-800/30">
+                <TableRow key={biz.id} className="border-border hover:bg-muted/30">
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded bg-slate-800">
-                        <Building2 className="h-4 w-4 text-violet-500" />
+                      <div className="flex h-8 w-8 items-center justify-center rounded bg-muted">
+                        <Building2 className="h-4 w-4 text-primary" />
                       </div>
                       <div>
                         <div className="font-medium text-slate-200">{biz.name}</div>
@@ -244,8 +244,8 @@ export default function BusinessesPage() {
                           className={cn(
                             "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors",
                             enabled 
-                              ? "bg-violet-500/10 text-violet-400 hover:bg-violet-500/20" 
-                              : "bg-slate-800 text-slate-500 hover:bg-slate-700"
+                              ? "bg-primary/10 text-primary hover:bg-primary/20" 
+                              : "bg-muted text-slate-500 hover:bg-slate-700"
                           )}
                         >
                           {enabled ? <CheckCircle2 className="h-2.5 w-2.5" /> : <XCircle className="h-2.5 w-2.5" />}
@@ -257,14 +257,14 @@ export default function BusinessesPage() {
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger
-                        className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 hover:text-white focus:outline-none transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-muted hover:text-white focus:outline-none transition-colors"
                       >
                         <MoreVertical className="h-4 w-4" />
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-slate-900 border-slate-800 text-slate-200 min-w-48">
+                      <DropdownMenuContent align="end" className="bg-card border-border text-slate-200 min-w-48">
                         <DropdownMenuGroup>
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator className="bg-slate-800" />
+                          <DropdownMenuSeparator className="bg-muted" />
                           <DropdownMenuItem
                             className="cursor-pointer"
                             onClick={() => window.location.href = `/admin/businesses/${biz.id}`}
@@ -291,7 +291,7 @@ export default function BusinessesPage() {
                           </DropdownMenuItem>
                         </DropdownMenuGroup>
                         
-                        <DropdownMenuSeparator className="bg-slate-800" />
+                        <DropdownMenuSeparator className="bg-muted" />
                         
                         <DropdownMenuGroup>
                           {biz.status !== 'active' && (
@@ -308,7 +308,7 @@ export default function BusinessesPage() {
                           )}
                         </DropdownMenuGroup>
                         
-                        <DropdownMenuSeparator className="bg-slate-800" />
+                        <DropdownMenuSeparator className="bg-muted" />
                         
                         <DropdownMenuGroup>
                           <DropdownMenuItem 
@@ -349,3 +349,4 @@ export default function BusinessesPage() {
     </div>
   );
 }
+

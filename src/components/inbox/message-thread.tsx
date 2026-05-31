@@ -99,7 +99,7 @@ function groupMessagesByDate(messages: Message[]) {
 }
 
 const STATUS_OPTIONS: { label: string; value: ConversationStatus; color: string }[] = [
-  { label: "Open", value: "open", color: "text-violet-400" },
+  { label: "Open", value: "open", color: "text-primary" },
   { label: "Pending", value: "pending", color: "text-amber-400" },
   { label: "Closed", value: "closed", color: "text-slate-400" },
 ];
@@ -632,8 +632,8 @@ export function MessageThread({
   // Empty state
   if (!conversation || !contact) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center bg-slate-950">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-800">
+      <div className="flex flex-1 flex-col items-center justify-center bg-background">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
           <MessageSquare className="h-8 w-8 text-slate-600" />
         </div>
         <h3 className="mt-4 text-sm font-medium text-slate-400">
@@ -658,9 +658,9 @@ export function MessageThread({
     : "Assign";
 
   return (
-    <div className="flex flex-1 flex-col bg-slate-950">
+    <div className="flex flex-1 flex-col bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 border-b border-slate-800 bg-slate-900 px-3 py-3 sm:px-4">
+      <div className="flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-3 sm:px-4">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           {/* Back-to-list button — mobile only. Hidden on lg+ where the
               conversation list is always visible next to the thread. */}
@@ -669,7 +669,7 @@ export function MessageThread({
               type="button"
               onClick={onBack}
               aria-label="Back to conversations"
-              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-slate-300 hover:bg-slate-800 hover:text-white lg:hidden"
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-slate-300 hover:bg-muted hover:text-white lg:hidden"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
@@ -687,7 +687,7 @@ export function MessageThread({
             variant="outline"
             className={cn(
               "ml-1 hidden gap-1 border-slate-700 text-[10px] sm:inline-flex sm:ml-2",
-              sessionInfo.expired ? "text-red-400" : "text-violet-400"
+              sessionInfo.expired ? "text-red-400" : "text-primary"
             )}
           >
             <Clock className="h-3 w-3" />
@@ -699,7 +699,7 @@ export function MessageThread({
           {/* Status dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger className={cn(
-              "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-slate-800",
+              "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-muted",
               currentStatus?.color ?? "text-slate-400"
             )}>
               {currentStatus?.label ?? "Status"}
@@ -707,7 +707,7 @@ export function MessageThread({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="border-slate-700 bg-slate-800"
+              className="border-slate-700 bg-muted"
             >
               {STATUS_OPTIONS.map((opt) => (
                 <DropdownMenuItem
@@ -725,8 +725,8 @@ export function MessageThread({
           <DropdownMenu>
             <DropdownMenuTrigger
               className={cn(
-                "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-slate-800",
-                assignedAgentId ? "text-violet-400" : "text-slate-400"
+                "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-muted",
+                assignedAgentId ? "text-primary" : "text-slate-400"
               )}
             >
               <UserPlus className="h-3 w-3" />
@@ -735,7 +735,7 @@ export function MessageThread({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="border-slate-700 bg-slate-800"
+              className="border-slate-700 bg-muted"
             >
               {profiles.length === 0 ? (
                 <DropdownMenuItem disabled className="text-sm text-slate-500">
@@ -750,7 +750,7 @@ export function MessageThread({
                       onClick={() => handleAssignChange(p.user_id)}
                       className={cn(
                         "text-sm",
-                        isSelected ? "text-violet-400" : "text-slate-300"
+                        isSelected ? "text-primary" : "text-slate-300"
                       )}
                     >
                       <span className="flex-1">
@@ -776,7 +776,7 @@ export function MessageThread({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-300">
+          <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-muted px-2 py-1 text-xs text-slate-300">
             <span>AI</span>
             <Switch
               checked={conversation.ai_enabled ?? false}
@@ -791,7 +791,7 @@ export function MessageThread({
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
@@ -806,7 +806,7 @@ export function MessageThread({
               <div key={group.date}>
                 {/* Date separator */}
                 <div className="mb-4 flex items-center justify-center">
-                  <span className="rounded-full bg-slate-800 px-3 py-1 text-[10px] font-medium text-slate-400">
+                  <span className="rounded-full bg-muted px-3 py-1 text-[10px] font-medium text-slate-400">
                     {formatDateSeparator(group.date)}
                   </span>
                 </div>
@@ -878,3 +878,4 @@ export function MessageThread({
     </div>
   );
 }
+

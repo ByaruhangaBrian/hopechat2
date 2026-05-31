@@ -55,10 +55,6 @@ const navItems = [
   { href: "/automations", label: "Automations", icon: Zap },
 ];
 
-const bottomNavItems = [
-  { href: "/settings", label: "Settings", icon: Settings },
-];
-
 interface SidebarProps {
   /** Controlled on mobile by the Header's hamburger button. Ignored on lg+. */
   open?: boolean;
@@ -70,6 +66,11 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const { profile, signOut } = useAuth();
   const totalUnread = useTotalUnread();
   const { theme, setTheme } = useTheme();
+
+  const bottomNavItems = [
+    ...(profile?.is_superadmin ? [{ href: "/admin", label: "System Admin", icon: ShieldCheck }] : []),
+    { href: "/settings", label: "Settings", icon: Settings },
+  ];
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [impersonatedName, setImpersonatedName] = useState<string | null>(null);
@@ -186,7 +187,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
               <div className="space-y-1.5">
                 <p className="text-[11px] font-medium text-amber-500 leading-tight">
-                  Impersonating: <span className="text-white">{impersonatedName}</span>
+                  Impersonating: <span className="text-foreground font-bold">{impersonatedName}</span>
                 </p>
                 <button 
                   onClick={stopImpersonating}

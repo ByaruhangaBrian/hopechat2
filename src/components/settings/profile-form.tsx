@@ -227,7 +227,7 @@ export function ProfileForm() {
     : '—';
 
   return (
-    <Card className="bg-slate-900/40 border-slate-800">
+    <Card className="bg-card/40 border-border">
       <CardHeader>
         <CardTitle className="text-white">Profile</CardTitle>
         <CardDescription className="text-slate-400">
@@ -244,7 +244,7 @@ export function ProfileForm() {
               {currentAvatar ? (
                 <AvatarImage src={currentAvatar} alt={fullName || 'Avatar'} />
               ) : null}
-              <AvatarFallback className="bg-violet-500/10 text-base text-violet-400">
+              <AvatarFallback className="bg-primary/10 text-base text-primary">
                 {initial}
               </AvatarFallback>
             </Avatar>
@@ -347,7 +347,7 @@ export function ProfileForm() {
           </div>
 
           {/* Read-only block */}
-          <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+          <div className="rounded-lg border border-border bg-card/60 p-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
               Account details
             </p>
@@ -395,3 +395,4 @@ export function ProfileForm() {
     </Card>
   );
 }
+

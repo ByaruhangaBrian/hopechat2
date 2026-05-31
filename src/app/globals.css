@@ -118,8 +118,8 @@
   body {
     @apply bg-background text-foreground selection:bg-primary/20;
     background-image: 
-      radial-gradient(at 0% 0%, oklch(var(--primary) / 0.05) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, oklch(var(--primary) / 0.03) 0px, transparent 50%);
+      radial-gradient(at 0% 0%, color-mix(in oklch, var(--primary), transparent 95%) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, color-mix(in oklch, var(--primary), transparent 97%) 0px, transparent 50%);
   }
   html {
     @apply font-sans;
@@ -143,7 +143,7 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at center, oklch(var(--primary) / 0.15), transparent 70%);
+    background: radial-gradient(circle at center, color-mix(in oklch, var(--primary), transparent 85%), transparent 70%);
     z-index: -1;
     @apply pointer-events-none;
   }

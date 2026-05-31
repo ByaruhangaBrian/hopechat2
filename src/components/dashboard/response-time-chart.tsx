@@ -25,8 +25,8 @@ export function ResponseTimeChart({
   const hasData = data?.buckets.some((b) => b.avgMinutes != null) ?? false
 
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900">
-      <header className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+    <section className="rounded-xl border border-border bg-card">
+      <header className="flex items-center justify-between border-b border-border px-5 py-4">
         <div>
           <h2 className="text-sm font-semibold text-white">
             Average First Response Time
@@ -158,7 +158,7 @@ function Bars({
               width={barW}
               height={muted ? 2 : Math.max(1, h)}
               rx={4}
-              fill={muted ? 'rgb(51 65 85)' : '#7c3aed'}
+              fill={muted ? 'rgb(51 65 85)' : '#10b8a2'}
               opacity={muted ? 0.6 : 1}
             >
               <title>
@@ -200,3 +200,4 @@ function niceCeil(max: number): number {
   else nice = 10
   return nice * pow
 }
+

@@ -58,14 +58,14 @@ export function IntegrationsHub() {
         const isComingSoon = int.status === 'Coming Soon';
 
         return (
-          <Card key={int.id} className="bg-slate-900 border-slate-800 flex flex-col">
+          <Card key={int.id} className="bg-card border-border flex flex-col">
             <CardHeader>
               <div className="flex items-center justify-between mb-2">
-                <div className={`p-2 rounded-lg bg-slate-800 ${int.iconColor}`}>
+                <div className={`p-2 rounded-lg bg-muted ${int.iconColor}`}>
                   <Icon className="size-6" />
                 </div>
                 <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                  isComingSoon ? 'bg-slate-800 text-slate-500' : 'bg-emerald-500/10 text-emerald-500'
+                  isComingSoon ? 'bg-muted text-slate-500' : 'bg-emerald-500/10 text-emerald-500'
                 }`}>
                   {int.status}
                 </span>
@@ -77,7 +77,7 @@ export function IntegrationsHub() {
             </CardHeader>
             <CardContent className="mt-auto pt-0">
               <Button 
-                className="w-full bg-slate-800 hover:bg-slate-700 text-white"
+                className="w-full bg-muted hover:bg-slate-700 text-white"
                 disabled={isComingSoon}
                 onClick={() => setActiveIntegration(int.id)}
               >
@@ -91,3 +91,4 @@ export function IntegrationsHub() {
     </div>
   );
 }
+

@@ -140,17 +140,17 @@ export default function NewBroadcastPage() {
                 <div
                   className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-all ${
                     isCompleted
-                      ? 'bg-violet-500 text-white'
+                      ? 'bg-primary text-white'
                       : isActive
-                        ? 'border-2 border-violet-500 bg-violet-500/10 text-violet-400'
-                        : 'border border-slate-700 bg-slate-800 text-slate-500'
+                        ? 'border-2 border-primary bg-primary/10 text-primary'
+                        : 'border border-slate-700 bg-muted text-slate-500'
                   }`}
                 >
                   {isCompleted ? <Check className="h-4 w-4" /> : index + 1}
                 </div>
                 <span
                   className={`hidden text-sm font-medium sm:block ${
-                    isActive ? 'text-white' : isCompleted ? 'text-violet-400' : 'text-slate-500'
+                    isActive ? 'text-white' : isCompleted ? 'text-primary' : 'text-slate-500'
                   }`}
                 >
                   {step.label}
@@ -159,7 +159,7 @@ export default function NewBroadcastPage() {
               {index < steps.length - 1 && (
                 <div
                   className={`mx-3 h-px flex-1 ${
-                    index < currentStep ? 'bg-violet-500' : 'bg-slate-800'
+                    index < currentStep ? 'bg-primary' : 'bg-muted'
                   }`}
                 />
               )}
@@ -220,3 +220,4 @@ export default function NewBroadcastPage() {
     </div>
   );
 }
+

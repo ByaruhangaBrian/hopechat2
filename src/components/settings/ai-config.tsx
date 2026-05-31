@@ -135,7 +135,7 @@ export function AiConfig() {
                                 setApiKeyEdited(true);
                             }}
                             placeholder={hasApiKey ? 'Leave blank to keep existing key' : 'Enter your Gemini API key'}
-                            className="bg-slate-900 text-white"
+                            className="bg-card text-white"
                         />
                         <p className="text-xs text-slate-500">
                             Your API key is encrypted and stored securely. {hasApiKey ? 'Existing key is already configured.' : 'A valid key is required to enable AI.'}
@@ -150,7 +150,7 @@ export function AiConfig() {
                         value={systemPrompt}
                         onChange={(e) => setSystemPrompt(e.target.value)}
                         placeholder={DEFAULT_PROMPT}
-                        className="min-h-[140px] bg-slate-900 text-white"
+                        className="min-h-[140px] bg-card text-white"
                     />
                 </div>
 
@@ -162,7 +162,7 @@ export function AiConfig() {
                             value={trainingDocuments}
                             onChange={(e) => setTrainingDocuments(e.target.value)}
                             placeholder="Enter optional training documents separated by ---"
-                            className="min-h-[140px] bg-slate-900 text-white"
+                            className="min-h-[140px] bg-card text-white"
                         />
                         <p className="text-xs text-slate-500">
                             Provide long-form context or documents separated by <strong>---</strong>.
@@ -185,3 +185,4 @@ export function AiConfig() {
         </Card>
     );
 }
+

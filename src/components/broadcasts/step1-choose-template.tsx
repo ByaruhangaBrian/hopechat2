@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, FileText, ArrowRight } from 'lucide-react';
 
 const categoryColors: Record<string, string> = {
-  Marketing: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  Marketing: 'bg-primary/10 text-primary border-primary/20',
   Utility: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
   Authentication: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
 };
@@ -48,7 +48,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-violet-500" />
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
   }
@@ -71,7 +71,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
       </div>
 
       {templates.length === 0 ? (
-        <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-slate-800 bg-slate-900/50">
+        <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-border bg-card/50">
           <FileText className="mb-2 h-8 w-8 text-slate-600" />
           <p className="text-sm text-slate-400">No templates available.</p>
           <p className="mt-1 text-xs text-slate-500">Create a template in Settings first.</p>
@@ -88,8 +88,8 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
                 onClick={() => onSelect(template)}
                 className={`flex flex-col gap-3 rounded-xl border p-4 text-left transition-all ${
                   isSelected
-                    ? 'border-violet-500 bg-violet-500/5 ring-1 ring-violet-500/30'
-                    : 'border-slate-800 bg-slate-900/50 hover:border-slate-700 hover:bg-slate-900'
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                    : 'border-border bg-card/50 hover:border-slate-700 hover:bg-card'
                 }`}
               >
                 <div className="flex items-start justify-between">
@@ -116,14 +116,14 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
         </div>
       )}
 
-      <div className="flex items-center justify-between border-t border-slate-800 pt-4">
+      <div className="flex items-center justify-between border-t border-border pt-4">
         <Button variant="outline" onClick={onBack} className="border-slate-700 text-slate-300">
           Back
         </Button>
         <Button
           onClick={onNext}
           disabled={!selectedTemplate}
-          className="bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50"
+          className="bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
         >
           Next
           <ArrowRight className="h-4 w-4" />
@@ -132,3 +132,4 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
     </div>
   );
 }
+

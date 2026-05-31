@@ -4,12 +4,12 @@ import { MessageSquare, ArrowRight, Shield, Zap, BarChart3, Users } from "lucide
 
 export default function LandingPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-slate-950 text-white selection:bg-violet-500/30">
+    <div className="flex min-h-screen flex-col bg-background text-white selection:bg-primary/30">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <MessageSquare className="h-4 w-4 text-white" />
             </div>
             <span className="text-lg font-bold tracking-tight">HopeChat</span>
@@ -21,10 +21,10 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-4">
             <Link href="/login">
-              <Button variant="ghost" className="text-slate-400 hover:text-white hover:bg-slate-900">Sign In</Button>
+              <Button variant="ghost" className="text-slate-400 hover:text-white hover:bg-card">Sign In</Button>
             </Link>
             <Link href="/signup">
-              <Button className="bg-violet-600 hover:bg-violet-500 text-white">Get Started</Button>
+              <Button className="bg-primary hover:bg-primary text-white">Get Started</Button>
             </Link>
           </div>
         </div>
@@ -33,9 +33,9 @@ export default function LandingPage() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative overflow-hidden py-24 lg:py-32">
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(45%_40%_at_50%_50%,rgba(124,58,237,0.1),transparent)]" />
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(45%_40%_at_50%_50%,rgba(16,185,129,0.1),transparent)]" />
           <div className="container mx-auto px-4 text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-violet-500/20 bg-violet-500/5 px-3 py-1 text-sm font-medium text-violet-400 mb-8 animate-fade-in">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-sm font-medium text-primary mb-8 animate-fade-in">
               <Zap className="h-3.5 w-3.5" />
               <span>Next-gen WhatsApp Marketing</span>
             </div>
@@ -47,11 +47,11 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link href="/signup">
-                <Button size="lg" className="h-12 px-8 bg-violet-600 hover:bg-violet-500 text-white gap-2">
+                <Button size="lg" className="h-12 px-8 bg-primary hover:bg-primary text-white gap-2">
                   Start your free trial <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <Button size="lg" variant="outline" className="h-12 px-8 border-slate-800 text-slate-300 hover:bg-slate-900 hover:text-white">
+              <Button size="lg" variant="outline" className="h-12 px-8 border-border text-slate-300 hover:bg-card hover:text-white">
                 Book a demo
               </Button>
             </div>
@@ -59,7 +59,7 @@ export default function LandingPage() {
         </section>
 
         {/* Features Grid */}
-        <section id="features" className="py-24 border-t border-slate-900 bg-slate-950/50">
+        <section id="features" className="py-24 border-t border-slate-900 bg-background/50">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl font-bold mb-4">Everything you need to scale</h2>
@@ -98,8 +98,8 @@ export default function LandingPage() {
                   icon: Shield,
                 },
               ].map((feature, i) => (
-                <div key={i} className="group p-8 rounded-2xl border border-slate-800 bg-slate-900/50 hover:border-violet-500/50 transition-all">
-                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-violet-600/10 text-violet-500 group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                <div key={i} className="group p-8 rounded-2xl border border-border bg-card/50 hover:border-primary/50 transition-all">
+                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
                     <feature.icon className="h-5 w-5" />
                   </div>
                   <h3 className="text-lg font-bold mb-2">{feature.title}</h3>
@@ -113,16 +113,16 @@ export default function LandingPage() {
         {/* CTA Section */}
         <section className="py-24">
           <div className="container mx-auto px-4">
-            <div className="rounded-3xl bg-violet-600 p-8 md:p-16 text-center text-white overflow-hidden relative">
+            <div className="rounded-3xl bg-primary p-8 md:p-16 text-center text-white overflow-hidden relative">
               <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
               <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-64 h-64 bg-black/10 rounded-full blur-3xl" />
               <h2 className="text-3xl md:text-4xl font-bold mb-6 relative z-10">Ready to transform your communication?</h2>
-              <p className="text-violet-100 mb-10 max-w-xl mx-auto relative z-10">
+              <p className="text-emerald-100 mb-10 max-w-xl mx-auto relative z-10">
                 Join hundreds of businesses using HopeChat to automate their customer engagement and boost sales.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
                 <Link href="/signup">
-                  <Button size="lg" className="bg-white text-violet-600 hover:bg-slate-100 h-12 px-8">
+                  <Button size="lg" className="bg-white text-primary hover:bg-slate-100 h-12 px-8">
                     Get Started Now
                   </Button>
                 </Link>
@@ -136,11 +136,11 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 py-12 bg-slate-950">
+      <footer className="border-t border-slate-900 py-12 bg-background">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-8">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                 <MessageSquare className="h-4 w-4 text-white" />
               </div>
               <span className="text-lg font-bold tracking-tight">HopeChat</span>
@@ -159,3 +159,4 @@ export default function LandingPage() {
     </div>
   );
 }
+

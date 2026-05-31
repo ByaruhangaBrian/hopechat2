@@ -47,45 +47,45 @@ export default function SettingsPage() {
       </div>
 
       <Tabs value={tab} onValueChange={(v) => onChange(v as TabValue)}>
-        <TabsList className="bg-slate-900 border border-slate-700">
+        <TabsList className="bg-card border border-slate-700">
           <TabsTrigger
             value="profile"
-            className="data-active:bg-slate-800 data-active:text-violet-400 text-slate-400"
+            className="data-active:bg-muted data-active:text-primary text-slate-400"
           >
             <User className="size-4" />
             Profile
           </TabsTrigger>
           <TabsTrigger
             value="whatsapp"
-            className="data-active:bg-slate-800 data-active:text-violet-400 text-slate-400"
+            className="data-active:bg-muted data-active:text-primary text-slate-400"
           >
             <Settings className="size-4" />
             WhatsApp Config
           </TabsTrigger>
           <TabsTrigger
             value="templates"
-            className="data-active:bg-slate-800 data-active:text-violet-400 text-slate-400"
+            className="data-active:bg-muted data-active:text-primary text-slate-400"
           >
             <MessageSquare className="size-4" />
             Templates
           </TabsTrigger>
           <TabsTrigger
             value="tags"
-            className="data-active:bg-slate-800 data-active:text-violet-400 text-slate-400"
+            className="data-active:bg-muted data-active:text-primary text-slate-400"
           >
             <Tag className="size-4" />
             Tags
           </TabsTrigger>
           <TabsTrigger
             value="ai"
-            className="data-active:bg-slate-800 data-active:text-violet-400 text-slate-400"
+            className="data-active:bg-muted data-active:text-primary text-slate-400"
           >
             <Cpu className="size-4" />
             AI
           </TabsTrigger>
           <TabsTrigger
             value="integrations"
-            className="data-active:bg-slate-800 data-active:text-violet-400 text-slate-400"
+            className="data-active:bg-muted data-active:text-primary text-slate-400"
           >
             <Blocks className="size-4" />
             Integrations
@@ -121,3 +121,4 @@ export default function SettingsPage() {
     </div>
   );
 }
+

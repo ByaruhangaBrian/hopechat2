@@ -239,7 +239,7 @@ export function DealForm({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="bg-slate-900 border-slate-700 text-slate-200 sm:max-w-lg w-full p-0"
+        className="bg-card border-slate-700 text-slate-200 sm:max-w-lg w-full p-0"
       >
         <div className="flex h-full flex-col">
           <SheetHeader className="border-b border-slate-700/50 p-4">
@@ -255,7 +255,7 @@ export function DealForm({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Deal title"
-                className="border-slate-700 bg-slate-800 text-white"
+                className="border-slate-700 bg-muted text-white"
               />
             </div>
 
@@ -264,7 +264,7 @@ export function DealForm({
               <select
                 value={contactId}
                 onChange={(e) => setContactId(e.target.value)}
-                className="h-9 w-full rounded-lg border border-slate-700 bg-slate-800 px-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                className="h-9 w-full rounded-lg border border-slate-700 bg-muted px-2.5 text-sm text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               >
                 <option value="">Select a contact</option>
                 {contacts.map((c) => (
@@ -277,7 +277,7 @@ export function DealForm({
               {linkedConversation && (
                 <Link
                   href="/inbox"
-                  className="mt-1 inline-flex items-center gap-1.5 self-start rounded-md bg-violet-500/10 px-2 py-1 text-xs text-violet-400 hover:bg-violet-500/20"
+                  className="mt-1 inline-flex items-center gap-1.5 self-start rounded-md bg-primary/10 px-2 py-1 text-xs text-primary hover:bg-primary/20"
                 >
                   <MessageSquare className="h-3 w-3" />
                   Link to Conversation
@@ -295,7 +295,7 @@ export function DealForm({
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
                     placeholder="0"
-                    className="border-slate-700 bg-slate-800 pl-7 text-white"
+                    className="border-slate-700 bg-muted pl-7 text-white"
                   />
                 </div>
               </div>
@@ -304,7 +304,7 @@ export function DealForm({
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
-                  className="h-9 w-full rounded-lg border border-slate-700 bg-slate-800 px-2.5 text-sm text-white outline-none focus:border-violet-500"
+                  className="h-9 w-full rounded-lg border border-slate-700 bg-muted px-2.5 text-sm text-white outline-none focus:border-primary"
                 >
                   <option value="USD">USD</option>
                   <option value="EUR">EUR</option>
@@ -319,7 +319,7 @@ export function DealForm({
                 type="date"
                 value={expectedCloseDate}
                 onChange={(e) => setExpectedCloseDate(e.target.value)}
-                className="border-slate-700 bg-slate-800 text-white"
+                className="border-slate-700 bg-muted text-white"
               />
             </div>
 
@@ -328,7 +328,7 @@ export function DealForm({
               <select
                 value={stageId}
                 onChange={(e) => setStageId(e.target.value)}
-                className="h-9 w-full rounded-lg border border-slate-700 bg-slate-800 px-2.5 text-sm text-white outline-none focus:border-violet-500"
+                className="h-9 w-full rounded-lg border border-slate-700 bg-muted px-2.5 text-sm text-white outline-none focus:border-primary"
               >
                 {stages.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -343,7 +343,7 @@ export function DealForm({
               <select
                 value={assignedTo}
                 onChange={(e) => setAssignedTo(e.target.value)}
-                className="h-9 w-full rounded-lg border border-slate-700 bg-slate-800 px-2.5 text-sm text-white outline-none focus:border-violet-500"
+                className="h-9 w-full rounded-lg border border-slate-700 bg-muted px-2.5 text-sm text-white outline-none focus:border-primary"
               >
                 <option value="">Unassigned</option>
                 {profiles.map((p) => (
@@ -360,12 +360,12 @@ export function DealForm({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add notes..."
-                className="min-h-[100px] border-slate-700 bg-slate-800 text-white"
+                className="min-h-[100px] border-slate-700 bg-muted text-white"
               />
             </div>
 
             {deal && (
-              <div className="space-y-2 rounded-lg border border-slate-700 bg-slate-900/50 p-3">
+              <div className="space-y-2 rounded-lg border border-slate-700 bg-card/50 p-3">
                 <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
                   Status
                 </p>
@@ -374,7 +374,7 @@ export function DealForm({
                     type="button"
                     onClick={() => handleStatusChange("won")}
                     disabled={!!statusAction || deal.status === "won"}
-                    className="flex-1 bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50"
+                    className="flex-1 bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
                   >
                     {statusAction === "won" ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -416,19 +416,19 @@ export function DealForm({
             )}
           </div>
 
-          <div className="border-t border-slate-700/50 bg-slate-900/80 p-4">
+          <div className="border-t border-slate-700/50 bg-card/80 p-4">
             <div className="flex gap-2">
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="flex-1 border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800"
+                className="flex-1 border-slate-700 bg-transparent text-slate-300 hover:bg-muted"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSave}
                 disabled={saving || !title.trim() || !contactId || !stageId}
-                className="flex-1 bg-violet-600 text-white hover:bg-violet-700"
+                className="flex-1 bg-primary text-white hover:bg-primary/90"
               >
                 {saving ? "Saving..." : deal ? "Save Changes" : "Create Deal"}
               </Button>
@@ -443,7 +443,7 @@ export function DealForm({
                       type="button"
                       onClick={() => setConfirmDelete(false)}
                       disabled={deleting}
-                      className="rounded px-2 py-1 text-slate-300 hover:bg-slate-800"
+                      className="rounded px-2 py-1 text-slate-300 hover:bg-muted"
                     >
                       Cancel
                     </button>
@@ -473,3 +473,4 @@ export function DealForm({
     </Sheet>
   );
 }
+

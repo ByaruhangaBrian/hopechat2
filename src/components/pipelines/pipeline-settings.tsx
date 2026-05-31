@@ -40,7 +40,7 @@ import { toast } from "sonner";
 const STAGE_COLORS = [
   "#3b82f6",
   "#6366f1",
-  "#8b5cf6",
+  "#14b8a6",
   "#ec4899",
   "#f43f5e",
   "#f97316",
@@ -202,7 +202,7 @@ export function PipelineSettings({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-slate-900 border-slate-700 max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md bg-card border-slate-700 max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-white">Manage Pipeline</DialogTitle>
         </DialogHeader>
@@ -225,7 +225,7 @@ export function PipelineSettings({
               <Button
                 variant="outline"
                 onClick={() => setShowDeleteConfirm(false)}
-                className="border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800"
+                className="border-slate-700 bg-transparent text-slate-300 hover:bg-muted"
               >
                 Cancel
               </Button>
@@ -246,7 +246,7 @@ export function PipelineSettings({
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="border-slate-700 bg-slate-800 text-white"
+                  className="border-slate-700 bg-muted text-white"
                 />
               </div>
 
@@ -306,7 +306,7 @@ export function PipelineSettings({
                     value={newStageName}
                     onChange={(e) => setNewStageName(e.target.value)}
                     placeholder="New stage name"
-                    className="border-slate-700 bg-slate-800 text-sm text-white"
+                    className="border-slate-700 bg-muted text-sm text-white"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleAddStage();
                     }}
@@ -316,7 +316,7 @@ export function PipelineSettings({
                     size="sm"
                     onClick={handleAddStage}
                     disabled={!newStageName.trim()}
-                    className="shrink-0 border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800"
+                    className="shrink-0 border-slate-700 bg-transparent text-slate-300 hover:bg-muted"
                   >
                     <Plus className="mr-1 h-3 w-3" />
                     Add
@@ -327,14 +327,14 @@ export function PipelineSettings({
               <Button
                 variant="outline"
                 onClick={onCreateNewPipeline}
-                className="w-full border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800"
+                className="w-full border-slate-700 bg-transparent text-slate-300 hover:bg-muted"
               >
                 <Plus className="mr-1 h-3 w-3" />
                 Create a new pipeline
               </Button>
             </div>
 
-            <DialogFooter className="border-slate-700 bg-slate-900/50">
+            <DialogFooter className="border-slate-700 bg-card/50">
               <Button
                 variant="destructive"
                 onClick={() => setShowDeleteConfirm(true)}
@@ -345,14 +345,14 @@ export function PipelineSettings({
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800"
+                className="border-slate-700 bg-transparent text-slate-300 hover:bg-muted"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSave}
                 disabled={saving || !name.trim()}
-                className="bg-violet-600 text-white hover:bg-violet-700"
+                className="bg-primary text-white hover:bg-primary/90"
               >
                 {saving ? "Saving..." : "Save Changes"}
               </Button>
@@ -390,7 +390,7 @@ function SortableStageRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 p-2"
+      className="flex items-center gap-2 rounded-lg border border-slate-700 bg-muted p-2"
     >
       <button
         type="button"
@@ -441,7 +441,7 @@ function ColorSwatch({
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-6 z-20 flex flex-wrap gap-1 rounded-lg border border-slate-700 bg-slate-900 p-2 shadow-lg w-36">
+          <div className="absolute left-0 top-6 z-20 flex flex-wrap gap-1 rounded-lg border border-slate-700 bg-card p-2 shadow-lg w-36">
             {colors.map((c) => (
               <button
                 key={c}
@@ -463,3 +463,4 @@ function ColorSwatch({
     </div>
   );
 }
+
