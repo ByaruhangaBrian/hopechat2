@@ -31,7 +31,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageBubble } from "./message-bubble";
 import { MessageActions } from "./message-actions";
 import { MessageComposer } from "./message-composer";
@@ -634,12 +633,12 @@ export function MessageThread({
     return (
       <div className="flex flex-1 flex-col items-center justify-center bg-background">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-          <MessageSquare className="h-8 w-8 text-slate-600" />
+          <MessageSquare className="h-8 w-8 text-muted-foreground/60" />
         </div>
-        <h3 className="mt-4 text-sm font-medium text-slate-400">
+        <h3 className="mt-4 text-sm font-medium text-muted-foreground">
           Select a conversation
         </h3>
-        <p className="mt-1 text-xs text-slate-600">
+        <p className="mt-1 text-xs text-muted-foreground/40">
           Choose a conversation from the left to start messaging
         </p>
       </div>
@@ -669,25 +668,25 @@ export function MessageThread({
               type="button"
               onClick={onBack}
               aria-label="Back to conversations"
-              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-slate-300 hover:bg-muted hover:text-white lg:hidden"
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
           )}
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-slate-700 text-sm font-medium text-white">
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
             {displayName.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-white">{displayName}</h2>
-            <p className="truncate text-xs text-slate-400">{contact.phone}</p>
+            <h2 className="truncate text-sm font-semibold text-foreground">{displayName}</h2>
+            <p className="truncate text-xs text-muted-foreground">{contact.phone}</p>
           </div>
           {/* Session timer badge — hidden on the narrowest phones so
               the name + back arrow keep their room. */}
           <Badge
             variant="outline"
             className={cn(
-              "ml-1 hidden gap-1 border-slate-700 text-[10px] sm:inline-flex sm:ml-2",
-              sessionInfo.expired ? "text-red-400" : "text-primary"
+              "ml-1 hidden gap-1 border-border text-[10px] sm:inline-flex sm:ml-2",
+              sessionInfo.expired ? "text-destructive" : "text-primary"
             )}
           >
             <Clock className="h-3 w-3" />
@@ -700,14 +699,14 @@ export function MessageThread({
           <DropdownMenu>
             <DropdownMenuTrigger className={cn(
               "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-muted",
-              currentStatus?.color ?? "text-slate-400"
+              currentStatus?.color ?? "text-muted-foreground"
             )}>
               {currentStatus?.label ?? "Status"}
               <ChevronDown className="h-3 w-3" />
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="border-slate-700 bg-muted"
+              className="border-border bg-popover"
             >
               {STATUS_OPTIONS.map((opt) => (
                 <DropdownMenuItem
@@ -726,7 +725,7 @@ export function MessageThread({
             <DropdownMenuTrigger
               className={cn(
                 "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-muted",
-                assignedAgentId ? "text-primary" : "text-slate-400"
+                assignedAgentId ? "text-primary" : "text-muted-foreground"
               )}
             >
               <UserPlus className="h-3 w-3" />
@@ -735,10 +734,10 @@ export function MessageThread({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="border-slate-700 bg-muted"
+              className="border-border bg-popover"
             >
               {profiles.length === 0 ? (
-                <DropdownMenuItem disabled className="text-sm text-slate-500">
+                <DropdownMenuItem disabled className="text-sm text-muted-foreground">
                   No teammates available
                 </DropdownMenuItem>
               ) : (
@@ -750,7 +749,7 @@ export function MessageThread({
                       onClick={() => handleAssignChange(p.user_id)}
                       className={cn(
                         "text-sm",
-                        isSelected ? "text-primary" : "text-slate-300"
+                        isSelected ? "text-primary" : "text-foreground"
                       )}
                     >
                       <span className="flex-1">
@@ -764,10 +763,10 @@ export function MessageThread({
               )}
               {assignedAgentId && (
                 <>
-                  <DropdownMenuSeparator className="bg-slate-700" />
+                  <DropdownMenuSeparator className="bg-border" />
                   <DropdownMenuItem
                     onClick={() => handleAssignChange(null)}
-                    className="text-sm text-slate-400"
+                    className="text-sm text-muted-foreground"
                   >
                     Unassign
                   </DropdownMenuItem>
@@ -776,8 +775,8 @@ export function MessageThread({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-muted px-2 py-1 text-xs text-slate-300">
-            <span>AI</span>
+          <div className="flex items-center gap-2 rounded-md border border-border bg-muted px-2 py-1 text-xs text-foreground">
+            <span className="text-muted-foreground">AI</span>
             <Switch
               checked={conversation.ai_enabled ?? false}
               onCheckedChange={handleAiToggle}
@@ -795,8 +794,8 @@ export function MessageThread({
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <p className="text-sm text-slate-500">No messages yet</p>
-            <p className="text-xs text-slate-600">
+            <p className="text-sm text-muted-foreground">No messages yet</p>
+            <p className="text-xs text-muted-foreground/60">
               Send a template to start the conversation
             </p>
           </div>
@@ -806,7 +805,7 @@ export function MessageThread({
               <div key={group.date}>
                 {/* Date separator */}
                 <div className="mb-4 flex items-center justify-center">
-                  <span className="rounded-full bg-muted px-3 py-1 text-[10px] font-medium text-slate-400">
+                  <span className="rounded-full bg-muted px-3 py-1 text-[10px] font-medium text-muted-foreground">
                     {formatDateSeparator(group.date)}
                   </span>
                 </div>
@@ -862,7 +861,6 @@ export function MessageThread({
 
       {/* Composer */}
       <MessageComposer
-        conversationId={conversation.id}
         sessionExpired={sessionInfo.expired}
         onSend={handleSend}
         onOpenTemplates={handleOpenTemplates}

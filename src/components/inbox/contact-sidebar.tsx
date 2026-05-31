@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
 import type { Contact, Deal, ContactNote, Tag } from "@/types";
 import {
   Phone,
@@ -114,7 +113,7 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
   if (!contact) {
     return (
       <div className="flex h-full w-70 items-center justify-center border-l border-border bg-card">
-        <p className="text-sm text-slate-500">Select a conversation</p>
+        <p className="text-sm text-muted-foreground">Select a conversation</p>
       </div>
     );
   }
@@ -128,7 +127,7 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
         <div className="p-4">
           {/* Contact Info */}
           <div className="flex flex-col items-center text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-700 text-lg font-semibold text-white">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted text-lg font-semibold text-foreground">
               {contact.avatar_url ? (
                 <img
                   src={contact.avatar_url}
@@ -139,11 +138,11 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                 initials
               )}
             </div>
-            <h3 className="mt-3 text-sm font-semibold text-white">
+            <h3 className="mt-3 text-sm font-semibold text-foreground">
               {displayName}
             </h3>
             {contact.company && (
-              <p className="text-xs text-slate-400">{contact.company}</p>
+              <p className="text-xs text-muted-foreground">{contact.company}</p>
             )}
           </div>
 
@@ -151,20 +150,20 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
           <div className="mt-4 space-y-2">
             <button
               onClick={handleCopyPhone}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-muted"
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted"
             >
-              <Phone className="h-4 w-4 text-slate-500" />
+              <Phone className="h-4 w-4 text-muted-foreground" />
               <span className="flex-1 text-left">{contact.phone}</span>
               {copied ? (
                 <Check className="h-3 w-3 text-primary" />
               ) : (
-                <Copy className="h-3 w-3 text-slate-600" />
+                <Copy className="h-3 w-3 text-muted-foreground/60" />
               )}
             </button>
 
             {contact.email && (
-              <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300">
-                <Mail className="h-4 w-4 text-slate-500" />
+              <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground">
+                <Mail className="h-4 w-4 text-muted-foreground" />
                 <span className="truncate">{contact.email}</span>
               </div>
             )}
@@ -175,13 +174,13 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
 
           {/* Tags */}
           <div>
-            <div className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-slate-500">
+            <div className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <TagIcon className="h-3 w-3" />
               Tags
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               {tags.length === 0 ? (
-                <p className="px-1 text-xs text-slate-600">No tags</p>
+                <p className="px-1 text-xs text-muted-foreground/60">No tags</p>
               ) : (
                 tags.map((tag) => (
                   <span
@@ -204,23 +203,23 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
 
           {/* Active Deals */}
           <div>
-            <div className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-slate-500">
+            <div className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <DollarSign className="h-3 w-3" />
               Active Deals
             </div>
             <div className="mt-2 space-y-2">
               {deals.length === 0 ? (
-                <p className="px-1 text-xs text-slate-600">No deals</p>
+                <p className="px-1 text-xs text-muted-foreground/60">No deals</p>
               ) : (
                 deals.map((deal) => (
                   <div
                     key={deal.id}
-                    className="rounded-lg bg-muted px-3 py-2"
+                    className="rounded-lg bg-muted/50 px-3 py-2"
                   >
-                    <p className="text-sm font-medium text-white">
+                    <p className="text-sm font-medium text-foreground">
                       {deal.title}
                     </p>
-                    <div className="mt-1 flex items-center justify-between text-xs text-slate-400">
+                    <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
                       <span>
                         {deal.currency ?? "$"}
                         {deal.value.toLocaleString()}
@@ -248,7 +247,7 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
 
           {/* Notes */}
           <div>
-            <div className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-slate-500">
+            <div className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <StickyNote className="h-3 w-3" />
               Notes
             </div>
@@ -259,11 +258,11 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                   onChange={(e) => setNewNote(e.target.value)}
                   placeholder="Add a note..."
                   rows={2}
-                  className="flex-1 resize-none rounded-lg border border-slate-700 bg-muted px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-primary/50"
+                  className="flex-1 resize-none rounded-lg border border-border bg-muted px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:ring-1 focus:ring-primary/50"
                 />
                 <Button
                   size="sm"
-                  className="h-auto bg-primary px-2 hover:bg-primary"
+                  className="h-auto px-2"
                   onClick={handleAddNote}
                   disabled={!newNote.trim() || addingNote}
                 >
@@ -275,12 +274,12 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                 {notes.map((note) => (
                   <div
                     key={note.id}
-                    className="rounded-lg bg-muted px-3 py-2"
+                    className="rounded-lg bg-muted/50 px-3 py-2"
                   >
-                    <p className="whitespace-pre-wrap text-xs text-slate-300">
+                    <p className="whitespace-pre-wrap text-xs text-foreground">
                       {note.note_text}
                     </p>
-                    <p className="mt-1 text-[10px] text-slate-600">
+                    <p className="mt-1 text-[10px] text-muted-foreground">
                       {format(new Date(note.created_at), "MMM d, yyyy HH:mm")}
                     </p>
                   </div>

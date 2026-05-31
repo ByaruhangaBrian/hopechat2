@@ -20,8 +20,6 @@ import {
   ShieldCheck,
   Sun,
   Moon,
-  PanelLeftClose,
-  PanelLeftOpen,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -288,18 +286,19 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         </nav>
 
         {/* Bottom controls */}
-        <div className="shrink-0 space-y-1 p-3">
+        <div className="shrink-0 p-3 flex justify-end">
           {/* Collapse toggle (Desktop only) */}
           <button
             onClick={toggleCollapse}
-            className="hidden w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sidebar-foreground/40 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground lg:flex"
+            className="hidden size-8 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent/50 text-sidebar-foreground/40 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground lg:flex"
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            {isCollapsed ? <PanelLeftOpen className="size-5" /> : <PanelLeftClose className="size-5" />}
-            {!isCollapsed && <span className="text-sm font-medium">Collapse Menu</span>}
+            {isCollapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
           </button>
+        </div>
 
-          {/* User section */}
+        {/* User section */}
+        <div className="shrink-0 p-3">
           <DropdownMenu>
             <DropdownMenuTrigger className={cn(
               "flex w-full items-center gap-3 rounded-xl p-2 text-left transition-all duration-200 hover:bg-sidebar-accent/50 focus:outline-none",

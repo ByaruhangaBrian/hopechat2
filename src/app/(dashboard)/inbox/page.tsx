@@ -8,7 +8,6 @@ import { useRealtime } from "@/hooks/use-realtime";
 import { ConversationList } from "@/components/inbox/conversation-list";
 import { MessageThread } from "@/components/inbox/message-thread";
 import { ContactSidebar } from "@/components/inbox/contact-sidebar";
-import { toast } from "sonner";
 import { WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -318,7 +317,7 @@ export default function InboxPage() {
             thread can occupy the full width. Always visible on lg+. */}
         <div
           className={cn(
-            "flex h-full flex-1 lg:flex-none",
+            "flex h-full flex-1 lg:flex-none min-w-0",
             hasActiveConv ? "hidden lg:flex" : "flex",
           )}
         >
@@ -336,7 +335,7 @@ export default function InboxPage() {
             (shows its own empty-state if no thread is picked yet). */}
         <div
           className={cn(
-            "flex h-full flex-1 lg:flex",
+            "flex h-full flex-1 lg:flex min-w-0",
             hasActiveConv ? "flex" : "hidden lg:flex",
           )}
         >
