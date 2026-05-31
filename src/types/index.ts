@@ -247,7 +247,8 @@ export type AutomationStepType =
   | 'condition'
   | 'send_webhook'
   | 'assign_to_ai'
-  | 'close_conversation';
+  | 'close_conversation'
+  | 'lookup_spreadsheet';
 
 export type AutomationLogStatus = 'success' | 'partial' | 'failed';
 
@@ -334,6 +335,14 @@ export interface AssignToAiStepConfig {
   enable_fallback_to_human?: boolean;
 }
 
+export interface LookupSpreadsheetStepConfig {
+  sheet_name: string;
+  search_column: string;
+  search_value: string;
+  /** Map of Spreadsheet Column Name -> Automation Variable Name */
+  mapping: Record<string, string>;
+}
+
 export type AutomationStepConfig =
   | SendMessageStepConfig
   | SendTemplateStepConfig
@@ -345,6 +354,7 @@ export type AutomationStepConfig =
   | ConditionStepConfig
   | SendWebhookStepConfig
   | AssignToAiStepConfig
+  | LookupSpreadsheetStepConfig
   | Record<string, never>
   | Record<string, unknown>;
 

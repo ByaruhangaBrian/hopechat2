@@ -24,6 +24,8 @@ import {
   Loader2,
   ArrowDown,
   ArrowUp,
+  TableProperties,
+  ArrowRight,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -89,11 +91,13 @@ const STEP_META: Record<AutomationStepType, StepMeta> = {
   condition: { label: "Condition (If/Else)", icon: GitBranch, border: "border-l-amber-500" },
   send_webhook: { label: "Send Webhook", icon: Webhook, border: "border-l-violet-500" },
   close_conversation: { label: "Close Conversation", icon: CircleSlash, border: "border-l-violet-500" },
+  lookup_spreadsheet: { label: "Lookup Spreadsheet", icon: TableProperties, border: "border-l-emerald-500" },
 }
 
 const ADDABLE_STEPS: AutomationStepType[] = [
   "send_message",
   "send_template",
+  "lookup_spreadsheet",
   "add_tag",
   "remove_tag",
   "assign_conversation",
@@ -152,6 +156,8 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
       return { url: "", headers: {}, body_template: "" }
     case "assign_to_ai":
       return { enable_fallback_to_human: false }
+    case "lookup_spreadsheet":
+      return { sheet_name: "Sheet1", search_column: "", search_value: "", mapping: {} }
     case "close_conversation":
       return {}
     default:
@@ -943,6 +949,93 @@ function StepEditor({
           Sets the conversation status to &quot;closed&quot;. No configuration needed.
         </p>
       )
+    case "lookup_spreadsheet":
+      return (
+        <>
+          <FieldBlock label="Sheet name">
+            <Input
+              value={(cfg.sheet_name as string) ?? "Sheet1"}
+              onChange={(e) => set({ sheet_name: e.target.value })}
+              className="bg-slate-800 text-white"
+            />
+          </FieldBlock>
+          <FieldBlock label="Search column (Header)">
+            <Input
+              value={(cfg.search_column as string) ?? ""}
+              onChange={(e) => set({ search_column: e.target.value })}
+              placeholder="e.g. Phone Number"
+              className="bg-slate-800 text-white"
+            />
+          </FieldBlock>
+          <FieldBlock label="Search value">
+            <Input
+              value={(cfg.search_value as string) ?? ""}
+              onChange={(e) => set({ search_value: e.target.value })}
+              placeholder="e.g. {{contact.phone}}"
+              className="bg-slate-800 text-white"
+            />
+          </FieldBlock>
+          <div className="space-y-2 border-t border-slate-800 pt-3 mt-2">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+              Output Mapping
+            </label>
+            <p className="text-[10px] text-slate-400 leading-tight mb-2">
+              Map spreadsheet columns to automation variables (use as {"{{vars.name}}"}).
+            </p>
+            {Object.entries((cfg.mapping as Record<string, string>) || {}).map(([col, varName], idx) => (
+              <div key={idx} className="flex items-center gap-2 mb-2">
+                <Input
+                  value={col}
+                  onChange={(e) => {
+                    const next = { ...(cfg.mapping as Record<string, string>) }
+                    const val = next[col]
+                    delete next[col]
+                    next[e.target.value] = val
+                    set({ mapping: next })
+                  }}
+                  placeholder="Col Header"
+                  className="h-8 bg-slate-800 text-[11px]"
+                />
+                <ArrowRight className="h-3 w-3 flex-shrink-0 text-slate-600" />
+                <Input
+                  value={varName}
+                  onChange={(e) => {
+                    const next = { ...(cfg.mapping as Record<string, string>) }
+                    next[col] = e.target.value
+                    set({ mapping: next })
+                  }}
+                  placeholder="var_name"
+                  className="h-8 bg-slate-800 text-[11px]"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-slate-500 hover:text-rose-400"
+                  onClick={() => {
+                    const next = { ...(cfg.mapping as Record<string, string>) }
+                    delete next[col]
+                    set({ mapping: next })
+                  }}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-full border-dashed border-slate-700 bg-transparent text-[10px] text-slate-400 hover:bg-slate-800"
+              onClick={() => {
+                const next = { ...((cfg.mapping as Record<string, string>) || {}) }
+                next["New Column"] = "new_var"
+                set({ mapping: next })
+              }}
+            >
+              <Plus className="mr-1 h-3 w-3" /> Add Mapping
+            </Button>
+          </div>
+        </>
+      )
     default:
       return null
   }
@@ -977,6 +1070,8 @@ function previewFor(step: BuilderStep): string {
       return `when ${step.step_config.subject ?? "?"}`
     case "send_webhook":
       return (step.step_config.url as string) || "no url"
+    case "lookup_spreadsheet":
+      return `lookup in ${step.step_config.sheet_name ?? "sheet"}`
     default:
       return ""
   }

@@ -299,7 +299,13 @@ async function executeAiJob(job: any): Promise<void> {
     note: 'ai_started' 
   });
   
-  const aiText = await generateGeminiResponse(lastUserMessage, systemInstruction, history.slice(0, -1), aiConfig.api_key);
+  const aiText = await generateGeminiResponse(
+    lastUserMessage, 
+    systemInstruction, 
+    history.slice(0, -1), 
+    aiConfig.api_key,
+    job.business_id
+  );
 
   // 5. Escalation Check
   if (aiText.includes('[ESCALATE]') || /angry|refund|human|manager/i.test(lastUserMessage)) {

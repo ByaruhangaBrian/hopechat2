@@ -1,22 +1,24 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
+import { searchSheets } from '@/lib/integrations/google-sheets';
 
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF_MS = 1000;
 
 interface MessageContent {
-  role: 'user' | 'model';
-  parts: { text: string }[];
+  role: 'user' | 'model' | 'function';
+  parts: { text?: string; functionCall?: any; functionResponse?: any }[];
 }
 
 /**
  * Unified function to generate Gemini responses with exponential backoff for 429 errors.
- * Uses the new @google/genai SDK as requested.
+ * Supports tool calling for Google Sheets if businessId is provided.
  */
 export async function generateGeminiResponse(
   text: string,
   systemInstruction: string,
   history: MessageContent[] = [],
-  apiKey?: string
+  apiKey?: string,
+  businessId?: string
 ): Promise<string> {
   const finalApiKey = apiKey || process.env.GEMINI_API_KEY || '';
   if (!finalApiKey) {
@@ -29,25 +31,85 @@ export async function generateGeminiResponse(
   // Standardize model to gemini-2.5-flash as requested
   const MODEL_NAME = 'gemini-2.5-flash';
 
+  const tools: any = businessId ? [
+    {
+      functionDeclarations: [
+        {
+          name: 'search_business_data',
+          description: 'Search the business spreadsheet for information like inventory, pricing, or order status.',
+          parameters: {
+            type: Type.OBJECT,
+            properties: {
+              query: {
+                type: Type.STRING,
+                description: 'The search query (e.g., a product name, order ID, or keyword).'
+              }
+            },
+            required: ['query']
+          }
+        }
+      ]
+    }
+  ] : undefined;
+
+  const contents: MessageContent[] = [
+    ...history,
+    { role: 'user', parts: [{ text: text }] }
+  ];
+
   while (attempt < MAX_RETRIES) {
     try {
       console.log(`[gemini] Generating response with @google/genai | model: ${MODEL_NAME} (Attempt ${attempt + 1})`);
 
-      // The new SDK syntax: ai.models.generateContent
-      // systemInstruction is inside config
-      const response = await ai.models.generateContent({
+      let response = await ai.models.generateContent({
         model: MODEL_NAME,
-        contents: [
-          ...history,
-          { role: 'user', parts: [{ text: text }] }
-        ],
+        contents,
         config: {
           systemInstruction: systemInstruction,
           temperature: 0.3,
+          tools: tools,
         }
       });
 
-      // The new SDK response structure
+      // Handle function calls if any
+      const parts = response.candidates?.[0]?.content?.parts || [];
+      const functionCall = parts.find((p: any) => p.functionCall)?.functionCall;
+
+      if (functionCall && businessId) {
+        console.log(`[gemini] AI requested tool call: ${functionCall.name}`, functionCall.args);
+        
+        let result = 'No data found.';
+        if (functionCall.name === 'search_business_data') {
+          const query = (functionCall.args as any)?.query;
+          if (query) {
+            result = await searchSheets(businessId, query);
+          }
+        }
+
+        // Add the model's function call and our response to the conversation
+        contents.push({ role: 'model', parts: [{ functionCall }] });
+        contents.push({
+          role: 'function' as any,
+          parts: [{
+            functionResponse: {
+              name: functionCall.name,
+              response: { content: result }
+            }
+          }]
+        } as any);
+
+        // Generate final response with tool results
+        response = await ai.models.generateContent({
+          model: MODEL_NAME,
+          contents,
+          config: {
+            systemInstruction: systemInstruction,
+            temperature: 0.3,
+            tools: tools,
+          }
+        });
+      }
+
       const responseText = response.text;
 
       if (!responseText) {

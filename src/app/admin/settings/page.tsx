@@ -32,6 +32,15 @@ export default function AdminSettingsPage() {
     maintenance_mode: false,
     announcement: "",
   });
+  const [integrationsGlobal, setIntegrationsGlobal] = useState({
+    google_sheets: {
+      enabled: true,
+      default_service_account: {
+        client_email: "",
+        private_key: "",
+      }
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const supabase = createClient();
@@ -40,14 +49,17 @@ export default function AdminSettingsPage() {
     async function fetchSettings() {
       const [
         { data: wa },
-        { data: sys }
+        { data: sys },
+        { data: int }
       ] = await Promise.all([
         supabase.from("system_settings").select("*").eq("id", "whatsapp_global").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "system_config").maybeSingle(),
+        supabase.from("system_settings").select("*").eq("id", "integrations_global").maybeSingle(),
       ]);
 
       if (wa) setWhatsappSettings(wa.value);
       if (sys) setSystemConfig(sys.value);
+      if (int) setIntegrationsGlobal(int.value);
       
       setLoading(false);
     }
@@ -86,6 +98,24 @@ export default function AdminSettingsPage() {
       toast.error("Failed to save system config");
     } else {
       toast.success("Platform configuration updated");
+    }
+    setSaving(false);
+  }
+
+  async function handleSaveIntegrations() {
+    setSaving(true);
+    const { error } = await supabase
+      .from("system_settings")
+      .upsert({
+        id: "integrations_global",
+        value: integrationsGlobal,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (error) {
+      toast.error("Failed to save integrations settings");
+    } else {
+      toast.success("Global integrations updated");
     }
     setSaving(false);
   }
@@ -200,6 +230,81 @@ export default function AdminSettingsPage() {
               <Button onClick={handleSaveSystem} disabled={saving || loading} className="bg-violet-600 hover:bg-violet-500">
                 <Save className="mr-2 h-4 w-4" />
                 {saving ? "Saving..." : "Save Platform Config"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-white">
+              <Settings className="h-5 w-5 text-emerald-500" />
+              Global Integrations
+            </CardTitle>
+            <CardDescription>
+              Configure platform-wide integration settings and fallbacks.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-slate-800/50 border border-slate-800">
+              <div className="space-y-0.5">
+                <Label className="text-base text-white">Google Sheets Integration</Label>
+                <p className="text-xs text-slate-400">
+                  Allow businesses to use Google Sheets as a data source.
+                </p>
+              </div>
+              <Switch 
+                checked={integrationsGlobal.google_sheets.enabled}
+                onCheckedChange={(val) => setIntegrationsGlobal(prev => ({ 
+                  ...prev, 
+                  google_sheets: { ...prev.google_sheets, enabled: val } 
+                }))}
+              />
+            </div>
+
+            <div className="space-y-4 border-t border-slate-800 pt-6">
+              <h3 className="text-sm font-medium text-slate-200">Default Service Account (Fallback)</h3>
+              <p className="text-xs text-slate-400">
+                Optional: If provided, businesses only need to share their sheet with this email.
+              </p>
+              
+              <div className="space-y-2">
+                <Label className="text-slate-300 text-xs">Client Email</Label>
+                <Input
+                  value={integrationsGlobal.google_sheets.default_service_account.client_email}
+                  onChange={(e) => setIntegrationsGlobal(prev => ({ 
+                    ...prev, 
+                    google_sheets: { 
+                      ...prev.google_sheets, 
+                      default_service_account: { ...prev.google_sheets.default_service_account, client_email: e.target.value } 
+                    } 
+                  }))}
+                  placeholder="e.g. hopechat-bot@project.iam.gserviceaccount.com"
+                  className="bg-slate-800 border-slate-700 text-slate-200"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-slate-300 text-xs">Private Key</Label>
+                <Textarea
+                  value={integrationsGlobal.google_sheets.default_service_account.private_key}
+                  onChange={(e) => setIntegrationsGlobal(prev => ({ 
+                    ...prev, 
+                    google_sheets: { 
+                      ...prev.google_sheets, 
+                      default_service_account: { ...prev.google_sheets.default_service_account, private_key: e.target.value } 
+                    } 
+                  }))}
+                  placeholder="-----BEGIN PRIVATE KEY-----\n..."
+                  className="bg-slate-800 border-slate-700 text-slate-200 font-mono text-xs min-h-[120px]"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end border-t border-slate-800 pt-6">
+              <Button onClick={handleSaveIntegrations} disabled={saving || loading} className="bg-violet-600 hover:bg-violet-500">
+                <Save className="mr-2 h-4 w-4" />
+                {saving ? "Saving..." : "Save Integrations"}
               </Button>
             </div>
           </CardContent>

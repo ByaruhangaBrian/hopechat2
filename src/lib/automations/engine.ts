@@ -14,12 +14,14 @@ import type {
   CreateDealStepConfig,
   AssignConversationStepConfig,
   AssignToAiStepConfig,
+  LookupSpreadsheetStepConfig,
 } from '@/types'
 import { supabaseAdmin } from './admin-client'
 import { engineSendText, engineSendTemplate } from './meta-send'
 import { generateGeminiResponse } from './gemini-client'
 import { logHttpEvent } from '@/lib/logs/http-logs'
 import { decrypt } from '@/lib/whatsapp/encryption'
+import { lookupRow } from '@/lib/integrations/google-sheets'
 
 // ------------------------------------------------------------
 // Public API
@@ -606,6 +608,27 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         .eq('user_id', args.automation.user_id)
         .eq('contact_id', args.contactId)
       return 'conversation closed'
+    }
+
+    case 'lookup_spreadsheet': {
+      const cfg = step.step_config as LookupSpreadsheetStepConfig
+      if (!cfg.sheet_name || !cfg.search_column || !cfg.search_value) {
+        throw new Error('lookup_spreadsheet needs sheet_name, search_column, and search_value')
+      }
+
+      const searchValue = interpolate(cfg.search_value, args)
+      const row = await lookupRow(args.businessId, cfg.sheet_name, cfg.search_column, searchValue)
+
+      if (!row) return `no row found for ${searchValue}`
+
+      // Map spreadsheet columns to automation variables
+      if (!args.context.vars) args.context.vars = {}
+
+      for (const [colName, varName] of Object.entries(cfg.mapping || {})) {
+        args.context.vars[varName] = row[colName] || ''
+      }
+
+      return `found row for ${searchValue}, mapped ${Object.keys(cfg.mapping || {}).length} variables`
     }
 
     default:
