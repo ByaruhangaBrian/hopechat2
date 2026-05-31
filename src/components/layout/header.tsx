@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { LogOut, Menu, Settings as SettingsIcon, User } from "lucide-react";
+import { useTheme } from "next-themes";
+import { LogOut, Menu, Settings as SettingsIcon, User, Sun, Moon } from "lucide-react";
 import {
   Avatar,
   AvatarFallback,
@@ -44,6 +45,7 @@ interface HeaderProps {
 export function Header({ onOpenSidebar }: HeaderProps) {
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const title = getPageTitle(pathname);
 
   const initial =
@@ -52,86 +54,97 @@ export function Header({ onOpenSidebar }: HeaderProps) {
     "U";
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-800 bg-slate-950 px-4 lg:px-6">
-      <div className="flex min-w-0 items-center gap-2">
-        {/* Hamburger — mobile only. 44×44 hit target per Apple HIG. */}
+    <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border bg-background/60 backdrop-blur-md px-4 lg:px-6 sticky top-0 z-30">
+      <div className="flex min-w-0 items-center gap-4">
+        {/* Hamburger — mobile only */}
         <button
           type="button"
           onClick={onOpenSidebar}
           aria-label="Open menu"
-          className="flex h-10 w-10 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-slate-800 hover:text-white lg:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="size-5" />
         </button>
-        <h1 className="truncate text-base font-semibold text-white sm:text-lg">
-          {title}
-        </h1>
+        <div className="space-y-0.5">
+          <h1 className="truncate text-lg font-bold tracking-tight text-foreground">
+            {title}
+          </h1>
+          <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">
+            <span>HopeChat</span>
+            <span>•</span>
+            <span className="text-primary">{profile?.business?.name || "Dashboard"}</span>
+          </div>
+        </div>
       </div>
 
       <DropdownMenu>
         <DropdownMenuTrigger
-          className="flex items-center gap-2 rounded-md px-1 py-1 transition-colors hover:bg-slate-800/70 focus:bg-slate-800/70 focus:outline-none data-popup-open:bg-slate-800/70 sm:gap-3 sm:pl-1 sm:pr-3"
+          className="flex items-center gap-3 rounded-xl p-1.5 transition-all duration-200 hover:bg-accent focus:outline-none data-popup-open:bg-accent"
           aria-label="Open account menu"
         >
-          <Avatar className="size-8">
+          <Avatar className="size-9 ring-2 ring-border">
             {profile?.avatar_url ? (
-              <AvatarImage
-                src={profile.avatar_url}
-                alt={profile.full_name ?? "Avatar"}
-              />
+              <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? "Avatar"} />
             ) : null}
-            <AvatarFallback className="bg-violet-500/10 text-sm font-medium text-violet-500">
+            <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
               {initial}
             </AvatarFallback>
           </Avatar>
-          <span className="hidden text-sm font-medium text-white sm:inline">
-            {profile?.full_name ?? "User"}
-          </span>
+          <div className="hidden flex-col items-start text-left sm:flex">
+            <span className="text-sm font-bold text-foreground leading-none">
+              {profile?.full_name ?? "User"}
+            </span>
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tighter">
+              {profile?.role || "Admin"}
+            </span>
+          </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
-          sideOffset={6}
-          className="min-w-56 bg-slate-900 text-slate-100 ring-slate-700"
+          sideOffset={8}
+          className="w-56 glass border-border shadow-2xl"
         >
-          <div className="px-2 py-1.5">
-            <p className="truncate text-sm font-medium text-white">
-              {profile?.full_name ?? "User"}
-            </p>
-            <p className="truncate text-xs text-slate-400">
-              {profile?.email ?? ""}
-            </p>
+          <div className="px-2 py-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-2 px-2">Account</p>
+            <DropdownMenuItem
+              render={
+                <Link href="/settings?tab=profile" className="rounded-lg flex items-center gap-2" />
+              }
+            >
+              <User className="size-4" /> Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              render={
+                <Link href="/settings?tab=whatsapp" className="rounded-lg flex items-center gap-2" />
+              }
+            >
+              <SettingsIcon className="size-4" /> Settings
+            </DropdownMenuItem>
           </div>
-          <DropdownMenuSeparator className="bg-slate-800" />
-          <DropdownMenuItem
-            render={
-              <Link
-                href="/settings?tab=profile"
-                className="text-slate-200 focus:bg-slate-800 focus:text-white"
-              />
-            }
-          >
-            <User className="size-4" />
-            Profile
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            render={
-              <Link
-                href="/settings?tab=whatsapp"
-                className="text-slate-200 focus:bg-slate-800 focus:text-white"
-              />
-            }
-          >
-            <SettingsIcon className="size-4" />
-            Settings
-          </DropdownMenuItem>
-          <DropdownMenuSeparator className="bg-slate-800" />
-          <DropdownMenuItem
-            onClick={signOut}
-            className="text-slate-200 focus:bg-slate-800 focus:text-white"
-          >
-            <LogOut className="size-4" />
-            Sign out
-          </DropdownMenuItem>
+          
+          <DropdownMenuSeparator className="bg-border/50" />
+          
+          <div className="px-2 py-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-2 px-2">Appearance</p>
+            <DropdownMenuItem 
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="rounded-lg flex items-center justify-between"
+            >
+              <div className="flex items-center gap-2">
+                {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+                <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+              </div>
+              <div className="size-2 rounded-full bg-primary animate-pulse" />
+            </DropdownMenuItem>
+          </div>
+
+          <DropdownMenuSeparator className="bg-border/50" />
+          
+          <div className="p-2">
+            <DropdownMenuItem onClick={signOut} className="rounded-lg flex items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive">
+              <LogOut className="size-4" /> Sign out
+            </DropdownMenuItem>
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

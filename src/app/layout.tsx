@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
+import { ThemeProvider } from "@/components/theme-provider";
+
 const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
@@ -30,7 +32,6 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#020617",
-  colorScheme: "dark",
 };
 
 export default function RootLayout({
@@ -39,20 +40,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full bg-slate-950 text-white font-sans">
-        {children}
-        <Toaster
-          theme="dark"
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: "rgb(30 41 59)",
-              border: "1px solid rgb(51 65 85)",
-              color: "white",
-            },
-          }}
-        />
+    <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
+      <body className="min-h-full bg-background font-sans">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster
+            position="top-right"
+          />
+        </ThemeProvider>
       </body>
     </html>
   );
