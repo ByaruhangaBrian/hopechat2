@@ -89,24 +89,24 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Admin Overview</h1>
-        <p className="text-slate-400">System-wide performance and statistics.</p>
+        <h1 className="text-2xl font-bold text-foreground">Admin Overview</h1>
+        <p className="text-muted-foreground">System-wide performance and statistics.</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((card) => (
           <Card key={card.title} className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-slate-400">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 {card.title}
               </CardTitle>
               <card.icon className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-2xl font-bold text-foreground">
                 {loading ? "..." : card.value.toLocaleString()}
               </div>
-              <p className="text-xs text-slate-500">{card.description}</p>
+              <p className="text-xs text-muted-foreground/60">{card.description}</p>
             </CardContent>
           </Card>
         ))}
@@ -115,7 +115,7 @@ export default function AdminDashboard() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white">Quick Actions</CardTitle>
+            <CardTitle className="text-foreground">Quick Actions</CardTitle>
             <CardDescription>Common administrative tasks.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2">
@@ -125,9 +125,9 @@ export default function AdminDashboard() {
             >
               <div className="flex items-center gap-3">
                 <Building2 className="h-4 w-4 text-primary" />
-                <span className="text-sm text-slate-200">Review new signups</span>
+                <span className="text-sm text-foreground/80">Review new signups</span>
               </div>
-              <ArrowUpRight className="h-4 w-4 text-slate-500" />
+              <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
             </Link>
             <Link 
               href="/admin/settings"
@@ -135,35 +135,35 @@ export default function AdminDashboard() {
             >
               <div className="flex items-center gap-3">
                 <Settings className="h-4 w-4 text-primary" />
-                <span className="text-sm text-slate-200">Configure global webhooks</span>
+                <span className="text-sm text-foreground/80">Configure global webhooks</span>
               </div>
-              <ArrowUpRight className="h-4 w-4 text-slate-500" />
+              <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
             </Link>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white">System Health</CardTitle>
+            <CardTitle className="text-foreground">System Health</CardTitle>
             <CardDescription>Real-time status of critical services.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-400">Database</span>
+              <span className="text-sm text-muted-foreground">Database</span>
               <span className="flex items-center gap-1.5 text-xs text-emerald-500">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 Operational
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-400">Webhook Listener</span>
+              <span className="text-sm text-muted-foreground">Webhook Listener</span>
               <span className="flex items-center gap-1.5 text-xs text-emerald-500">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 Operational
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-400">AI Processing</span>
+              <span className="text-sm text-muted-foreground">AI Processing</span>
               <span className="flex items-center gap-1.5 text-xs text-emerald-500">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 Operational

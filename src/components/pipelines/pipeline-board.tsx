@@ -193,14 +193,14 @@ function StageColumn({
         style={{ backgroundColor: stage.color }}
       />
       <div className="flex items-center justify-between pt-3">
-        <h3 className="truncate text-sm font-semibold text-white">
+        <h3 className="truncate text-sm font-semibold text-foreground">
           {stage.name}
         </h3>
-        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-slate-300">
+        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
           {deals.length}
         </span>
       </div>
-      <p className="text-xs text-slate-400">{formatCurrency(totalValue)}</p>
+      <p className="text-xs text-muted-foreground/60">{formatCurrency(totalValue)}</p>
 
       <div
         ref={setNodeRef}
@@ -211,7 +211,7 @@ function StageColumn({
         }`}
       >
         {deals.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center rounded-lg border-2 border-dashed border-slate-700 py-10 text-xs text-slate-500">
+          <div className="flex flex-1 items-center justify-center rounded-lg border-2 border-dashed border-border py-10 text-xs text-muted-foreground/40">
             Drop a deal here
           </div>
         ) : (
@@ -230,7 +230,7 @@ function StageColumn({
         variant="ghost"
         size="sm"
         onClick={() => onAddDeal(stage.id)}
-        className="mt-3 w-full justify-start border border-dashed border-slate-700 bg-transparent text-slate-400 hover:border-slate-600 hover:bg-muted hover:text-white"
+        className="mt-3 w-full justify-start border border-dashed border-border bg-transparent text-muted-foreground hover:border-primary/40 hover:bg-muted hover:text-foreground"
       >
         <Plus className="mr-1 h-3 w-3" />
         Add Deal

@@ -101,7 +101,7 @@ export function PipelineAnalytics({ stages, deals }: PipelineAnalyticsProps) {
     <TooltipProvider>
       <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-card/60 p-4 sm:grid-cols-3 xl:grid-cols-6">
         <Metric
-          icon={<BarChart3 className="h-4 w-4 text-slate-400" />}
+          icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
           label="Total Deals"
           value={String(stats.totalCount)}
           tooltip="Count of every deal in this pipeline that isn't marked as Lost. Won deals are still included."
@@ -131,7 +131,7 @@ export function PipelineAnalytics({ stages, deals }: PipelineAnalyticsProps) {
           tooltip="Deals marked as Won since the first day of the current month."
         />
         <Metric
-          icon={<XCircle className="h-4 w-4 text-red-400" />}
+          icon={<XCircle className="h-4 w-4 text-destructive" />}
           label="Lost This Month"
           value={String(stats.lostThisMonth)}
           tooltip="Deals marked as Lost since the first day of the current month."
@@ -154,18 +154,12 @@ function Metric({
 }) {
   return (
     <div className="rounded-lg bg-muted/50 p-3">
-      <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">
+      <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
         {icon}
         <span>{label}</span>
         <Tooltip>
           <TooltipTrigger
-            render={
-              <button
-                type="button"
-                aria-label={`How ${label} is calculated`}
-                className="ml-auto text-slate-500 hover:text-slate-300 focus:outline-none"
-              />
-            }
+            className="ml-auto text-muted-foreground/60 hover:text-foreground focus:outline-none"
           >
             <Info className="h-3 w-3" />
           </TooltipTrigger>
@@ -174,7 +168,7 @@ function Metric({
           </TooltipContent>
         </Tooltip>
       </div>
-      <p className="mt-1 text-base font-semibold text-white">{value}</p>
+      <p className="mt-1 text-base font-semibold text-foreground">{value}</p>
     </div>
   );
 }

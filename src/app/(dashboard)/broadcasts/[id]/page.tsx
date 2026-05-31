@@ -254,7 +254,7 @@ export default function BroadcastDetailPage() {
   if (error || !broadcast) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-2">
-        <p className="text-sm text-red-400">{error ?? 'Broadcast not found'}</p>
+        <p className="text-sm text-destructive">{error ?? 'Broadcast not found'}</p>
         <Button variant="outline" onClick={() => router.push('/broadcasts')}>
           Back to Broadcasts
         </Button>
@@ -308,8 +308,8 @@ export default function BroadcastDetailPage() {
             because orphaning in-flight Meta messages would leave the
             funnel inconsistent. */}
         {confirmDelete ? (
-          <div className="flex items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm">
-            <span className="text-red-300">Delete this broadcast?</span>
+          <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-sm">
+            <span className="text-destructive font-medium">Delete this broadcast?</span>
             <Button
               variant="outline"
               size="sm"
@@ -320,10 +320,11 @@ export default function BroadcastDetailPage() {
               Cancel
             </Button>
             <Button
+              variant="destructive"
               size="sm"
               onClick={handleDelete}
               disabled={deleting}
-              className="h-7 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              className="h-7 disabled:opacity-50"
             >
               {deleting ? 'Deleting…' : 'Confirm'}
             </Button>
@@ -339,7 +340,7 @@ export default function BroadcastDetailPage() {
                 ? 'Cannot delete while a broadcast is actively sending'
                 : 'Delete this broadcast'
             }
-            className="border-red-500/30 bg-transparent text-red-400 hover:bg-red-500/10 disabled:opacity-40"
+            className="border-destructive/30 bg-transparent text-destructive hover:bg-destructive/10 disabled:opacity-40"
           >
             <Trash2 className="h-3.5 w-3.5" />
             Delete
@@ -512,7 +513,7 @@ export default function BroadcastDetailPage() {
                           ? new Date(recipient.read_at).toLocaleString()
                           : '-'}
                       </TableCell>
-                      <TableCell className="max-w-xs truncate text-xs text-red-400">
+                      <TableCell className="max-w-xs truncate text-xs text-destructive">
                         {recipient.error_message ?? '-'}
                       </TableCell>
                     </TableRow>

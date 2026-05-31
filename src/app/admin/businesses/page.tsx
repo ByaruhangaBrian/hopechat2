@@ -169,7 +169,7 @@ export default function BusinessesPage() {
       case "past_due":
         return <Badge className="bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20">Past Due</Badge>;
       default:
-        return <Badge className="bg-slate-500/10 text-slate-500 hover:bg-slate-500/20 border-slate-500/20">{status}</Badge>;
+        return <Badge variant="outline" className="text-muted-foreground border-border">{status}</Badge>;
     }
   };
 
@@ -177,18 +177,18 @@ export default function BusinessesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Businesses</h1>
-          <p className="text-slate-400">Manage tenants and their subscription features.</p>
+          <h1 className="text-2xl font-bold text-foreground">Businesses</h1>
+          <p className="text-muted-foreground">Manage tenants and their subscription features.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" className="border-border text-slate-300" onClick={fetchBusinesses} disabled={loading}>
+        <div className="flex gap-2">
+          <Button variant="outline" className="border-border text-muted-foreground" onClick={fetchBusinesses} disabled={loading}>
             Refresh
           </Button>
-          <Button className="bg-primary hover:bg-primary text-white" onClick={() => {
+          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => {
             setEditingBusiness(null);
             setIsFormOpen(true);
           }}>
-            Create Business
+            New Business
           </Button>
         </div>
       </div>
@@ -197,23 +197,23 @@ export default function BusinessesPage() {
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow className="hover:bg-transparent border-border">
-              <TableHead className="text-slate-300">Business Name</TableHead>
-              <TableHead className="text-slate-300">Status</TableHead>
-              <TableHead className="text-slate-300">Plan</TableHead>
-              <TableHead className="text-slate-300">Features</TableHead>
-              <TableHead className="text-slate-300 text-right">Actions</TableHead>
+              <TableHead className="text-muted-foreground">Business Name</TableHead>
+              <TableHead className="text-muted-foreground">Status</TableHead>
+              <TableHead className="text-muted-foreground">Plan</TableHead>
+              <TableHead className="text-muted-foreground">Features</TableHead>
+              <TableHead className="text-muted-foreground text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-slate-500">
+                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                   Loading businesses...
                 </TableCell>
               </TableRow>
             ) : businesses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-slate-500">
+                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                   No businesses found.
                 </TableCell>
               </TableRow>
@@ -226,14 +226,14 @@ export default function BusinessesPage() {
                         <Building2 className="h-4 w-4 text-primary" />
                       </div>
                       <div>
-                        <div className="font-medium text-slate-200">{biz.name}</div>
-                        <div className="text-xs text-slate-500">ID: {biz.id.slice(0, 8)}...</div>
+                        <div className="font-medium text-foreground">{biz.name}</div>
+                        <div className="text-xs text-muted-foreground/60">ID: {biz.id.slice(0, 8)}...</div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>{getStatusBadge(biz.status)}</TableCell>
                   <TableCell>
-                    <span className="capitalize text-slate-300 text-sm">{biz.plan_tier}</span>
+                    <span className="capitalize text-muted-foreground text-sm">{biz.plan_tier}</span>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1.5">
@@ -245,7 +245,7 @@ export default function BusinessesPage() {
                             "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors",
                             enabled 
                               ? "bg-primary/10 text-primary hover:bg-primary/20" 
-                              : "bg-muted text-slate-500 hover:bg-slate-700"
+                              : "bg-muted text-muted-foreground hover:bg-muted/80"
                           )}
                         >
                           {enabled ? <CheckCircle2 className="h-2.5 w-2.5" /> : <XCircle className="h-2.5 w-2.5" />}
@@ -257,11 +257,11 @@ export default function BusinessesPage() {
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger
-                        className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-muted hover:text-white focus:outline-none transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none transition-colors"
                       >
                         <MoreVertical className="h-4 w-4" />
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-card border-border text-slate-200 min-w-48">
+                      <DropdownMenuContent align="end" className="bg-card border-border text-foreground min-w-48">
                         <DropdownMenuGroup>
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator className="bg-muted" />

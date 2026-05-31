@@ -186,8 +186,8 @@ export function Step3Personalize({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-white">Personalize Message</h2>
-        <p className="mt-1 text-sm text-slate-400">
+        <h2 className="text-lg font-semibold text-foreground">Personalize Message</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Map template variables to contact fields, custom fields, or static
           values.
         </p>
@@ -195,7 +195,7 @@ export function Step3Personalize({
 
       {placeholders.length === 0 ? (
         <div className="rounded-xl border border-border bg-card/50 p-6 text-center">
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted-foreground">
             This template has no variables to personalize.
           </p>
         </div>
@@ -218,7 +218,7 @@ export function Step3Personalize({
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                       Mapping Type
                     </label>
                     <Select
@@ -230,10 +230,10 @@ export function Step3Personalize({
                         })
                       }
                     >
-                      <SelectTrigger className="w-full border-slate-700 bg-muted text-white">
+                      <SelectTrigger className="w-full border-border bg-muted text-foreground">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="border-slate-700 bg-muted">
+                      <SelectContent className="border-border bg-card">
                         <SelectItem value="static">Static Value</SelectItem>
                         <SelectItem value="field">Contact Field</SelectItem>
                         <SelectItem value="custom_field">
@@ -244,7 +244,7 @@ export function Step3Personalize({
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                       {mapping.type === 'static' ? 'Value' : 'Field'}
                     </label>
                     {mapping.type === 'static' ? (
@@ -254,7 +254,7 @@ export function Step3Personalize({
                           updateVariable(key, { value: e.target.value })
                         }
                         placeholder="Enter value..."
-                        className="border-slate-700 bg-muted text-white placeholder:text-slate-500"
+                        className="border-border bg-muted text-foreground placeholder:text-muted-foreground/50"
                       />
                     ) : mapping.type === 'field' ? (
                       <Select
@@ -263,10 +263,10 @@ export function Step3Personalize({
                           updateVariable(key, { value: val || '' })
                         }
                       >
-                        <SelectTrigger className="w-full border-slate-700 bg-muted text-white">
+                        <SelectTrigger className="w-full border-border bg-muted text-foreground">
                           <SelectValue placeholder="Select field..." />
                         </SelectTrigger>
-                        <SelectContent className="border-slate-700 bg-muted">
+                        <SelectContent className="border-border bg-card">
                           {contactFields.map((field) => (
                             <SelectItem key={field.value} value={field.value}>
                               {field.label}
@@ -281,7 +281,7 @@ export function Step3Personalize({
                           updateVariable(key, { value: val || '' })
                         }
                       >
-                        <SelectTrigger className="w-full border-slate-700 bg-muted text-white">
+                        <SelectTrigger className="w-full border-border bg-muted text-foreground">
                           <SelectValue
                             placeholder={
                               loadingFields
@@ -292,7 +292,7 @@ export function Step3Personalize({
                             }
                           />
                         </SelectTrigger>
-                        <SelectContent className="border-slate-700 bg-muted">
+                        <SelectContent className="border-border bg-card">
                           {customFields.map((f) => (
                             <SelectItem key={f.id} value={f.id}>
                               {f.field_name}
@@ -314,13 +314,13 @@ export function Step3Personalize({
       <div className="rounded-xl border border-border bg-card/50 p-4">
         <div className="mb-3 flex items-center gap-2">
           <Eye className="h-4 w-4 text-primary" />
-          <p className="text-sm font-medium text-white">Live Preview</p>
-          <span className="text-xs text-slate-500">({previewLabel})</span>
+          <p className="text-sm font-medium text-foreground">Live Preview</p>
+          <span className="text-xs text-muted-foreground/60">({previewLabel})</span>
           {loadingPreview && (
             <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
           )}
         </div>
-        <div className="rounded-lg bg-emerald-950/30 p-3">
+        <div className="rounded-lg bg-emerald-500/10 p-3">
           <div className="ml-auto max-w-[85%] rounded-lg bg-primary/20 px-3 py-2 shadow-sm">
             <p className="whitespace-pre-wrap text-sm text-foreground">
               {previewText}
@@ -343,7 +343,7 @@ export function Step3Personalize({
         <Button
           variant="outline"
           onClick={onBack}
-          className="border-slate-700 text-slate-300"
+          className="border-border text-muted-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Back

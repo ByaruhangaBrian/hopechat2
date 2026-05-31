@@ -111,12 +111,12 @@ export default function SignupPage() {
             <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
               <CheckCircle className="h-6 w-6 text-primary" />
             </div>
-            <CardTitle className="text-xl text-white">
+            <CardTitle className="text-xl text-foreground">
               Check your email
             </CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardDescription className="text-muted-foreground">
               We&apos;ve sent a confirmation link to{" "}
-              <span className="text-white">{email}</span>. Please check your
+              <span className="text-foreground">{email}</span>. Please check your
               inbox and click the link to verify your account.
             </CardDescription>
           </CardHeader>
@@ -124,7 +124,7 @@ export default function SignupPage() {
             <Link href="/login">
               <Button
                 variant="outline"
-                className="w-full border-slate-700 text-slate-300 hover:bg-muted hover:text-white"
+                className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 Back to sign in
               </Button>
@@ -142,8 +142,8 @@ export default function SignupPage() {
           <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
             <MessageSquare className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-xl text-white">Create account</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardTitle className="text-xl text-foreground">Create account</CardTitle>
+          <CardDescription className="text-muted-foreground">
             Get started with HopeChat
           </CardDescription>
         </CardHeader>
@@ -151,13 +151,13 @@ export default function SignupPage() {
           {step === 1 ? (
             <form onSubmit={handleNextStep} className="flex flex-col gap-4">
               {error && (
-                <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                   {error}
                 </div>
               )}
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="fullName" className="text-slate-300">
+                <Label htmlFor="fullName" className="text-foreground">
                   Full name
                 </Label>
                 <Input
@@ -167,12 +167,12 @@ export default function SignupPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
-                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500 focus-visible:border-primary focus-visible:ring-primary/20"
+                  className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
                 />
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="businessName" className="text-slate-300">
+                <Label htmlFor="businessName" className="text-foreground">
                   Business name
                 </Label>
                 <Input
@@ -182,12 +182,12 @@ export default function SignupPage() {
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   required
-                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500 focus-visible:border-primary focus-visible:ring-primary/20"
+                  className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
                 />
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="email" className="text-slate-300">
+                <Label htmlFor="email" className="text-foreground">
                   Email
                 </Label>
                 <Input
@@ -197,12 +197,12 @@ export default function SignupPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500 focus-visible:border-primary focus-visible:ring-primary/20"
+                  className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
                 />
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="password" className="text-slate-300">
+                <Label htmlFor="password" className="text-foreground">
                   Password
                 </Label>
                 <Input
@@ -212,12 +212,12 @@ export default function SignupPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500 focus-visible:border-primary focus-visible:ring-primary/20"
+                  className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
                 />
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="confirmPassword" className="text-slate-300">
+                <Label htmlFor="confirmPassword" className="text-foreground">
                   Confirm password
                 </Label>
                 <Input
@@ -227,13 +227,13 @@ export default function SignupPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500 focus-visible:border-primary focus-visible:ring-primary/20"
+                  className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
                 />
               </div>
 
               <Button
                 type="submit"
-                className="mt-2 h-10 w-full bg-primary text-white hover:bg-primary"
+                className="mt-2 h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 Continue setup
               </Button>
@@ -241,12 +241,12 @@ export default function SignupPage() {
           ) : (
             <form onSubmit={handleSignup} className="flex flex-col gap-4">
               <div className="mb-2">
-                <h3 className="text-sm font-semibold text-white">WhatsApp Configuration (Optional)</h3>
-                <p className="text-xs text-slate-400">Link your Meta WhatsApp Business API now or skip to do it later in settings.</p>
+                <h3 className="text-sm font-semibold text-foreground">WhatsApp Configuration (Optional)</h3>
+                <p className="text-xs text-muted-foreground">Link your Meta WhatsApp Business API now or skip to do it later in settings.</p>
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="phoneNumberId" className="text-slate-300">
+                <Label htmlFor="phoneNumberId" className="text-foreground">
                   Phone Number ID
                 </Label>
                 <Input
@@ -254,12 +254,12 @@ export default function SignupPage() {
                   placeholder="e.g. 100234567890123"
                   value={phoneNumberId}
                   onChange={(e) => setPhoneNumberId(e.target.value)}
-                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500"
+                  className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                 />
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="wabaId" className="text-slate-300">
+                <Label htmlFor="wabaId" className="text-foreground">
                   WhatsApp Business Account ID
                 </Label>
                 <Input
@@ -267,12 +267,12 @@ export default function SignupPage() {
                   placeholder="e.g. 100234567890456"
                   value={wabaId}
                   onChange={(e) => setWabaId(e.target.value)}
-                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500"
+                  className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                 />
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="accessToken" className="text-slate-300">
+                <Label htmlFor="accessToken" className="text-foreground">
                   Permanent Access Token
                 </Label>
                 <Input
@@ -281,7 +281,7 @@ export default function SignupPage() {
                   placeholder="Enter your Meta access token"
                   value={accessToken}
                   onChange={(e) => setAccessToken(e.target.value)}
-                  className="border-slate-700 bg-muted text-white placeholder:text-slate-500"
+                  className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                 />
               </div>
 
@@ -289,7 +289,7 @@ export default function SignupPage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="h-10 w-full bg-primary text-white hover:bg-primary"
+                  className="h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   {loading ? "Creating account..." : "Finish setup"}
                 </Button>
@@ -298,7 +298,7 @@ export default function SignupPage() {
                   variant="ghost"
                   onClick={() => handleSignup()}
                   disabled={loading}
-                  className="text-slate-400 hover:bg-muted hover:text-white"
+                  className="text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
                   Skip for now
                 </Button>
@@ -306,11 +306,11 @@ export default function SignupPage() {
             </form>
           )}
 
-          <p className="mt-6 text-center text-sm text-slate-400">
+          <p className="mt-6 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link
               href="/login"
-              className="text-primary hover:text-primary"
+              className="text-primary hover:text-primary/90"
             >
               Sign in
             </Link>

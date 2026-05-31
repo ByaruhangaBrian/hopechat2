@@ -87,7 +87,7 @@ const STEP_META: Record<AutomationStepType, StepMeta> = {
   assign_to_ai: { label: "Assign to AI assistant", icon: Loader2, border: "border-l-primary" },
   update_contact_field: { label: "Update Contact Field", icon: PencilLine, border: "border-l-primary" },
   create_deal: { label: "Create Deal", icon: Briefcase, border: "border-l-primary" },
-  wait: { label: "Wait", icon: Hourglass, border: "border-l-slate-500" },
+  wait: { label: "Wait", icon: Hourglass, border: "border-l-muted-foreground/40" },
   condition: { label: "Condition (If/Else)", icon: GitBranch, border: "border-l-amber-500" },
   send_webhook: { label: "Send Webhook", icon: Webhook, border: "border-l-primary" },
   close_conversation: { label: "Close Conversation", icon: CircleSlash, border: "border-l-primary" },

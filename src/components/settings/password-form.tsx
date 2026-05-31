@@ -83,11 +83,11 @@ export function PasswordForm() {
   return (
     <Card className="bg-card/40 border-border">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-white">
+        <CardTitle className="flex items-center gap-2 text-foreground">
           <KeyRound className="size-4 text-primary" />
           Password
         </CardTitle>
-        <CardDescription className="text-slate-400">
+        <CardDescription className="text-muted-foreground">
           Use at least {MIN_PASSWORD} characters. You will stay signed in on
           this device after changing it.
         </CardDescription>
@@ -96,7 +96,7 @@ export function PasswordForm() {
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="current-password" className="text-slate-200">
+            <Label htmlFor="current-password" className="text-muted-foreground">
               Current password
             </Label>
             <Input
@@ -107,12 +107,13 @@ export function PasswordForm() {
               autoComplete="current-password"
               disabled={saving}
               required
+              className="bg-muted border-border text-foreground"
             />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="new-password" className="text-slate-200">
+              <Label htmlFor="new-password" className="text-muted-foreground">
                 New password
               </Label>
               <Input
@@ -124,10 +125,11 @@ export function PasswordForm() {
                 minLength={MIN_PASSWORD}
                 disabled={saving}
                 required
+                className="bg-muted border-border text-foreground"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm-password" className="text-slate-200">
+              <Label htmlFor="confirm-password" className="text-muted-foreground">
                 Confirm new password
               </Label>
               <Input
@@ -139,6 +141,7 @@ export function PasswordForm() {
                 minLength={MIN_PASSWORD}
                 disabled={saving}
                 required
+                className="bg-muted border-border text-foreground"
               />
             </div>
           </div>

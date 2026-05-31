@@ -202,20 +202,20 @@ export function PipelineSettings({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-card border-slate-700 max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md bg-card border-border max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-white">Manage Pipeline</DialogTitle>
+          <DialogTitle className="text-foreground">Manage Pipeline</DialogTitle>
         </DialogHeader>
 
         {showDeleteConfirm ? (
           <div className="py-4">
-            <div className="flex items-center gap-3 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
-              <AlertTriangle className="h-5 w-5 shrink-0 text-red-400" />
+            <div className="flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" />
               <div>
-                <p className="text-sm font-medium text-red-400">
+                <p className="text-sm font-medium text-destructive">
                   Delete Pipeline
                 </p>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-muted-foreground/60">
                   This will archive all deals in this pipeline. This cannot be
                   undone.
                 </p>
@@ -225,14 +225,14 @@ export function PipelineSettings({
               <Button
                 variant="outline"
                 onClick={() => setShowDeleteConfirm(false)}
-                className="border-slate-700 bg-transparent text-slate-300 hover:bg-muted"
+                className="border-border bg-transparent text-muted-foreground hover:bg-muted"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleDeletePipeline}
                 disabled={deleting}
-                className="bg-red-600 text-white hover:bg-red-700"
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {deleting ? "Deleting..." : "Delete Pipeline"}
               </Button>
@@ -242,16 +242,16 @@ export function PipelineSettings({
           <>
             <div className="grid gap-4 py-2">
               <div className="grid gap-2">
-                <Label className="text-slate-300">Pipeline Name</Label>
+                <Label className="text-muted-foreground">Pipeline Name</Label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="border-slate-700 bg-muted text-white"
+                  className="border-border bg-muted text-foreground"
                 />
               </div>
 
               <div className="grid gap-2">
-                <Label className="text-slate-300">Stages</Label>
+                <Label className="text-muted-foreground">Stages</Label>
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
@@ -295,7 +295,7 @@ export function PipelineSettings({
                       style={{
                         backgroundColor: color,
                         borderColor:
-                          newStageColor === color ? "white" : "transparent",
+                          newStageColor === color ? "var(--foreground)" : "transparent",
                       }}
                       aria-label={`Pick color ${color}`}
                     />
@@ -306,7 +306,7 @@ export function PipelineSettings({
                     value={newStageName}
                     onChange={(e) => setNewStageName(e.target.value)}
                     placeholder="New stage name"
-                    className="border-slate-700 bg-muted text-sm text-white"
+                    className="border-border bg-muted text-sm text-foreground"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleAddStage();
                     }}
@@ -316,7 +316,7 @@ export function PipelineSettings({
                     size="sm"
                     onClick={handleAddStage}
                     disabled={!newStageName.trim()}
-                    className="shrink-0 border-slate-700 bg-transparent text-slate-300 hover:bg-muted"
+                    className="shrink-0 border-border bg-transparent text-muted-foreground hover:bg-muted"
                   >
                     <Plus className="mr-1 h-3 w-3" />
                     Add
@@ -327,32 +327,32 @@ export function PipelineSettings({
               <Button
                 variant="outline"
                 onClick={onCreateNewPipeline}
-                className="w-full border-slate-700 bg-transparent text-slate-300 hover:bg-muted"
+                className="w-full border-border bg-transparent text-muted-foreground hover:bg-muted"
               >
                 <Plus className="mr-1 h-3 w-3" />
                 Create a new pipeline
               </Button>
             </div>
 
-            <DialogFooter className="border-slate-700 bg-card/50">
+            <DialogFooter className="border-border bg-muted/30">
               <Button
                 variant="destructive"
                 onClick={() => setShowDeleteConfirm(true)}
-                className="mr-auto bg-red-600 hover:bg-red-700"
+                className="mr-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Delete Pipeline
               </Button>
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="border-slate-700 bg-transparent text-slate-300 hover:bg-muted"
+                className="border-border bg-transparent text-muted-foreground hover:bg-muted"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSave}
                 disabled={saving || !name.trim()}
-                className="bg-primary text-white hover:bg-primary/90"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 {saving ? "Saving..." : "Save Changes"}
               </Button>
@@ -390,13 +390,13 @@ function SortableStageRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-2 rounded-lg border border-slate-700 bg-muted p-2"
+      className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 p-2"
     >
       <button
         type="button"
         {...attributes}
         {...listeners}
-        className="cursor-grab touch-none text-slate-500 hover:text-slate-300 active:cursor-grabbing"
+        className="cursor-grab touch-none text-muted-foreground/60 hover:text-foreground active:cursor-grabbing"
         aria-label="Drag to reorder"
       >
         <GripVertical className="h-4 w-4" />
@@ -405,13 +405,13 @@ function SortableStageRow({
       <Input
         value={stage.name}
         onChange={(e) => onNameChange(e.target.value)}
-        className="h-7 flex-1 border-transparent bg-transparent text-sm text-white focus:border-slate-600"
+        className="h-7 flex-1 border-transparent bg-transparent text-sm text-foreground focus:border-border"
       />
       <Button
         variant="ghost"
-        size="icon-xs"
+        size="icon"
         onClick={onRemove}
-        className="text-slate-400 hover:text-red-400"
+        className="text-muted-foreground/60 hover:text-destructive"
       >
         <Trash2 className="h-3 w-3" />
       </Button>
@@ -434,14 +434,14 @@ function ColorSwatch({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="h-4 w-4 rounded-full border border-slate-600"
+        className="h-4 w-4 rounded-full border border-border"
         style={{ backgroundColor: value }}
         aria-label="Change color"
       />
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-6 z-20 flex flex-wrap gap-1 rounded-lg border border-slate-700 bg-card p-2 shadow-lg w-36">
+          <div className="absolute left-0 top-6 z-20 flex flex-wrap gap-1 rounded-lg border border-border bg-card p-2 shadow-lg w-36">
             {colors.map((c) => (
               <button
                 key={c}
@@ -453,7 +453,7 @@ function ColorSwatch({
                 className="h-5 w-5 rounded-full border-2 transition-transform hover:scale-110"
                 style={{
                   backgroundColor: c,
-                  borderColor: c === value ? "white" : "transparent",
+                  borderColor: c === value ? "var(--foreground)" : "transparent",
                 }}
               />
             ))}

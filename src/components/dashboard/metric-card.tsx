@@ -26,7 +26,7 @@ export function MetricCard({ title, value, icon: Icon, delta, subtitle }: Metric
     <div className="group relative overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">{title}</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{title}</p>
           <p className="mt-2 text-3xl font-black tracking-tight text-foreground tabular-nums">
             {value}
           </p>

@@ -86,7 +86,7 @@ export function GoogleSheetsForm() {
     }
   };
 
-  if (loading) return <div className="text-slate-400">Loading Google Sheets configuration...</div>;
+  if (loading) return <div className="text-muted-foreground">Loading Google Sheets configuration...</div>;
 
   return (
     <div className="space-y-6">
@@ -95,7 +95,7 @@ export function GoogleSheetsForm() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <TableProperties className="size-5 text-emerald-500" />
-              <CardTitle className="text-white">Google Sheets Configuration</CardTitle>
+              <CardTitle className="text-foreground">Google Sheets Configuration</CardTitle>
             </div>
             <Switch checked={isEnabled} onCheckedChange={setIsEnabled} />
           </div>
@@ -106,7 +106,7 @@ export function GoogleSheetsForm() {
         <CardContent className="space-y-6">
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 flex gap-3">
             <Info className="size-5 text-blue-400 shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-100 leading-relaxed">
+            <div className="text-sm text-blue-600 dark:text-blue-100 leading-relaxed">
               <p className="font-semibold mb-1">Quick Setup:</p>
               <ol className="list-decimal ml-4 space-y-1">
                 <li>Share your Google Sheet with the bot email below as a <strong>Viewer</strong>.</li>
@@ -117,17 +117,17 @@ export function GoogleSheetsForm() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-slate-300">Default Bot Email (System)</Label>
+            <Label className="text-muted-foreground">Default Bot Email (System)</Label>
             <div className="flex gap-2">
               <Input 
                 value={globalBotEmail || 'Not configured by admin'} 
                 readOnly 
-                className="bg-muted border-slate-700 text-slate-400 font-mono text-xs" 
+                className="bg-muted border-border text-muted-foreground font-mono text-xs" 
               />
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="border-slate-700 h-10"
+                className="border-border h-10"
                 onClick={() => {
                   navigator.clipboard.writeText(globalBotEmail);
                   toast.success('Email copied');
@@ -139,45 +139,45 @@ export function GoogleSheetsForm() {
           </div>
 
           <div className="space-y-2 pt-4 border-t border-border">
-            <Label className="text-slate-300">Spreadsheet ID</Label>
+            <Label className="text-muted-foreground">Spreadsheet ID</Label>
             <Input
               value={config.spreadsheet_id}
               onChange={(e) => setConfig({ ...config, spreadsheet_id: e.target.value })}
               placeholder="e.g. 1aBCDeFGhIJKlMnOpqRStUvWxYz1234567890"
-              className="bg-muted border-slate-700 text-white"
+              className="bg-muted border-border text-foreground"
             />
-            <p className="text-[10px] text-slate-500 italic">
+            <p className="text-[10px] text-muted-foreground/60 italic">
               Found in the URL: docs.google.com/spreadsheets/d/<strong>[SPREADSHEET_ID]</strong>/edit
             </p>
           </div>
 
           <div className="space-y-4 pt-4 border-t border-border">
             <div className="flex items-center justify-between">
-              <Label className="text-slate-300">Custom Service Account (Advanced)</Label>
+              <Label className="text-muted-foreground">Custom Service Account (Advanced)</Label>
             </div>
             
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label className="text-slate-400 text-xs uppercase tracking-wider">Client Email</Label>
+                <Label className="text-muted-foreground/60 text-xs uppercase tracking-wider">Client Email</Label>
                 <Input
                   value={config.client_email}
                   onChange={(e) => setConfig({ ...config, client_email: e.target.value })}
                   placeholder="my-bot@project.iam.gserviceaccount.com"
-                  className="bg-muted border-slate-700 text-slate-200"
+                  className="bg-muted border-border text-foreground"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-400 text-xs uppercase tracking-wider">Private Key</Label>
+                <Label className="text-muted-foreground/60 text-xs uppercase tracking-wider">Private Key</Label>
                 <Input
                   type="password"
                   value={config.private_key}
                   onChange={(e) => setConfig({ ...config, private_key: e.target.value })}
                   placeholder={hasLocalKeys ? '••••••••••••••••' : 'Paste private key here'}
-                  className="bg-muted border-slate-700 text-slate-200"
+                  className="bg-muted border-border text-foreground"
                 />
               </div>
             </div>
-            <p className="text-[10px] text-slate-500">
+            <p className="text-[10px] text-muted-foreground/60">
               Leave these blank to use the system default bot. If provided, they will override the default.
             </p>
           </div>
@@ -186,7 +186,7 @@ export function GoogleSheetsForm() {
             <Button 
               onClick={handleSave} 
               disabled={saving}
-              className="bg-primary hover:bg-primary"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               <Save className="mr-2 size-4" />
               {saving ? 'Saving...' : 'Save Configuration'}

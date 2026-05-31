@@ -132,14 +132,14 @@ export default function AdminSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">System Settings</h1>
-        <p className="text-slate-400">Configure global platform defaults and integrations.</p>
+        <h1 className="text-2xl font-bold text-foreground">System Settings</h1>
+        <p className="text-muted-foreground">Configure global platform defaults and integrations.</p>
       </div>
 
       <div className="grid gap-6">
         <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               <Webhook className="h-5 w-5 text-primary" />
               Global WhatsApp Webhook
             </CardTitle>
@@ -149,39 +149,39 @@ export default function AdminSettingsPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label className="text-slate-300">Webhook Callback URL</Label>
+              <Label className="text-muted-foreground">Webhook Callback URL</Label>
               <div className="flex gap-2">
                 <Input
                   value={currentWebhookUrl}
                   readOnly
-                  className="bg-muted border-slate-700 text-slate-400 font-mono text-xs"
+                  className="bg-muted border-border text-muted-foreground font-mono text-xs"
                 />
-                <Button variant="outline" className="border-slate-700" onClick={() => copyToClipboard(currentWebhookUrl)}>
+                <Button variant="outline" className="border-border" onClick={() => copyToClipboard(currentWebhookUrl)}>
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-muted-foreground/60">
                 Use this URL in your Meta App Dashboard under the Webhooks section.
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-300">Global Verify Token</Label>
+              <Label className="text-muted-foreground">Global Verify Token</Label>
               <div className="flex gap-2">
                 <Input
                   value={whatsappSettings.verify_token}
                   onChange={(e) => setWhatsappSettings(prev => ({ ...prev, verify_token: e.target.value }))}
                   placeholder="Enter verify token"
-                  className="bg-muted border-slate-700 text-slate-200"
+                  className="bg-muted border-border text-foreground"
                 />
               </div>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-muted-foreground/60">
                 Must match the "Verify Token" you set in the Meta App Dashboard.
               </p>
             </div>
 
             <div className="flex justify-end border-t border-border pt-6">
-              <Button onClick={handleSaveWhatsapp} disabled={saving || loading} className="bg-primary hover:bg-primary">
+              <Button onClick={handleSaveWhatsapp} disabled={saving || loading} className="bg-primary hover:bg-primary/90">
                 <Save className="mr-2 h-4 w-4" />
                 {saving ? "Saving..." : "Save Settings"}
               </Button>
@@ -191,7 +191,7 @@ export default function AdminSettingsPage() {
 
         <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               <ShieldCheck className="h-5 w-5 text-amber-500" />
               Platform Control
             </CardTitle>
@@ -202,8 +202,8 @@ export default function AdminSettingsPage() {
           <CardContent className="space-y-6">
             <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border">
               <div className="space-y-0.5">
-                <Label className="text-base text-white">Maintenance Mode</Label>
-                <p className="text-xs text-slate-400">
+                <Label className="text-base text-foreground">Maintenance Mode</Label>
+                <p className="text-xs text-muted-foreground">
                   Block all non-admin access to the application.
                 </p>
               </div>
@@ -214,20 +214,20 @@ export default function AdminSettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-300">System Announcement</Label>
+              <Label className="text-muted-foreground">System Announcement</Label>
               <Textarea 
                 value={systemConfig.announcement}
                 onChange={(e) => setSystemConfig(prev => ({ ...prev, announcement: e.target.value }))}
                 placeholder="Message for all tenant dashboards..."
-                className="bg-muted border-slate-700 text-slate-200 min-h-[100px]"
+                className="bg-muted border-border text-foreground min-h-[100px]"
               />
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-muted-foreground/60">
                 This will be displayed as a banner on every business dashboard.
               </p>
             </div>
 
             <div className="flex justify-end border-t border-border pt-6">
-              <Button onClick={handleSaveSystem} disabled={saving || loading} className="bg-primary hover:bg-primary">
+              <Button onClick={handleSaveSystem} disabled={saving || loading} className="bg-primary hover:bg-primary/90">
                 <Save className="mr-2 h-4 w-4" />
                 {saving ? "Saving..." : "Save Platform Config"}
               </Button>
@@ -237,7 +237,7 @@ export default function AdminSettingsPage() {
 
         <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               <Settings className="h-5 w-5 text-emerald-500" />
               Global Integrations
             </CardTitle>
@@ -248,8 +248,8 @@ export default function AdminSettingsPage() {
           <CardContent className="space-y-6">
             <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border">
               <div className="space-y-0.5">
-                <Label className="text-base text-white">Google Sheets Integration</Label>
-                <p className="text-xs text-slate-400">
+                <Label className="text-base text-foreground">Google Sheets Integration</Label>
+                <p className="text-xs text-muted-foreground">
                   Allow businesses to use Google Sheets as a data source.
                 </p>
               </div>
@@ -263,13 +263,13 @@ export default function AdminSettingsPage() {
             </div>
 
             <div className="space-y-4 border-t border-border pt-6">
-              <h3 className="text-sm font-medium text-slate-200">Default Service Account (Fallback)</h3>
-              <p className="text-xs text-slate-400">
+              <h3 className="text-sm font-medium text-foreground">Default Service Account (Fallback)</h3>
+              <p className="text-xs text-muted-foreground">
                 Optional: If provided, businesses only need to share their sheet with this email.
               </p>
               
               <div className="space-y-2">
-                <Label className="text-slate-300 text-xs">Client Email</Label>
+                <Label className="text-muted-foreground text-xs">Client Email</Label>
                 <Input
                   value={integrationsGlobal.google_sheets.default_service_account.client_email}
                   onChange={(e) => setIntegrationsGlobal(prev => ({ 
@@ -280,12 +280,12 @@ export default function AdminSettingsPage() {
                     } 
                   }))}
                   placeholder="e.g. hopechat-bot@project.iam.gserviceaccount.com"
-                  className="bg-muted border-slate-700 text-slate-200"
+                  className="bg-muted border-border text-foreground"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-slate-300 text-xs">Private Key</Label>
+                <Label className="text-muted-foreground text-xs">Private Key</Label>
                 <Textarea
                   value={integrationsGlobal.google_sheets.default_service_account.private_key}
                   onChange={(e) => setIntegrationsGlobal(prev => ({ 
@@ -296,13 +296,13 @@ export default function AdminSettingsPage() {
                     } 
                   }))}
                   placeholder="-----BEGIN PRIVATE KEY-----\n..."
-                  className="bg-muted border-slate-700 text-slate-200 font-mono text-xs min-h-[120px]"
+                  className="bg-muted border-border text-foreground font-mono text-xs min-h-[120px]"
                 />
               </div>
             </div>
 
             <div className="flex justify-end border-t border-border pt-6">
-              <Button onClick={handleSaveIntegrations} disabled={saving || loading} className="bg-primary hover:bg-primary">
+              <Button onClick={handleSaveIntegrations} disabled={saving || loading} className="bg-primary hover:bg-primary/90">
                 <Save className="mr-2 h-4 w-4" />
                 {saving ? "Saving..." : "Save Integrations"}
               </Button>

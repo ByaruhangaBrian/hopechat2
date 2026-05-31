@@ -25,7 +25,7 @@ interface ConversationListProps {
 const STATUS_COLORS: Record<ConversationStatus, string> = {
   open: "bg-primary",
   pending: "bg-amber-500",
-  closed: "bg-slate-500",
+  closed: "bg-muted-foreground/40",
 };
 
 const FILTER_OPTIONS: { label: string; value: ConversationStatus | "all" }[] = [

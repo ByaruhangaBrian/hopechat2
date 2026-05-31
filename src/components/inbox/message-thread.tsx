@@ -100,7 +100,7 @@ function groupMessagesByDate(messages: Message[]) {
 const STATUS_OPTIONS: { label: string; value: ConversationStatus; color: string }[] = [
   { label: "Open", value: "open", color: "text-primary" },
   { label: "Pending", value: "pending", color: "text-amber-400" },
-  { label: "Closed", value: "closed", color: "text-slate-400" },
+  { label: "Closed", value: "closed", color: "text-muted-foreground/60" },
 ];
 
 export function MessageThread({

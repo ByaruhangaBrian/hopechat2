@@ -41,7 +41,7 @@ function RateCell({
   const pct = percent(value, total);
   return (
     <div className="flex items-center gap-2">
-      <span className="w-10 text-right text-xs tabular-nums text-slate-300">
+      <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
         {pct}%
       </span>
       <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">

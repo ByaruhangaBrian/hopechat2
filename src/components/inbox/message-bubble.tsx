@@ -29,15 +29,15 @@ interface MessageBubbleProps {
 function StatusIcon({ status }: { status: Message["status"] }) {
   switch (status) {
     case "sending":
-      return <Clock className="h-3 w-3 text-slate-400" />;
+      return <Clock className="h-3 w-3 text-primary-foreground/40" />;
     case "sent":
-      return <Check className="h-3 w-3 text-slate-400" />;
+      return <Check className="h-3 w-3 text-primary-foreground/60" />;
     case "delivered":
-      return <CheckCheck className="h-3 w-3 text-slate-400" />;
+      return <CheckCheck className="h-3 w-3 text-primary-foreground/60" />;
     case "read":
-      return <CheckCheck className="h-3 w-3 text-blue-400" />;
+      return <CheckCheck className="h-3 w-3 text-sky-300" />;
     case "failed":
-      return <XCircle className="h-3 w-3 text-red-400" />;
+      return <XCircle className="h-3 w-3 text-red-300" />;
     default:
       return null;
   }

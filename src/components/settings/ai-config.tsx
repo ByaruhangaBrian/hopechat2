@@ -117,7 +117,7 @@ export function AiConfig() {
                             checked={isEnabled}
                             onCheckedChange={setIsEnabled}
                         />
-                        <span className="text-sm text-slate-400">
+                        <span className="text-sm text-muted-foreground">
                             When enabled, automations can send AI-generated responses.
                         </span>
                     </div>
@@ -135,9 +135,9 @@ export function AiConfig() {
                                 setApiKeyEdited(true);
                             }}
                             placeholder={hasApiKey ? 'Leave blank to keep existing key' : 'Enter your Gemini API key'}
-                            className="bg-card text-white"
+                            className="bg-muted border-border text-foreground"
                         />
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted-foreground/60">
                             Your API key is encrypted and stored securely. {hasApiKey ? 'Existing key is already configured.' : 'A valid key is required to enable AI.'}
                         </p>
                     </div>
@@ -145,13 +145,15 @@ export function AiConfig() {
 
                 <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-start">
                     <Label htmlFor="system-prompt">System prompt</Label>
-                    <Textarea
-                        id="system-prompt"
-                        value={systemPrompt}
-                        onChange={(e) => setSystemPrompt(e.target.value)}
-                        placeholder={DEFAULT_PROMPT}
-                        className="min-h-[140px] bg-card text-white"
-                    />
+                    <div className="space-y-2">
+                        <Textarea
+                            id="system-prompt"
+                            value={systemPrompt}
+                            onChange={(e) => setSystemPrompt(e.target.value)}
+                            placeholder={DEFAULT_PROMPT}
+                            className="min-h-[140px] bg-muted border-border text-foreground"
+                        />
+                    </div>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-start">
@@ -162,16 +164,16 @@ export function AiConfig() {
                             value={trainingDocuments}
                             onChange={(e) => setTrainingDocuments(e.target.value)}
                             placeholder="Enter optional training documents separated by ---"
-                            className="min-h-[140px] bg-card text-white"
+                            className="min-h-[140px] bg-muted border-border text-foreground"
                         />
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted-foreground/60">
                             Provide long-form context or documents separated by <strong>---</strong>.
                         </p>
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="text-sm text-slate-500">
+                    <div className="text-sm text-muted-foreground/60">
                         {loading ? 'Loading AI settings…' : hasApiKey ? 'Gemini key is configured.' : 'AI is not configured.'}
                     </div>
                     <Button

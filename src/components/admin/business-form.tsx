@@ -132,10 +132,10 @@ export function BusinessForm({
       onOpenChange(val);
       if (!val) setTimeout(resetForm, 300);
     }}>
-      <DialogContent className="bg-card border-border text-slate-100 sm:max-w-[500px]">
+      <DialogContent className="bg-card border-border text-foreground sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-white">{title}</DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogTitle className="text-xl font-bold text-foreground">{title}</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
             {description}
           </DialogDescription>
         </DialogHeader>
@@ -147,7 +147,7 @@ export function BusinessForm({
                 <div className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors",
                   step === s.id ? "border-primary bg-primary/10 text-primary" :
-                  step > s.id ? "border-emerald-500 bg-emerald-500 text-white" : "border-border text-slate-500"
+                  step > s.id ? "border-emerald-500 bg-emerald-500 text-white" : "border-border text-muted-foreground/60"
                 )}>
                   {step > s.id ? <CheckCircle2 className="h-5 w-5" /> : <s.icon className="h-4 w-4" />}
                 </div>
@@ -166,24 +166,24 @@ export function BusinessForm({
           {step === 1 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-slate-300">Business Name</Label>
+                <Label htmlFor="name" className="text-muted-foreground">Business Name</Label>
                 <Input
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Acme Corp"
                   required
-                  className="bg-muted border-slate-700 text-white focus:ring-primary"
+                  className="bg-muted border-border text-foreground focus:ring-primary"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-slate-300">Status</Label>
+                  <Label className="text-muted-foreground">Status</Label>
                   <Select value={status} onValueChange={setStatus}>
-                    <SelectTrigger className="bg-muted border-slate-700 text-white">
+                    <SelectTrigger className="bg-muted border-border text-foreground">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
-                    <SelectContent className="bg-muted border-slate-700 text-white">
+                    <SelectContent className="bg-muted border-border text-foreground">
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="trialing">Trialing</SelectItem>
                       <SelectItem value="past_due">Past Due</SelectItem>
@@ -192,12 +192,12 @@ export function BusinessForm({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-slate-300">Plan Tier</Label>
+                  <Label className="text-muted-foreground">Plan Tier</Label>
                   <Select value={planTier} onValueChange={setPlanTier}>
-                    <SelectTrigger className="bg-muted border-slate-700 text-white">
+                    <SelectTrigger className="bg-muted border-border text-foreground">
                       <SelectValue placeholder="Select plan" />
                     </SelectTrigger>
-                    <SelectContent className="bg-muted border-slate-700 text-white">
+                    <SelectContent className="bg-muted border-border text-foreground">
                       <SelectItem value="basic">Basic</SelectItem>
                       <SelectItem value="pro">Pro</SelectItem>
                       <SelectItem value="enterprise">Enterprise</SelectItem>
@@ -211,18 +211,18 @@ export function BusinessForm({
           {step === 2 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="space-y-2">
-                <Label htmlFor="ownerName" className="text-slate-300">Full Name</Label>
+                <Label htmlFor="ownerName" className="text-muted-foreground">Full Name</Label>
                 <Input
                   id="ownerName"
                   value={ownerName}
                   onChange={(e) => setOwnerName(e.target.value)}
                   placeholder="John Doe"
                   required
-                  className="bg-muted border-slate-700 text-white"
+                  className="bg-muted border-border text-foreground"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ownerEmail" className="text-slate-300">Email Address</Label>
+                <Label htmlFor="ownerEmail" className="text-muted-foreground">Email Address</Label>
                 <Input
                   id="ownerEmail"
                   type="email"
@@ -230,11 +230,11 @@ export function BusinessForm({
                   onChange={(e) => setOwnerEmail(e.target.value)}
                   placeholder="john@example.com"
                   required
-                  className="bg-muted border-slate-700 text-white"
+                  className="bg-muted border-border text-foreground"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ownerPass" className="text-slate-300">Password</Label>
+                <Label htmlFor="ownerPass" className="text-muted-foreground">Password</Label>
                 <Input
                   id="ownerPass"
                   type="password"
@@ -242,7 +242,7 @@ export function BusinessForm({
                   onChange={(e) => setOwnerPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="bg-muted border-slate-700 text-white"
+                  className="bg-muted border-border text-foreground"
                 />
               </div>
             </div>
@@ -254,34 +254,34 @@ export function BusinessForm({
                 Optional: You can provision WhatsApp credentials now or let the tenant do it later.
               </div>
               <div className="space-y-2">
-                <Label htmlFor="waPhone" className="text-slate-300">Phone Number ID</Label>
+                <Label htmlFor="waPhone" className="text-muted-foreground">Phone Number ID</Label>
                 <Input
                   id="waPhone"
                   value={waPhoneId}
                   onChange={(e) => setWaPhoneId(e.target.value)}
                   placeholder="e.g. 1029384756..."
-                  className="bg-muted border-slate-700 text-white font-mono text-xs"
+                  className="bg-muted border-border text-foreground font-mono text-xs"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="waWaba" className="text-slate-300">WABA ID</Label>
+                <Label htmlFor="waWaba" className="text-muted-foreground">WABA ID</Label>
                 <Input
                   id="waWaba"
                   value={waWabaId}
                   onChange={(e) => setWaWabaId(e.target.value)}
                   placeholder="e.g. 5647382910..."
-                  className="bg-muted border-slate-700 text-white font-mono text-xs"
+                  className="bg-muted border-border text-foreground font-mono text-xs"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="waToken" className="text-slate-300">Permanent Access Token</Label>
+                <Label htmlFor="waToken" className="text-muted-foreground">Permanent Access Token</Label>
                 <Input
                   id="waToken"
                   type="password"
                   value={waToken}
                   onChange={(e) => setWaToken(e.target.value)}
                   placeholder="EAAB..."
-                  className="bg-muted border-slate-700 text-white font-mono text-xs"
+                  className="bg-muted border-border text-foreground font-mono text-xs"
                 />
               </div>
             </div>
@@ -294,7 +294,7 @@ export function BusinessForm({
                   type="button"
                   variant="outline"
                   onClick={() => setStep(step - 1)}
-                  className="border-border text-slate-400 hover:text-white"
+                  className="border-border text-muted-foreground hover:text-foreground"
                 >
                   <ChevronLeft className="mr-2 h-4 w-4" />
                   Back
@@ -306,7 +306,7 @@ export function BusinessForm({
                 type="button"
                 variant="ghost"
                 onClick={() => onOpenChange(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 Cancel
               </Button>

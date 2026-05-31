@@ -15,7 +15,7 @@ export function IntegrationsHub() {
         <Button 
           variant="ghost" 
           onClick={() => setActiveIntegration(null)}
-          className="text-slate-400 hover:text-white"
+          className="text-muted-foreground hover:text-foreground"
         >
           ← Back to Integrations
         </Button>
@@ -65,19 +65,19 @@ export function IntegrationsHub() {
                   <Icon className="size-6" />
                 </div>
                 <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                  isComingSoon ? 'bg-muted text-slate-500' : 'bg-emerald-500/10 text-emerald-500'
+                  isComingSoon ? 'bg-muted text-muted-foreground/60' : 'bg-emerald-500/10 text-emerald-500'
                 }`}>
                   {int.status}
                 </span>
               </div>
-              <CardTitle className="text-white text-lg">{int.name}</CardTitle>
-              <CardDescription className="text-slate-400 text-sm leading-relaxed">
+              <CardTitle className="text-foreground text-lg">{int.name}</CardTitle>
+              <CardDescription className="text-muted-foreground text-sm leading-relaxed">
                 {int.description}
               </CardDescription>
             </CardHeader>
             <CardContent className="mt-auto pt-0">
               <Button 
-                className="w-full bg-muted hover:bg-slate-700 text-white"
+                className="w-full bg-muted hover:bg-muted/80 text-foreground"
                 disabled={isComingSoon}
                 onClick={() => setActiveIntegration(int.id)}
               >
