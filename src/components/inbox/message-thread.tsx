@@ -26,6 +26,7 @@ import {
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -659,10 +660,10 @@ export function MessageThread({
     : "Assign";
 
   return (
-    <div className="flex flex-1 flex-col bg-background">
+    <div className="flex flex-1 flex-col bg-background min-w-0 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-3 sm:px-4">
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+      <div className="flex h-[60px] flex-shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-3 sm:px-4">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           {/* Back-to-list button — mobile only. Hidden on lg+ where the
               conversation list is always visible next to the thread. */}
           {onBack && (
@@ -678,33 +679,38 @@ export function MessageThread({
           <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
             {displayName.charAt(0).toUpperCase()}
           </div>
-          <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-foreground">{displayName}</h2>
-            <p className="truncate text-xs text-muted-foreground">{contact.phone}</p>
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-sm font-semibold text-foreground leading-tight">{displayName}</h2>
+            <div className="flex items-center gap-2 overflow-hidden">
+              <p className="truncate text-[11px] text-muted-foreground">{contact.phone}</p>
+              {/* Session timer badge — hidden on tiny phones */}
+              <Badge
+                variant="outline"
+                className={cn(
+                  "hidden gap-1 border-border px-1.5 py-0 text-[9px] sm:inline-flex shrink-0",
+                  sessionInfo.expired ? "text-destructive" : "text-primary"
+                )}
+              >
+                <Clock className="h-2.5 w-2.5" />
+                {sessionInfo.remaining}
+              </Badge>
+            </div>
           </div>
-          {/* Session timer badge — hidden on the narrowest phones so
-              the name + back arrow keep their room. */}
-          <Badge
-            variant="outline"
-            className={cn(
-              "ml-1 hidden gap-1 border-border text-[10px] sm:inline-flex sm:ml-2",
-              sessionInfo.expired ? "text-destructive" : "text-primary"
-            )}
-          >
-            <Clock className="h-3 w-3" />
-            {sessionInfo.remaining}
-          </Badge>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+        <div className="flex flex-shrink-0 items-center gap-1.5 sm:gap-3">
           {/* Status dropdown */}
           <DropdownMenu>
-            <DropdownMenuTrigger className={cn(
-              "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-muted",
-              currentStatus?.color ?? "text-muted-foreground"
-            )}>
-              {currentStatus?.label ?? "Status"}
-              <ChevronDown className="h-3 w-3" />
+            <DropdownMenuTrigger
+              className={cn(
+                "inline-flex h-8 items-center justify-center gap-1.5 px-2 text-xs font-medium hover:bg-muted rounded-md transition-colors",
+                currentStatus?.color ?? "text-muted-foreground"
+              )}
+            >
+              <span className="max-w-[60px] truncate sm:max-w-none">
+                {currentStatus?.label ?? "Status"}
+              </span>
+              <ChevronDown className="h-3 w-3 opacity-50" />
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
@@ -726,13 +732,13 @@ export function MessageThread({
           <DropdownMenu>
             <DropdownMenuTrigger
               className={cn(
-                "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-muted",
+                "inline-flex h-8 items-center justify-center gap-1.5 px-2 text-xs font-medium hover:bg-muted rounded-md transition-colors",
                 assignedAgentId ? "text-primary" : "text-muted-foreground"
               )}
             >
-              <UserPlus className="h-3 w-3" />
-              <span className="hidden sm:inline">{assignLabel}</span>
-              <ChevronDown className="h-3 w-3" />
+              <UserPlus className="h-3.5 w-3.5" />
+              <span className="hidden md:inline max-w-[80px] truncate">{assignLabel}</span>
+              <ChevronDown className="h-3 w-3 opacity-50" />
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
@@ -754,7 +760,7 @@ export function MessageThread({
                         isSelected ? "text-primary" : "text-foreground"
                       )}
                     >
-                      <span className="flex-1">
+                      <span className="flex-1 truncate">
                         {p.full_name}
                         {p.user_id === user?.id ? " (me)" : ""}
                       </span>
@@ -777,12 +783,12 @@ export function MessageThread({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <div className="flex items-center gap-2 rounded-md border border-border bg-muted px-2 py-1 text-xs text-foreground">
-            <span className="text-muted-foreground">AI</span>
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-2 py-1">
+            <span className="text-[10px] font-bold text-muted-foreground">AI</span>
             <Switch
               checked={conversation.ai_enabled ?? false}
               onCheckedChange={handleAiToggle}
-              className="h-5 w-9"
+              className="h-4 w-7"
             />
           </div>
         </div>

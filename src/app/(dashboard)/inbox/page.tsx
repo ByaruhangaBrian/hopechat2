@@ -311,13 +311,13 @@ export default function InboxPage() {
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden min-w-0">
         {/* Left panel: Conversation list.
             Hidden on mobile when a conversation is selected so the
             thread can occupy the full width. Always visible on lg+. */}
         <div
           className={cn(
-            "flex h-full w-full lg:w-80 lg:shrink-0 min-w-0 border-r border-border",
+            "flex h-full w-full lg:w-72 xl:w-80 lg:shrink-0 min-w-0 border-r border-border overflow-hidden",
             hasActiveConv ? "hidden lg:flex" : "flex",
           )}
         >
@@ -335,7 +335,7 @@ export default function InboxPage() {
             (shows its own empty-state if no thread is picked yet). */}
         <div
           className={cn(
-            "flex h-full flex-1 min-w-0",
+            "flex h-full flex-1 min-w-0 overflow-hidden",
             hasActiveConv ? "flex" : "hidden lg:flex",
           )}
         >
@@ -354,7 +354,7 @@ export default function InboxPage() {
         </div>
 
         {/* Right panel: Contact sidebar — desktop only. */}
-        <div className="hidden lg:block w-80 shrink-0 border-l border-border">
+        <div className="hidden lg:block lg:w-72 xl:w-80 shrink-0 border-l border-border bg-card overflow-hidden">
           <ContactSidebar contact={activeContact} />
         </div>
       </div>
