@@ -29,7 +29,6 @@ export default function InboxPage() {
   const [whatsappConnected, setWhatsappConnected] = useState<boolean | null>(
     null
   );
-  const [showSidebar, setShowSidebar] = useState(true);
 
   // Fire the deep-link auto-select exactly once per URL — subsequent
   // list refreshes (realtime, manual refetch) must not snap the user
@@ -318,7 +317,7 @@ export default function InboxPage() {
             thread can occupy the full width. Always visible on lg+. */}
         <div
           className={cn(
-            "flex h-full flex-1 lg:flex-none min-w-0",
+            "flex h-full w-full lg:w-80 lg:shrink-0 min-w-0 border-r border-border",
             hasActiveConv ? "hidden lg:flex" : "flex",
           )}
         >
@@ -336,7 +335,7 @@ export default function InboxPage() {
             (shows its own empty-state if no thread is picked yet). */}
         <div
           className={cn(
-            "flex h-full flex-1 lg:flex min-w-0",
+            "flex h-full flex-1 min-w-0",
             hasActiveConv ? "flex" : "hidden lg:flex",
           )}
         >
@@ -351,17 +350,13 @@ export default function InboxPage() {
             onAssignChange={handleAssignChange}
             onAiEnabledChange={handleAiEnabledChange}
             onBack={handleCloseConversation}
-            showSidebar={showSidebar}
-            onToggleSidebar={() => setShowSidebar(!showSidebar)}
           />
         </div>
 
         {/* Right panel: Contact sidebar — desktop only. */}
-        {showSidebar && (
-          <div className="hidden lg:block">
-            <ContactSidebar contact={activeContact} />
-          </div>
-        )}
+        <div className="hidden lg:block w-80 shrink-0 border-l border-border">
+          <ContactSidebar contact={activeContact} />
+        </div>
       </div>
     </div>
   );
