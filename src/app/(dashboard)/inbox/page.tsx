@@ -29,6 +29,7 @@ export default function InboxPage() {
   const [whatsappConnected, setWhatsappConnected] = useState<boolean | null>(
     null
   );
+  const [showSidebar, setShowSidebar] = useState(true);
 
   // Fire the deep-link auto-select exactly once per URL — subsequent
   // list refreshes (realtime, manual refetch) must not snap the user
@@ -350,13 +351,17 @@ export default function InboxPage() {
             onAssignChange={handleAssignChange}
             onAiEnabledChange={handleAiEnabledChange}
             onBack={handleCloseConversation}
+            showSidebar={showSidebar}
+            onToggleSidebar={() => setShowSidebar(!showSidebar)}
           />
         </div>
 
         {/* Right panel: Contact sidebar — desktop only. */}
-        <div className="hidden lg:block">
-          <ContactSidebar contact={activeContact} />
-        </div>
+        {showSidebar && (
+          <div className="hidden lg:block">
+            <ContactSidebar contact={activeContact} />
+          </div>
+        )}
       </div>
     </div>
   );

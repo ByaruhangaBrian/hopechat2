@@ -20,6 +20,8 @@ import {
   Check,
   Clock,
   ArrowLeft,
+  PanelRightOpen,
+  PanelRightClose,
 } from "lucide-react";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +66,8 @@ interface MessageThreadProps {
     assignedAgentId: string | null,
   ) => void;
   onAiEnabledChange: (conversationId: string, aiEnabled: boolean) => void;
+  showSidebar?: boolean;
+  onToggleSidebar?: () => void;
   /**
    * On mobile, the thread is shown full-screen with the conversation list
    * hidden. This callback lets the page deselect the active conversation
@@ -113,6 +117,8 @@ export function MessageThread({
   onStatusChange,
   onAssignChange,
   onAiEnabledChange,
+  showSidebar,
+  onToggleSidebar,
   onBack,
 }: MessageThreadProps) {
   const { user } = useAuth();
@@ -692,9 +698,25 @@ export function MessageThread({
             <Clock className="h-3 w-3" />
             {sessionInfo.remaining}
           </Badge>
+
+          {/* Sidebar Toggle — desktop only */}
+          {onToggleSidebar && (
+            <button
+              type="button"
+              onClick={onToggleSidebar}
+              className="hidden h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground lg:flex"
+              aria-label={showSidebar ? "Hide sidebar" : "Show sidebar"}
+            >
+              {showSidebar ? (
+                <PanelRightClose className="h-5 w-5" />
+              ) : (
+                <PanelRightOpen className="h-5 w-5" />
+              )}
+            </button>
+          )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:gap-4">
           {/* Status dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger className={cn(

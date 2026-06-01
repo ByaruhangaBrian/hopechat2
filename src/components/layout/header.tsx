@@ -69,11 +69,6 @@ export function Header({ onOpenSidebar }: HeaderProps) {
           <h1 className="truncate text-lg font-bold tracking-tight text-foreground">
             {title}
           </h1>
-          <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">
-            <span>HopeChat</span>
-            <span>•</span>
-            <span className="text-primary">{profile?.business?.name || "Dashboard"}</span>
-          </div>
         </div>
       </div>
 

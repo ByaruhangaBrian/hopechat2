@@ -75,6 +75,10 @@ export default function BusinessesPage() {
     const biz = businesses.find(b => b.id === businessId);
     if (!biz) return;
 
+    if (currentValue && !confirm(`Are you sure you want to disable ${feature.replace('_enabled', '')} for ${biz.name}?`)) {
+      return;
+    }
+
     const newFeatures = { ...biz.features, [feature]: !currentValue };
 
     const { error } = await supabase
