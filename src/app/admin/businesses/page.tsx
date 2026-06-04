@@ -35,6 +35,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BusinessForm } from "@/components/admin/business-form";
+import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 
 interface Business {
   id: string;
@@ -50,6 +51,16 @@ export default function BusinessesPage() {
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
+
+  // Modal states
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [businessToDelete, setBusinessToDelete] = useState<Business | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [isToggleModalOpen, setIsToggleModalOpen] = useState(false);
+  const [toggleData, setToggleData] = useState<{ businessId: string, feature: string, currentValue: boolean } | null>(null);
+  const [isToggling, setIsToggling] = useState(false);
+
   const supabase = createClient();
 
   async function fetchBusinesses() {
@@ -75,11 +86,19 @@ export default function BusinessesPage() {
     const biz = businesses.find(b => b.id === businessId);
     if (!biz) return;
 
-    if (currentValue && !confirm(`Are you sure you want to disable ${feature.replace('_enabled', '')} for ${biz.name}?`)) {
+    if (currentValue) {
+      setToggleData({ businessId, feature, currentValue });
+      setIsToggleModalOpen(true);
       return;
     }
 
-    const newFeatures = { ...biz.features, [feature]: !currentValue };
+    await executeToggle(businessId, feature, currentValue);
+  }
+
+  async function executeToggle(businessId: string, feature: string, currentValue: boolean) {
+    setIsToggling(true);
+    const biz = businesses.find(b => b.id === businessId);
+    const newFeatures = { ...biz?.features, [feature]: !currentValue };
 
     const { error } = await supabase
       .from("businesses")
@@ -92,9 +111,12 @@ export default function BusinessesPage() {
       toast.success("Feature updated");
       setBusinesses(prev => prev.map(b => b.id === businessId ? { ...b, features: newFeatures } : b));
     }
+    setIsToggling(false);
+    setIsToggleModalOpen(false);
   }
 
   async function deleteBusiness(businessId: string) {
+    setIsDeleting(true);
     const { error } = await supabase
       .from("businesses")
       .delete()
@@ -106,6 +128,8 @@ export default function BusinessesPage() {
       toast.success("Business deleted successfully");
       setBusinesses(prev => prev.filter(b => b.id !== businessId));
     }
+    setIsDeleting(false);
+    setIsDeleteModalOpen(false);
   }
 
   async function updateStatus(businessId: string, newStatus: string) {
@@ -318,9 +342,8 @@ export default function BusinessesPage() {
                           <DropdownMenuItem 
                             variant="destructive"
                             onClick={() => {
-                              if (confirm(`Permanently delete ${biz.name}?`)) {
-                                deleteBusiness(biz.id);
-                              }
+                              setBusinessToDelete(biz);
+                              setIsDeleteModalOpen(true);
                             }}
                             className="cursor-pointer"
                           >
@@ -349,6 +372,27 @@ export default function BusinessesPage() {
         } : undefined}
         title={editingBusiness ? "Edit Business" : "Create Business"}
         description={editingBusiness ? "Update tenant configuration." : "Provision a new tenant environment."}
+      />
+
+      <ConfirmationModal
+        open={isDeleteModalOpen}
+        onOpenChange={setIsDeleteModalOpen}
+        title="Delete Business"
+        description={`Are you sure you want to permanently delete ${businessToDelete?.name}? This action cannot be undone and will remove all users, contacts, messages, and associated data.`}
+        confirmText="Delete Business"
+        onConfirm={() => businessToDelete && deleteBusiness(businessToDelete.id)}
+        variant="destructive"
+        loading={isDeleting}
+      />
+
+      <ConfirmationModal
+        open={isToggleModalOpen}
+        onOpenChange={setIsToggleModalOpen}
+        title="Disable Feature"
+        description={`Are you sure you want to disable ${toggleData?.feature.replace('_enabled', '')} for this business?`}
+        confirmText="Disable"
+        onConfirm={() => toggleData && executeToggle(toggleData.businessId, toggleData.feature, toggleData.currentValue)}
+        loading={isToggling}
       />
     </div>
   );

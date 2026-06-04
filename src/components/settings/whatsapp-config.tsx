@@ -28,6 +28,8 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
+import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 import type { WhatsAppConfig as WhatsAppConfigType } from '@/types';
 
 const MASKED_TOKEN = '••••••••••••••••';
@@ -48,6 +50,7 @@ export function WhatsAppConfig() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('unknown');
   const [resetReason, setResetReason] = useState<ResetReason>(null);
   const [statusMessage, setStatusMessage] = useState<string>('');
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
   const [phoneNumberId, setPhoneNumberId] = useState('');
   const [wabaId, setWabaId] = useState('');
@@ -227,10 +230,10 @@ export function WhatsAppConfig() {
   }
 
   async function handleReset() {
-    if (!confirm('This will delete the current WhatsApp config so you can re-enter it. Continue?')) {
-      return;
-    }
+    setIsResetModalOpen(true);
+  }
 
+  async function executeReset() {
     try {
       setResetting(true);
       const res = await fetch('/api/whatsapp/config', { method: 'DELETE' });
@@ -257,6 +260,7 @@ export function WhatsAppConfig() {
       toast.error(getErrorMessage(err, 'Failed to reset configuration'));
     } finally {
       setResetting(false);
+      setIsResetModalOpen(false);
     }
   }
 
@@ -603,6 +607,17 @@ export function WhatsAppConfig() {
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmationModal
+        open={isResetModalOpen}
+        onOpenChange={setIsResetModalOpen}
+        title="Reset Configuration"
+        description="This will delete the current WhatsApp configuration so you can re-enter it. This action cannot be undone."
+        confirmText="Reset"
+        onConfirm={executeReset}
+        variant="destructive"
+        loading={resetting}
+      />
     </div>
   );
 }

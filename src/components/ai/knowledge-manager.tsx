@@ -39,6 +39,7 @@ import { Switch } from '@/components/ui/switch';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 
 interface KnowledgeItem {
   id: string;
@@ -55,6 +56,11 @@ export function KnowledgeManager() {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<KnowledgeItem | null>(null);
+
+  // Delete modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<KnowledgeItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Form state
   const [title, setTitle] = useState('');
@@ -140,8 +146,7 @@ export function KnowledgeManager() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this item?')) return;
-
+    setIsDeleting(true);
     const { error } = await supabase
       .from('business_knowledge')
       .delete()
@@ -153,6 +158,8 @@ export function KnowledgeManager() {
       toast.success('Item deleted');
       fetchItems();
     }
+    setIsDeleting(false);
+    setIsDeleteModalOpen(false);
   };
 
   const toggleStatus = async (item: KnowledgeItem) => {
@@ -272,7 +279,10 @@ export function KnowledgeManager() {
                     variant="ghost" 
                     size="icon" 
                     className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => handleDelete(item.id)}
+                    onClick={() => {
+                      setItemToDelete(item);
+                      setIsDeleteModalOpen(true);
+                    }}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -343,6 +353,17 @@ export function KnowledgeManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmationModal
+        open={isDeleteModalOpen}
+        onOpenChange={setIsDeleteModalOpen}
+        title="Delete Snippet"
+        description={`Are you sure you want to delete "${itemToDelete?.title}"? This information will no longer be available to the AI assistant.`}
+        confirmText="Delete"
+        onConfirm={() => itemToDelete && handleDelete(itemToDelete.id)}
+        variant="destructive"
+        loading={isDeleting}
+      />
     </div>
   );
 }
