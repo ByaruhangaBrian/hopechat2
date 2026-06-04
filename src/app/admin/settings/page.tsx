@@ -9,6 +9,9 @@ import {
   ShieldCheck,
   Save,
   Copy,
+  Key,
+  Database,
+  Cpu,
 } from "lucide-react";
 import {
   Card,
@@ -41,6 +44,13 @@ export default function AdminSettingsPage() {
       }
     }
   });
+  const [platformCredentials, setPlatformCredentials] = useState({
+    supabase_url: "",
+    supabase_anon_key: "",
+    meta_app_id: "",
+    meta_app_secret: "",
+    gemini_global_key: "",
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const supabase = createClient();
@@ -50,16 +60,19 @@ export default function AdminSettingsPage() {
       const [
         { data: wa },
         { data: sys },
-        { data: int }
+        { data: int },
+        { data: creds }
       ] = await Promise.all([
         supabase.from("system_settings").select("*").eq("id", "whatsapp_global").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "system_config").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "integrations_global").maybeSingle(),
+        supabase.from("system_settings").select("*").eq("id", "platform_credentials").maybeSingle(),
       ]);
 
       if (wa) setWhatsappSettings(wa.value);
       if (sys) setSystemConfig(sys.value);
       if (int) setIntegrationsGlobal(int.value);
+      if (creds) setPlatformCredentials(creds.value);
       
       setLoading(false);
     }
@@ -116,6 +129,24 @@ export default function AdminSettingsPage() {
       toast.error("Failed to save integrations settings");
     } else {
       toast.success("Global integrations updated");
+    }
+    setSaving(false);
+  }
+
+  async function handleSavePlatformCredentials() {
+    setSaving(true);
+    const { error } = await supabase
+      .from("system_settings")
+      .upsert({
+        id: "platform_credentials",
+        value: platformCredentials,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (error) {
+      toast.error("Failed to save platform credentials");
+    } else {
+      toast.success("Platform credentials updated");
     }
     setSaving(false);
   }
@@ -230,6 +261,102 @@ export default function AdminSettingsPage() {
               <Button onClick={handleSaveSystem} disabled={saving || loading} className="bg-primary hover:bg-primary/90">
                 <Save className="mr-2 h-4 w-4" />
                 {saving ? "Saving..." : "Save Platform Config"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <Key className="h-5 w-5 text-indigo-500" />
+              Platform Credentials
+            </CardTitle>
+            <CardDescription>
+              Manage global secrets and infrastructure keys.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Database className="h-4 w-4 text-muted-foreground" />
+                Supabase Configuration
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs">Supabase URL</Label>
+                  <Input
+                    value={platformCredentials.supabase_url}
+                    onChange={(e) => setPlatformCredentials(prev => ({ ...prev, supabase_url: e.target.value }))}
+                    placeholder="https://your-project.supabase.co"
+                    className="bg-muted border-border text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs">Anon Key</Label>
+                  <Input
+                    type="password"
+                    value={platformCredentials.supabase_anon_key}
+                    onChange={(e) => setPlatformCredentials(prev => ({ ...prev, supabase_anon_key: e.target.value }))}
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    className="bg-muted border-border text-foreground"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 border-t border-border pt-6">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Webhook className="h-4 w-4 text-muted-foreground" />
+                Meta App Credentials
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs">App ID</Label>
+                  <Input
+                    value={platformCredentials.meta_app_id}
+                    onChange={(e) => setPlatformCredentials(prev => ({ ...prev, meta_app_id: e.target.value }))}
+                    placeholder="123456789012345"
+                    className="bg-muted border-border text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs">App Secret</Label>
+                  <Input
+                    type="password"
+                    value={platformCredentials.meta_app_secret}
+                    onChange={(e) => setPlatformCredentials(prev => ({ ...prev, meta_app_secret: e.target.value }))}
+                    placeholder="••••••••••••••••••••••••••••••••"
+                    className="bg-muted border-border text-foreground"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 border-t border-border pt-6">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Cpu className="h-4 w-4 text-muted-foreground" />
+                Global AI Configuration
+              </h3>
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-xs">Global Gemini API Key</Label>
+                <Input
+                  type="password"
+                  value={platformCredentials.gemini_global_key}
+                  onChange={(e) => setPlatformCredentials(prev => ({ ...prev, gemini_global_key: e.target.value }))}
+                  placeholder="AIzaSy..."
+                  className="bg-muted border-border text-foreground"
+                />
+                <p className="text-[10px] text-muted-foreground/60">
+                  Fallback key used if a business hasn't provided their own API key.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end border-t border-border pt-6">
+              <Button onClick={handleSavePlatformCredentials} disabled={saving || loading} className="bg-primary hover:bg-primary/90">
+                <Save className="mr-2 h-4 w-4" />
+                {saving ? "Saving..." : "Save Credentials"}
               </Button>
             </div>
           </CardContent>
