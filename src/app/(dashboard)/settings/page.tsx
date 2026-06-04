@@ -9,10 +9,9 @@ import { TagManager } from '@/components/settings/tag-manager';
 import { ProfileForm } from '@/components/settings/profile-form';
 import { PasswordForm } from '@/components/settings/password-form';
 import { SessionsCard } from '@/components/settings/sessions-card';
-import { AiConfig } from '@/components/settings/ai-config';
 import { IntegrationsHub } from '@/components/settings/integrations-hub';
 
-const TAB_VALUES = ['profile', 'whatsapp', 'templates', 'tags', 'ai', 'integrations'] as const;
+const TAB_VALUES = ['profile', 'whatsapp', 'templates', 'tags', 'integrations'] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
 function isTabValue(v: string | null): v is TabValue {
@@ -77,13 +76,6 @@ export default function SettingsPage() {
             Tags
           </TabsTrigger>
           <TabsTrigger
-            value="ai"
-            className="data-active:bg-muted data-active:text-primary text-muted-foreground"
-          >
-            <Cpu className="size-4" />
-            AI
-          </TabsTrigger>
-          <TabsTrigger
             value="integrations"
             className="data-active:bg-muted data-active:text-primary text-muted-foreground"
           >
@@ -108,10 +100,6 @@ export default function SettingsPage() {
 
         <TabsContent value="tags">
           <TagManager />
-        </TabsContent>
-
-        <TabsContent value="ai">
-          <AiConfig />
         </TabsContent>
 
         <TabsContent value="integrations">

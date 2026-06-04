@@ -4,6 +4,7 @@ import { decrypt } from './encryption';
 interface AiConfig {
   system_prompt: string;
   training_documents: string[];
+  knowledge_items: { title: string; content: string }[];
   is_enabled: boolean;
   api_key: string;
   expires_at: number;
@@ -20,21 +21,37 @@ export async function getBusinessAiConfig(userId: string): Promise<Omit<AiConfig
     return cached;
   }
 
-  const { data, error } = await supabaseAdmin()
+  const db = supabaseAdmin();
+
+  // 1. Fetch AI settings
+  const { data: settings, error: settingsError } = await db
     .from('ai_settings')
-    .select('system_prompt, training_documents, is_enabled, groq_api_key')
+    .select('system_prompt, training_documents, is_enabled, groq_api_key, business_id')
     .eq('user_id', userId)
     .maybeSingle();
 
-  if (error || !data) {
+  if (settingsError || !settings) {
     return null;
   }
 
+  // 2. Fetch active knowledge items
+  const { data: knowledge, error: knowledgeError } = await db
+    .from('business_knowledge')
+    .select('title, content')
+    .eq('business_id', settings.business_id)
+    .eq('is_active', true)
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+
+  if (knowledgeError) {
+    console.error('[ai-config-cache] Failed to fetch knowledge items:', knowledgeError);
+  }
+
   const config = {
-    system_prompt: data.system_prompt,
-    training_documents: data.training_documents || [],
-    is_enabled: data.is_enabled,
-    api_key: data.groq_api_key ? decrypt(data.groq_api_key) : '',
+    system_prompt: settings.system_prompt,
+    training_documents: settings.training_documents || [],
+    knowledge_items: knowledge || [],
+    is_enabled: settings.is_enabled,
+    api_key: settings.groq_api_key ? decrypt(settings.groq_api_key) : '',
   };
 
   aiConfigCache.set(userId, {

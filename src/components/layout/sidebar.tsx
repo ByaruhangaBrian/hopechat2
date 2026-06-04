@@ -13,6 +13,7 @@ import {
   GitBranch,
   Radio,
   Zap,
+  Cpu,
   Settings,
   LogOut,
   User,
@@ -51,6 +52,7 @@ const navItems = [
   { href: "/pipelines", label: "Pipelines", icon: GitBranch },
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
   { href: "/automations", label: "Automations", icon: Zap },
+  { href: "/ai", label: "AI Hub", icon: Cpu },
 ];
 
 interface SidebarProps {

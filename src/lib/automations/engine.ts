@@ -499,7 +499,7 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
 
       const { data: aiSettings } = await db
         .from('ai_settings')
-        .select('system_prompt, training_documents, groq_api_key, is_enabled')
+        .select('system_prompt, training_documents, groq_api_key, is_enabled, business_id')
         .eq('user_id', args.automation.user_id)
         .single()
 
@@ -510,6 +510,14 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         throw new Error('AI settings are disabled for this user')
       }
 
+      // Fetch active knowledge items
+      const { data: knowledge } = await db
+        .from('business_knowledge')
+        .select('title, content')
+        .eq('business_id', aiSettings.business_id)
+        .eq('is_active', true)
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+
       const apiKey = aiSettings.groq_api_key ? decrypt(aiSettings.groq_api_key) : ''
       if (!apiKey) {
         console.warn('[automations] No API key found in ai_settings for user:', args.automation.user_id)
@@ -519,6 +527,9 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       let systemInstruction = aiSettings?.system_prompt ?? 'You are a helpful customer service AI assistant.'
       if (aiSettings?.training_documents && aiSettings.training_documents.length > 0) {
         systemInstruction += `\n\nTraining context:\n${aiSettings.training_documents.join('\n\n')}`
+      }
+      if (knowledge && knowledge.length > 0) {
+        systemInstruction += `\n\nDynamic Business Knowledge:\n${knowledge.map((item: any) => `[${item.title}]: ${item.content}`).join('\n')}`
       }
 
       const { data: messages } = await db

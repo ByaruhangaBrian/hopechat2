@@ -283,9 +283,15 @@ async function executeAiJob(job: any): Promise<void> {
   
   // Compact Prompt Assembly
   let systemInstruction = `${aiConfig.system_prompt}\n\n`;
+  
   if (aiConfig.training_documents.length > 0) {
     systemInstruction += `Context Information:\n${aiConfig.training_documents.join('\n')}\n\n`;
   }
+
+  if (aiConfig.knowledge_items && aiConfig.knowledge_items.length > 0) {
+    systemInstruction += `Dynamic Business Knowledge:\n${aiConfig.knowledge_items.map(item => `[${item.title}]: ${item.content}`).join('\n')}\n\n`;
+  }
+
   systemInstruction += `RULES:\n1. Be concise.\n2. If user is angry or asks for a refund, say "I am escalating this to a human manager" and end your message with [ESCALATE].\n3. Never repeat yourself.`;
 
   // 4. AI Generation
