@@ -69,6 +69,7 @@ export interface Conversation {
   status: ConversationStatus;
   assigned_agent_id?: string;
   ai_enabled?: boolean;
+  human_takeover?: boolean;
   last_message_text?: string;
   last_message_at?: string;
   unread_count: number;
