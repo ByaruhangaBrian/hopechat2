@@ -482,7 +482,7 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
 
       const { data: conversation, error: conversationErr } = await db
         .from('conversations')
-        .select('id, ai_enabled')
+        .select('id, ai_enabled, human_takeover')
         .eq('id', conversationId)
         .eq('user_id', args.automation.user_id)
         .maybeSingle()
@@ -490,11 +490,14 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       if (!conversation) throw new Error('conversation not found')
 
       // If AI is disabled for this conversation, we enable it as part of "Assigning to AI"
-      if (conversation.ai_enabled === false) {
+      // BUT ONLY if a human has not explicitly taken over (manual toggle off).
+      if (conversation.ai_enabled === false && !conversation.human_takeover) {
         await db
           .from('conversations')
           .update({ ai_enabled: true })
           .eq('id', conversationId)
+      } else if (conversation.human_takeover) {
+        return 'AI settings skipped: human takeover is active for this conversation'
       }
 
       const { data: aiSettings } = await db

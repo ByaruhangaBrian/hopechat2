@@ -617,7 +617,10 @@ export function MessageThread({
       const supabase = createClient();
       const { error } = await supabase
         .from("conversations")
-        .update({ ai_enabled: enabled })
+        .update({ 
+          ai_enabled: enabled,
+          human_takeover: !enabled // If AI is turned off, human takeover is active
+        })
         .eq("id", conversation.id);
 
       if (error) {
