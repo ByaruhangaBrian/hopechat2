@@ -182,6 +182,152 @@ export async function sendTemplateMessage(
   return { messageId: data.messages[0].id }
 }
 
+export interface SendInteractiveMessageArgs {
+  phoneNumberId: string;
+  accessToken: string;
+  to: string;
+  header?: string;
+  body: string;
+  footer?: string;
+  /** List of (id, label) pairs. If <= 3, sent as buttons; if > 3 (up to 10), sent as a list. */
+  items: Array<{ id: string; label: string }>;
+}
+
+/**
+ * Send interactive buttons or list menu.
+ */
+export async function sendInteractiveMessage(
+  args: SendInteractiveMessageArgs
+): Promise<MetaSendResult> {
+  const { phoneNumberId, accessToken, to, header, body, footer, items } = args;
+  const url = `${META_API_BASE}/${phoneNumberId}/messages`;
+
+  const interactive: Record<string, unknown> = {
+    body: { text: body },
+  };
+
+  if (header) {
+    interactive.header = { type: 'text', text: header };
+  }
+  if (footer) {
+    interactive.footer = { text: footer };
+  }
+
+  if (items.length <= 3) {
+    interactive.type = 'button';
+    interactive.action = {
+      buttons: items.map((item) => ({
+        type: 'reply',
+        reply: { id: item.id, title: item.label.slice(0, 20) }, // Meta limit: 20 chars
+      })),
+    };
+  } else {
+    interactive.type = 'list';
+    interactive.action = {
+      button: 'Select Option',
+      sections: [
+        {
+          title: 'Options',
+          rows: items.slice(0, 10).map((item) => ({
+            id: item.id,
+            title: item.label.slice(0, 24), // Meta limit: 24 chars
+          })),
+        },
+      ],
+    };
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to,
+      type: 'interactive',
+      interactive,
+    }),
+  });
+
+  if (!response.ok) {
+    await throwMetaError(response, `Meta API error: ${response.status}`);
+  }
+  const data = await response.json();
+  return { messageId: data.messages[0].id };
+}
+
+export interface SendFlowMessageArgs {
+  phoneNumberId: string;
+  accessToken: string;
+  to: string;
+  header?: string;
+  body: string;
+  footer?: string;
+  flowId: string;
+  screenId: string;
+  data?: Record<string, unknown>;
+}
+
+/**
+ * Send a WhatsApp Flow.
+ */
+export async function sendFlowMessage(
+  args: SendFlowMessageArgs
+): Promise<MetaSendResult> {
+  const { phoneNumberId, accessToken, to, header, body, footer, flowId, screenId, data } = args;
+  const url = `${META_API_BASE}/${phoneNumberId}/messages`;
+
+  const interactive: Record<string, unknown> = {
+    type: 'flow',
+    body: { text: body },
+    action: {
+      name: 'flow',
+      parameters: {
+        flow_message_version: '3',
+        flow_token: `flow_${Date.now()}`,
+        flow_id: flowId,
+        flow_cta: 'Open Flow',
+        flow_action: 'navigate',
+        flow_action_payload: {
+          screen: screenId,
+          data: data || {},
+        },
+      },
+    },
+  };
+
+  if (header) {
+    interactive.header = { type: 'text', text: header };
+  }
+  if (footer) {
+    interactive.footer = { text: footer };
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to,
+      type: 'interactive',
+      interactive,
+    }),
+  });
+
+  if (!response.ok) {
+    await throwMetaError(response, `Meta API error: ${response.status}`);
+  }
+  const data_resp = await response.json();
+  return { messageId: data_resp.messages[0].id };
+}
+
 // ============================================================
 // Reactions
 // ============================================================

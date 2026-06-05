@@ -1,4 +1,4 @@
-import { sendTextMessage, sendTemplateMessage } from '@/lib/whatsapp/meta-api'
+import { sendTextMessage, sendTemplateMessage, sendInteractiveMessage, sendFlowMessage } from '@/lib/whatsapp/meta-api'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import {
   sanitizePhoneForMeta,
@@ -46,9 +46,45 @@ export async function engineSendTemplate(
   return sendViaMeta({ ...args, kind: 'template' })
 }
 
+interface SendInteractiveArgs {
+  userId: string;
+  conversationId: string;
+  contactId: string;
+  header?: string;
+  body: string;
+  footer?: string;
+  items: Array<{ id: string; label: string }>;
+}
+
+export async function engineSendInteractive(
+  args: SendInteractiveArgs
+): Promise<{ whatsapp_message_id: string }> {
+  return sendViaMeta({ ...args, kind: 'interactive' });
+}
+
+interface SendFlowArgs {
+  userId: string;
+  conversationId: string;
+  contactId: string;
+  header?: string;
+  body: string;
+  footer?: string;
+  flowId: string;
+  screenId: string;
+  data?: Record<string, unknown>;
+}
+
+export async function engineSendFlow(
+  args: SendFlowArgs
+): Promise<{ whatsapp_message_id: string }> {
+  return sendViaMeta({ ...args, kind: 'flow' });
+}
+
 type SendInput =
   | (SendTextArgs & { kind: 'text' })
   | (SendTemplateArgs & { kind: 'template' })
+  | (SendInteractiveArgs & { kind: 'interactive' })
+  | (SendFlowArgs & { kind: 'flow' });
 
 async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: string }> {
   const db = supabaseAdmin()
@@ -112,6 +148,53 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
       })
       return r.messageId
     }
+
+    if (input.kind === 'interactive') {
+      // Log outgoing Meta interactive send
+      void logHttpEvent({
+        userId: input.userId,
+        direction: 'outgoing',
+        service: 'meta',
+        endpoint: `/v21.0/${config.phone_number_id}/messages`,
+        payload: { to: phone, type: 'interactive', items: input.items },
+        note: `automation:${input.userId}`,
+      });
+      const r = await sendInteractiveMessage({
+        phoneNumberId: config.phone_number_id,
+        accessToken,
+        to: phone,
+        header: input.header,
+        body: input.body,
+        footer: input.footer,
+        items: input.items,
+      });
+      return r.messageId;
+    }
+
+    if (input.kind === 'flow') {
+      // Log outgoing Meta flow send
+      void logHttpEvent({
+        userId: input.userId,
+        direction: 'outgoing',
+        service: 'meta',
+        endpoint: `/v21.0/${config.phone_number_id}/messages`,
+        payload: { to: phone, type: 'flow', flow_id: input.flowId },
+        note: `automation:${input.userId}`,
+      });
+      const r = await sendFlowMessage({
+        phoneNumberId: config.phone_number_id,
+        accessToken,
+        to: phone,
+        header: input.header,
+        body: input.body,
+        footer: input.footer,
+        flowId: input.flowId,
+        screenId: input.screenId,
+        data: input.data,
+      });
+      return r.messageId;
+    }
+
     // Log outgoing Meta text send
     void logHttpEvent({
       userId: input.userId,
@@ -158,8 +241,10 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
   // Persist the sent message so it appears in the inbox with a real
   // Meta message id. sender_type='bot' distinguishes automation sends
   // from manual agent sends.
-  const content_type = input.kind === 'template' ? 'template' : 'text'
-  const content_text = input.kind === 'text' ? input.text : null
+  const content_type = input.kind === 'template' ? 'template' : (input.kind === 'interactive' || input.kind === 'flow' ? 'text' : 'text')
+  
+  const content_text = input.kind === 'text' ? input.text : 
+                      input.kind === 'interactive' || input.kind === 'flow' ? input.body : null
   const template_name = input.kind === 'template' ? input.templateName : null
 
   const { error: msgErr } = await db.from('messages').insert({
@@ -181,7 +266,9 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
     .from('conversations')
     .update({
       last_message_text:
-        input.kind === 'template' ? `[template:${input.templateName}]` : input.text,
+        input.kind === 'template' ? `[template:${input.templateName}]` : 
+        input.kind === 'interactive' ? `[interactive:buttons]` :
+        input.kind === 'flow' ? `[flow:${input.flowId}]` : input.text,
       last_message_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })

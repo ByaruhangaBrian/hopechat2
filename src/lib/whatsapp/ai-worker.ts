@@ -4,7 +4,7 @@ import { sendTextMessage } from '@/lib/whatsapp/meta-api';
 import { logHttpEvent } from '@/lib/logs/http-logs';
 import { generateGeminiResponse } from '@/lib/automations/gemini-client';
 import { getBusinessAiConfig } from './ai-config-cache';
-import { runAutomationsForTrigger } from '@/lib/automations/engine';
+import { runAutomationsForTrigger, resumeAutomationWithInteraction } from '@/lib/automations/engine';
 import { decrypt } from './encryption';
 import { GoogleGenAI } from '@google/genai'; // Strict requirement: import from the new SDK package
 
@@ -244,19 +244,21 @@ async function executeAiJob(job: any): Promise<void> {
 
   if (!conv || !conv.ai_enabled || conv.human_takeover || conv.escalated || conv.paused) {
     console.log(`[ai-worker] Guardrail triggered for conv ${job.conversation_id}. Aborting.`);
-    void logHttpEvent({
-      userId: job.user_id,
-      businessId: job.business_id,
-      direction: 'incoming',
-      service: 'ai',
-      endpoint: 'guardrail',
-      payload: { 
-        stage: 'ai_aborted', 
-        conv_id: job.conversation_id,
-        reason: !conv ? 'conv_not_found' : !conv.ai_enabled ? 'ai_disabled' : conv.human_takeover ? 'human_takeover' : conv.escalated ? 'escalated' : 'paused'
-      },
-      note: 'ai_job_aborted_guardrail',
-    });
+    return;
+  }
+
+  // AI Interaction Guardrail: If there's an active automation waiting for a button click,
+  // we skip the AI response to avoid confusing the user.
+  const { data: activeInteraction } = await db
+    .from('automation_pending_executions')
+    .select('id')
+    .eq('contact_id', conv.contact_id)
+    .eq('status', 'pending')
+    .not('waiting_on_message_id', 'is', null)
+    .maybeSingle();
+
+  if (activeInteraction) {
+    console.log(`[ai-worker] Interaction guardrail triggered for conv ${job.conversation_id}. Skipping AI.`);
     return;
   }
 
@@ -399,11 +401,37 @@ async function handleIncomingMessageSaving(message: WhatsAppMessage, contactName
   }
   if (!conv) return null;
 
+  // Handle Interactive Replies (Buttons/Lists/Flows)
+  const isInteractive = message.type === 'interactive';
+  const interactiveData = (message as any).interactive;
+  const replyContextId = message.context?.id;
+
+  if (isInteractive && interactiveData && replyContextId) {
+    let interactionValue: any = null;
+    if (interactiveData.type === 'button_reply') {
+      interactionValue = interactiveData.button_reply.id;
+    } else if (interactiveData.type === 'list_reply') {
+      interactionValue = interactiveData.list_reply.id;
+    } else if (interactiveData.type === 'nfm_reply' && interactiveData.nfm_reply.name === 'flow') {
+      // Flow response
+      try {
+        const flowResponse = JSON.parse(interactiveData.nfm_reply.response_json);
+        interactionValue = flowResponse;
+      } catch (e) {
+        console.error('[ai-worker] Failed to parse flow response:', e);
+      }
+    }
+
+    if (interactionValue) {
+      await resumeAutomationWithInteraction(replyContextId, interactionValue);
+    }
+  }
+
   // Save Message
   await db.from('messages').insert({
     conversation_id: conv.id,
     sender_type: 'customer',
-    content_text: message.text?.body || '',
+    content_text: message.text?.body || (isInteractive ? '[Interaction Reply]' : ''),
     message_id: message.id,
     status: 'delivered',
     created_at: new Date(Number(message.timestamp) * 1000).toISOString()

@@ -15,9 +15,12 @@ import type {
   AssignConversationStepConfig,
   AssignToAiStepConfig,
   LookupSpreadsheetStepConfig,
+  WhatsAppInteractionStepConfig,
+  WhatsAppFlowStepConfig,
+  TriggerAutomationStepConfig,
 } from '@/types'
 import { supabaseAdmin } from './admin-client'
-import { engineSendText, engineSendTemplate } from './meta-send'
+import { engineSendText, engineSendTemplate, engineSendInteractive, engineSendFlow } from './meta-send'
 import { generateGeminiResponse } from './gemini-client'
 import { logHttpEvent } from '@/lib/logs/http-logs'
 import { decrypt } from '@/lib/whatsapp/encryption'
@@ -132,6 +135,66 @@ export async function resumePendingExecution(pending: {
   }
 }
 
+/**
+ * Resume an automation that was waiting for a WhatsApp interaction.
+ */
+export async function resumeAutomationWithInteraction(
+  messageId: string,
+  interactionValue: string | Record<string, unknown>
+): Promise<void> {
+  const db = supabaseAdmin()
+
+  // Find the pending execution
+  const { data: pending, error } = await db
+    .from('automation_pending_executions')
+    .select('*')
+    .eq('waiting_on_message_id', messageId)
+    .eq('status', 'pending')
+    .maybeSingle()
+
+  if (error || !pending) {
+    if (error) console.error('[automations] interactive resume error:', error)
+    return
+  }
+
+  // Update context with the response
+  const context = pending.context || {}
+  context.vars = {
+    ...(context.vars || {}),
+    interaction_response: interactionValue,
+  }
+
+  // Resume it
+  const { data: automation } = await db
+    .from('automations')
+    .select('*')
+    .eq('id', pending.automation_id)
+    .single()
+
+  if (!automation) {
+    await markPending(pending.id, 'failed')
+    return
+  }
+
+  try {
+    await executeStepsFrom({
+      automation: automation as Automation,
+      contactId: pending.contact_id,
+      businessId: pending.business_id,
+      context,
+      parentStepId: pending.parent_step_id,
+      branch: pending.branch,
+      startPosition: pending.next_step_position,
+      logId: pending.log_id,
+      triggerEvent: 'resumed_interaction',
+    })
+    await markPending(pending.id, 'done')
+  } catch (err) {
+    console.error('[automations] interactive resume failed:', err)
+    await markPending(pending.id, 'failed')
+  }
+}
+
 // ------------------------------------------------------------
 // Internal execution
 // ------------------------------------------------------------
@@ -232,32 +295,30 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
   let errorMessage: string | null = null
 
   for (const step of steps as AutomationStep[]) {
-    // `wait` is the suspension point: enqueue and stop processing this
-    // scope. The cron endpoint will pick it up later.
-    if (step.step_type === 'wait') {
-      const cfg = step.step_config as WaitStepConfig
-      const ms = waitMs(cfg)
-      await db.from('automation_pending_executions').insert({
-        automation_id: args.automation.id,
-        user_id: args.automation.user_id,
-        business_id: args.businessId,
-        contact_id: args.contactId,
-        log_id: args.logId,
-        parent_step_id: args.parentStepId,
-        branch: args.branch,
-        next_step_position: step.position + 1,
-        context: args.context,
-        run_at: new Date(Date.now() + ms).toISOString(),
-        status: 'pending',
-      })
-      results.push({
-        step_id: step.id,
-        step_type: step.step_type,
-        status: 'success',
-        detail: `waiting ${cfg.amount} ${cfg.unit}`,
-      })
-      status = 'partial'
-      await appendResults(args.logId, results, status, errorMessage)
+    // suspension points: `wait`, `whatsapp_interaction`, `whatsapp_flow`
+    if (step.step_type === 'wait' || step.step_type === 'whatsapp_interaction' || step.step_type === 'whatsapp_flow') {
+      try {
+        const detail = await runStep(step, args)
+        results.push({
+          step_id: step.id,
+          step_type: step.step_type,
+          status: 'success',
+          detail,
+        })
+        status = 'partial'
+        await appendResults(args.logId, results, status, errorMessage)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        results.push({
+          step_id: step.id,
+          step_type: step.step_type,
+          status: 'failed',
+          detail: msg,
+        })
+        status = 'failed'
+        errorMessage = msg
+        await appendResults(args.logId, results, status, errorMessage)
+      }
       return
     }
 
@@ -336,10 +397,6 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       if (!args.contactId) throw new Error('send_template needs a contact')
       if (!cfg.template_name) throw new Error('send_template needs template_name')
       const conversationId = await resolveConversationId(args)
-      // Meta templates use positional {{1}}, {{2}}, … placeholders, so
-      // we MUST emit params in strict numeric order. Lexicographic sort
-      // of "1", "2", …, "10" yields "1", "10", "2", … which silently
-      // scrambles every template with ≥10 variables.
       const params = cfg.variables
         ? Object.keys(cfg.variables)
           .sort((a, b) => {
@@ -363,6 +420,124 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         params,
       })
       return `template sent via Meta (${whatsapp_message_id})`
+    }
+
+    case 'whatsapp_interaction': {
+      const cfg = step.step_config as WhatsAppInteractionStepConfig
+      if (!args.contactId) throw new Error('whatsapp_interaction needs a contact')
+      const conversationId = await resolveConversationId(args)
+
+      const { data: settings } = await db
+        .from('system_settings')
+        .select('value')
+        .eq('id', 'whatsapp_global')
+        .maybeSingle()
+      const timeoutHours = Number(settings?.value?.default_interaction_timeout_hours || 24)
+
+      const { whatsapp_message_id } = await engineSendInteractive({
+        userId: args.automation.user_id,
+        conversationId,
+        contactId: args.contactId,
+        header: cfg.header ? interpolate(cfg.header, args) : undefined,
+        body: interpolate(cfg.body, args),
+        footer: cfg.footer ? interpolate(cfg.footer, args) : undefined,
+        items: cfg.items.map((i) => ({ id: i.id, label: interpolate(i.label, args) })),
+      })
+
+      await db.from('automation_pending_executions').insert({
+        automation_id: args.automation.id,
+        user_id: args.automation.user_id,
+        business_id: args.businessId,
+        contact_id: args.contactId,
+        log_id: args.logId,
+        parent_step_id: args.parentStepId,
+        branch: args.branch,
+        next_step_position: step.position + 1,
+        context: args.context,
+        run_at: new Date(Date.now() + 1000 * 60 * 60 * timeoutHours).toISOString(),
+        expires_at: new Date(Date.now() + 1000 * 60 * 60 * timeoutHours).toISOString(),
+        status: 'pending',
+        waiting_on_message_id: whatsapp_message_id,
+      })
+
+      return `interaction sent (${whatsapp_message_id}), parked for reply`
+    }
+
+    case 'whatsapp_flow': {
+      const cfg = step.step_config as WhatsAppFlowStepConfig
+      if (!args.contactId) throw new Error('whatsapp_flow needs a contact')
+      const conversationId = await resolveConversationId(args)
+
+      const { whatsapp_message_id } = await engineSendFlow({
+        userId: args.automation.user_id,
+        conversationId,
+        contactId: args.contactId,
+        body: 'Please complete the form below:',
+        flowId: cfg.flow_id,
+        screenId: cfg.screen_id,
+        data: cfg.initial_data,
+      })
+
+      await db.from('automation_pending_executions').insert({
+        automation_id: args.automation.id,
+        user_id: args.automation.user_id,
+        business_id: args.businessId,
+        contact_id: args.contactId,
+        log_id: args.logId,
+        parent_step_id: args.parentStepId,
+        branch: args.branch,
+        next_step_position: step.position + 1,
+        context: args.context,
+        run_at: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
+        expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
+        status: 'pending',
+        waiting_on_message_id: whatsapp_message_id,
+      })
+
+      return `flow sent (${whatsapp_message_id}), parked for reply`
+    }
+
+    case 'trigger_automation': {
+      const cfg = step.step_config as TriggerAutomationStepConfig
+      if (!cfg.automation_id) throw new Error('trigger_automation needs automation_id')
+      if (!args.contactId) throw new Error('trigger_automation needs contact_id')
+
+      const { data: childAutomation } = await db
+        .from('automations')
+        .select('*')
+        .eq('id', cfg.automation_id)
+        .single()
+
+      if (!childAutomation) throw new Error(`child automation ${cfg.automation_id} not found`)
+
+      await executeAutomation(childAutomation as Automation, {
+        userId: args.automation.user_id,
+        businessId: args.businessId,
+        triggerType: 'new_message_received',
+        contactId: args.contactId,
+        context: args.context,
+      })
+
+      return `triggered child automation ${cfg.automation_id}`
+    }
+
+    case 'wait': {
+      const cfg = step.step_config as WaitStepConfig
+      const ms = waitMs(cfg)
+      await db.from('automation_pending_executions').insert({
+        automation_id: args.automation.id,
+        user_id: args.automation.user_id,
+        business_id: args.businessId,
+        contact_id: args.contactId,
+        log_id: args.logId,
+        parent_step_id: args.parentStepId,
+        branch: args.branch,
+        next_step_position: step.position + 1,
+        context: args.context,
+        run_at: new Date(Date.now() + ms).toISOString(),
+        status: 'pending',
+      })
+      return `waiting ${cfg.amount} ${cfg.unit}`
     }
 
     case 'add_tag': {
@@ -448,7 +623,6 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         headers: { 'content-type': 'application/json', ...(cfg.headers ?? {}) },
         body,
       })
-      // Log the outgoing webhook call for monitoring
       void (async () => {
         try {
           let parsedBody: unknown = null
@@ -489,8 +663,6 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       if (conversationErr) throw new Error(`conversation lookup failed: ${conversationErr.message}`)
       if (!conversation) throw new Error('conversation not found')
 
-      // If AI is disabled for this conversation, we enable it as part of "Assigning to AI"
-      // BUT ONLY if a human has not explicitly taken over (manual toggle off).
       if (conversation.ai_enabled === false && !conversation.human_takeover) {
         await db
           .from('conversations')
@@ -513,7 +685,6 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         throw new Error('AI settings are disabled for this user')
       }
 
-      // Fetch active knowledge items
       const { data: knowledge } = await db
         .from('business_knowledge')
         .select('title, content')
@@ -523,7 +694,6 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
 
       const apiKey = aiSettings.groq_api_key ? decrypt(aiSettings.groq_api_key) : ''
       if (!apiKey) {
-        console.warn('[automations] No API key found in ai_settings for user:', args.automation.user_id)
         throw new Error('Gemini API key is missing in AI settings')
       }
 
@@ -557,15 +727,6 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       if (!userMessage) throw new Error('assign_to_ai has no user message to generate from')
 
       try {
-        void logHttpEvent({
-          userId: args.automation.user_id,
-          direction: 'incoming',
-          service: 'ai',
-          endpoint: 'automation:generate',
-          payload: { stage: 'automation_ai_started', conv_id: conversationId },
-          note: 'automation_ai_started',
-        })
-
         const replyText = await generateGeminiResponse(userMessage, systemInstruction, conversationHistory.slice(0, -1), apiKey)
         
         const { whatsapp_message_id } = await engineSendText({
@@ -575,52 +736,29 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
           text: replyText,
         })
 
-        void logHttpEvent({
-          userId: args.automation.user_id,
-          direction: 'outgoing',
-          service: 'ai',
-          endpoint: 'automation:send',
-          payload: { stage: 'automation_ai_sent', conv_id: conversationId, wa_id: whatsapp_message_id },
-          note: 'automation_ai_sent',
-        })
-
         return `AI reply sent via Meta (${whatsapp_message_id})`
       } catch (err: any) {
-        // Log and insert a visible bot message so agents see the failure
         const errMsg = err instanceof Error ? err.message : String(err)
-        console.error('[automations] assign_to_ai failed:', errMsg)
-        try {
-          await db.from('messages').insert({
-            conversation_id: conversationId,
-            sender_type: 'bot',
-            content_type: 'text',
-            content_text: `AI generation failed: ${errMsg}. Please respond manually.`,
-            status: 'failed',
-            is_ai_response: false,
-            ai_handled: false,
-          })
-        } catch (dbErr) {
-          console.error('[automations] failed to insert fallback bot message:', dbErr)
-        }
-
-        // If fallback to human is enabled, return a non-throwing message so
-        // the automation continues and logs a 'success' for the step.
-        if (cfg.enable_fallback_to_human) {
-          return 'AI generation failed; human takeover requested'
-        }
-
-        // Otherwise rethrow so the automation log marks this as failed.
+        await db.from('messages').insert({
+          conversation_id: conversationId,
+          sender_type: 'bot',
+          content_type: 'text',
+          content_text: `AI generation failed: ${errMsg}. Please respond manually.`,
+          status: 'failed',
+          is_ai_response: false,
+          ai_handled: false,
+        })
+        if (cfg.enable_fallback_to_human) return 'AI generation failed; human takeover requested'
         throw err
       }
     }
 
     case 'close_conversation': {
-      if (!args.contactId) throw new Error('close_conversation needs a contact')
+      const conversationId = await resolveConversationId(args)
       await db
         .from('conversations')
         .update({ status: 'closed', updated_at: new Date().toISOString() })
-        .eq('user_id', args.automation.user_id)
-        .eq('contact_id', args.contactId)
+        .eq('id', conversationId)
       return 'conversation closed'
     }
 
@@ -629,19 +767,13 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       if (!cfg.sheet_name || !cfg.search_column || !cfg.search_value) {
         throw new Error('lookup_spreadsheet needs sheet_name, search_column, and search_value')
       }
-
       const searchValue = interpolate(cfg.search_value, args)
       const row = await lookupRow(args.businessId, cfg.sheet_name, cfg.search_column, searchValue)
-
       if (!row) return `no row found for ${searchValue}`
-
-      // Map spreadsheet columns to automation variables
       if (!args.context.vars) args.context.vars = {}
-
       for (const [colName, varName] of Object.entries(cfg.mapping || {})) {
         args.context.vars[varName] = row[colName] || ''
       }
-
       return `found row for ${searchValue}, mapped ${Object.keys(cfg.mapping || {}).length} variables`
     }
 
@@ -654,13 +786,6 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
 // Helpers
 // ------------------------------------------------------------
 
-/**
- * Pick the conversation a send-type step should use. Prefer the id the
- * webhook handed us (it's the one that just got the inbound message);
- * fall back to the contact's conversation for resumed/wait paths and
- * manual engine POSTs. Throws if none exists — send steps have
- * no meaningful target without a conversation.
- */
 async function resolveConversationId(args: ExecuteArgs): Promise<string> {
   const fromCtx = args.context.conversation_id
   if (fromCtx) return fromCtx
@@ -709,6 +834,11 @@ async function evaluateCondition(cfg: ConditionStepConfig, args: ExecuteArgs): P
         .eq('id', args.contactId)
         .maybeSingle()
       const v = (data as Record<string, unknown> | null)?.[cfg.operand]
+      if (cfg.operand === 'interaction_response') {
+          // Special case for interaction response variable
+          const ir = args.context.vars?.interaction_response
+          return ir != null && String(ir) === String(cfg.value ?? '')
+      }
       return v != null && String(v) === String(cfg.value ?? '')
     }
     case 'message_content': {
@@ -716,8 +846,6 @@ async function evaluateCondition(cfg: ConditionStepConfig, args: ExecuteArgs): P
       return text.toLowerCase().includes((cfg.value ?? '').toLowerCase())
     }
     case 'time_of_day': {
-      // operand form "HH:mm-HH:mm" — true if now is within that window
-      // (supports over-midnight ranges like "18:00-09:00").
       const [from, to] = (cfg.operand ?? '').split('-')
       if (!from || !to) return false
       const now = new Date()
@@ -767,10 +895,7 @@ async function appendResults(
     ...newItems,
   ]
   const update: Record<string, unknown> = { steps_executed: merged }
-  // Only overwrite status on the outermost scope — nested branches pass null.
-  if (status !== null) {
-    update.status = status
-  }
+  if (status !== null) update.status = status
   if (errorMessage) update.error_message = errorMessage
   await db.from('automation_logs').update(update).eq('id', logId)
 }

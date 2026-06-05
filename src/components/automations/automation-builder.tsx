@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
@@ -26,6 +26,9 @@ import {
   ArrowUp,
   TableProperties,
   ArrowRight,
+  MousePointerClick,
+  LayoutList,
+  Workflow,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -39,6 +42,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type {
+  Automation,
   AutomationStepType,
   AutomationTriggerType,
   KeywordMatchTriggerConfig,
@@ -92,11 +96,17 @@ const STEP_META: Record<AutomationStepType, StepMeta> = {
   send_webhook: { label: "Send Webhook", icon: Webhook, border: "border-l-primary" },
   close_conversation: { label: "Close Conversation", icon: CircleSlash, border: "border-l-primary" },
   lookup_spreadsheet: { label: "Lookup Spreadsheet", icon: TableProperties, border: "border-l-emerald-500" },
+  whatsapp_interaction: { label: "WhatsApp Interaction", icon: MousePointerClick, border: "border-l-indigo-500" },
+  whatsapp_flow: { label: "WhatsApp Flow", icon: LayoutList, border: "border-l-violet-500" },
+  trigger_automation: { label: "Trigger Automation", icon: Workflow, border: "border-l-orange-500" },
 }
 
 const ADDABLE_STEPS: AutomationStepType[] = [
   "send_message",
   "send_template",
+  "whatsapp_interaction",
+  "whatsapp_flow",
+  "trigger_automation",
   "lookup_spreadsheet",
   "add_tag",
   "remove_tag",
@@ -158,6 +168,12 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
       return { enable_fallback_to_human: false }
     case "lookup_spreadsheet":
       return { sheet_name: "Sheet1", search_column: "", search_value: "", mapping: {} }
+    case "whatsapp_interaction":
+      return { body: "", items: [{ id: "1", label: "Option 1" }] }
+    case "whatsapp_flow":
+      return { flow_id: "", screen_id: "", initial_data: {} }
+    case "trigger_automation":
+      return { automation_id: "" }
     case "close_conversation":
       return {}
     default:
@@ -175,6 +191,18 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
   const [state, setState] = useState<BuilderInitial>(initial)
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [availableAutomations, setAvailableAutomations] = useState<Automation[]>([])
+
+  useEffect(() => {
+    fetch("/api/automations")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.automations)) {
+          setAvailableAutomations(data.automations.filter((a: any) => a.id !== initial.id))
+        }
+      })
+      .catch(console.error)
+  }, [initial.id])
 
   function patchTop<K extends keyof BuilderInitial>(key: K, value: BuilderInitial[K]) {
     setState((s) => ({ ...s, [key]: value }))
@@ -231,9 +259,6 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
 
       const body = await res.json().catch(() => ({}))
       if (!res.ok) {
-        // If the server blocked activation with validation issues,
-        // surface the first concrete problem so the user can fix it
-        // without opening DevTools for the full array.
         const firstIssue: { path?: string; message?: string } | undefined =
           body?.issues?.[0]
         if (firstIssue?.message) {
@@ -256,9 +281,6 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-background">
-      {/* Top bar. At sub-sm widths the "Active" label is hidden and the
-          switch moves to the right of the save button, so the name input
-          gets maximum width. */}
       <header className="flex flex-shrink-0 items-center gap-2 border-b border-border bg-card/80 px-3 py-3 sm:gap-3 sm:px-4">
         <button
           type="button"
@@ -292,7 +314,6 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
         </Button>
       </header>
 
-      {/* Canvas */}
       <div className="relative flex-1 overflow-y-auto">
         <div className="absolute inset-0 bg-[radial-gradient(circle,color-mix(in_oklch,var(--muted-foreground),transparent_85%)_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none" />
         <div className="relative mx-auto flex max-w-2xl flex-col items-center gap-0 px-4 py-10">
@@ -311,6 +332,7 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
             addStepAt={addStepAt}
             deleteStepAt={deleteStepAt}
             moveStepAt={moveStepAt}
+            availableAutomations={availableAutomations}
           />
         </div>
       </div>
@@ -335,8 +357,6 @@ function TriggerCard({
 }) {
   const [open, setOpen] = useState(false)
   return (
-    // Card width: full on mobile, fixed 320px on sm+. The canvas wrapper
-    // (max-w-2xl + px-4) keeps this tidy on tablet/desktop.
     <div className="z-10 w-full max-w-[320px] sm:w-80">
       <div className="rounded-lg border border-border border-l-4 border-l-blue-500 bg-card shadow-lg">
         <button
@@ -478,6 +498,7 @@ interface StepListProps {
   addStepAt: (parent: ParentScope, index: number, type: AutomationStepType) => void
   deleteStepAt: (path: StepPath) => void
   moveStepAt: (path: StepPath, direction: -1 | 1) => void
+  availableAutomations: Automation[]
 }
 
 function StepList(props: StepListProps) {
@@ -533,9 +554,6 @@ function StepRenderer({
   const Icon = meta.icon
   const expanded = props.expandedId === step.cid
   const isCondition = step.step_type === "condition"
-  // Card widths on mobile fill the full canvas column (max-w-2xl px-4
-  // still keeps them reasonable). On sm+ the original fixed widths
-  // come back so the flow visual stays recognisable.
   const width = isCondition
     ? "w-full max-w-[400px] sm:w-[400px]"
     : "w-full max-w-[320px] sm:w-80"
@@ -574,6 +592,7 @@ function StepRenderer({
               <StepEditor
                 step={step}
                 onChange={(next) => props.updateStep(path, () => next)}
+                availableAutomations={props.availableAutomations}
               />
               <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
                 <div className="flex gap-1">
@@ -631,9 +650,6 @@ function ConditionBranches({
 } & Omit<StepListProps, "steps" | "parentPath">) {
   const yes = step.branches?.yes ?? []
   const no = step.branches?.no ?? []
-  // Build the child scope by appending a branch marker. The scope the
-  // StepList uses is driven by the LAST element of parentPath, so the
-  // tail's `index` doesn't matter — it's replaced per child during walks.
   const yesPath: StepPath = [
     ...parentPath,
     { kind: "branch", parentCid: step.cid, branch: "yes", index: 0 },
@@ -643,9 +659,6 @@ function ConditionBranches({
     { kind: "branch", parentCid: step.cid, branch: "no", index: 0 },
   ]
   return (
-    // Stack Yes/No vertically on mobile — two columns at 375px would
-    // cram each branch to ~170px which is too narrow for the nested
-    // cards. Two-column grid returns on sm+.
     <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
       <BranchColumn label="Yes" color="text-primary">
         <StepList {...props} steps={yes} parentPath={yesPath} />
@@ -712,9 +725,11 @@ function AddButton({ onPick }: { onPick: (t: AutomationStepType) => void }) {
 function StepEditor({
   step,
   onChange,
+  availableAutomations,
 }: {
   step: BuilderStep
   onChange: (s: BuilderStep) => void
+  availableAutomations: Automation[]
 }) {
   const cfg = step.step_config
   const set = (patch: Record<string, unknown>) =>
@@ -750,6 +765,125 @@ function StepEditor({
             />
           </FieldBlock>
         </>
+      )
+    case "whatsapp_interaction":
+      return (
+        <>
+          <FieldBlock label="Header (Optional)">
+            <Input
+              value={(cfg.header as string) ?? ""}
+              onChange={(e) => set({ header: e.target.value })}
+              className="bg-muted text-foreground"
+            />
+          </FieldBlock>
+          <FieldBlock label="Body text">
+            <Textarea
+              value={(cfg.body as string) ?? ""}
+              onChange={(e) => set({ body: e.target.value })}
+              placeholder="Select an option:"
+              className="min-h-20 bg-muted text-foreground"
+            />
+          </FieldBlock>
+          <FieldBlock label="Footer (Optional)">
+            <Input
+              value={(cfg.footer as string) ?? ""}
+              onChange={(e) => set({ footer: e.target.value })}
+              className="bg-muted text-foreground"
+            />
+          </FieldBlock>
+          <div className="space-y-2 border-t border-border pt-3 mt-2">
+            <label className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest">
+              Buttons / List Items
+            </label>
+            <p className="text-[10px] text-muted-foreground/60 leading-tight mb-2">
+              Add 1-3 for reply buttons, 4-10 for a list menu.
+            </p>
+            {((cfg.items as any[]) || []).map((item, idx) => (
+              <div key={idx} className="flex items-center gap-2 mb-2">
+                <Input
+                  value={item.id}
+                  onChange={(e) => {
+                    const items = [...(cfg.items as any[])]
+                    items[idx] = { ...items[idx], id: e.target.value }
+                    set({ items })
+                  }}
+                  placeholder="ID (e.g. 1)"
+                  className="h-8 w-16 bg-muted text-[11px]"
+                />
+                <Input
+                  value={item.label}
+                  onChange={(e) => {
+                    const items = [...(cfg.items as any[])]
+                    items[idx] = { ...items[idx], label: e.target.value }
+                    set({ items })
+                  }}
+                  placeholder="Label (e.g. Yes)"
+                  className="h-8 flex-1 bg-muted text-[11px]"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground/60 hover:text-destructive"
+                  onClick={() => {
+                    const items = [...(cfg.items as any[])]
+                    items.splice(idx, 1)
+                    set({ items })
+                  }}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-full border-dashed border-border bg-transparent text-[10px] text-muted-foreground/60 hover:bg-muted"
+              onClick={() => {
+                const items = [...((cfg.items as any[]) || [])]
+                items.push({ id: String(items.length + 1), label: "New Option" })
+                set({ items })
+              }}
+            >
+              <Plus className="mr-1 h-3 w-3" /> Add Item
+            </Button>
+          </div>
+        </>
+      )
+    case "whatsapp_flow":
+      return (
+        <>
+          <FieldBlock label="Flow ID">
+            <Input
+              value={(cfg.flow_id as string) ?? ""}
+              onChange={(e) => set({ flow_id: e.target.value })}
+              className="bg-muted text-foreground"
+            />
+          </FieldBlock>
+          <FieldBlock label="Screen ID">
+            <Input
+              value={(cfg.screen_id as string) ?? ""}
+              onChange={(e) => set({ screen_id: e.target.value })}
+              className="bg-muted text-foreground"
+            />
+          </FieldBlock>
+        </>
+      )
+    case "trigger_automation":
+      return (
+        <FieldBlock label="Target Automation">
+          <select
+            value={(cfg.automation_id as string) ?? ""}
+            onChange={(e) => set({ automation_id: e.target.value })}
+            className="w-full rounded-md border border-input bg-muted px-2 py-1.5 text-sm text-foreground"
+          >
+            <option value="">Select an automation...</option>
+            {availableAutomations.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </FieldBlock>
       )
     case "add_tag":
     case "remove_tag":
@@ -889,7 +1023,7 @@ function StepEditor({
                 cfg.subject === "time_of_day"
                   ? "HH:mm-HH:mm"
                   : cfg.subject === "contact_field"
-                    ? "name / email / company"
+                    ? "field name or interaction_response"
                     : cfg.subject === "tag_presence"
                       ? "tag id"
                       : ""
@@ -979,9 +1113,6 @@ function StepEditor({
             <label className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest">
               Output Mapping
             </label>
-            <p className="text-[10px] text-muted-foreground/60 leading-tight mb-2">
-              Map spreadsheet columns to automation variables (use as {"{{vars.name}}"}).
-            </p>
             {Object.entries((cfg.mapping as Record<string, string>) || {}).map(([col, varName], idx) => (
               <div key={idx} className="flex items-center gap-2 mb-2">
                 <Input
@@ -1062,6 +1193,12 @@ function previewFor(step: BuilderStep): string {
       return (step.step_config.text as string) || "no text yet"
     case "send_template":
       return (step.step_config.template_name as string) || "pick a template"
+    case "whatsapp_interaction":
+      return (step.step_config.body as string) || "no interaction body"
+    case "whatsapp_flow":
+      return `flow: ${step.step_config.flow_id ?? "?"}`
+    case "trigger_automation":
+      return "start another automation"
     case "assign_to_ai":
       return "generate an AI reply"
     case "wait":
@@ -1289,4 +1426,3 @@ export function fromServerSteps(nodes: ServerStepNode[]): BuilderStep[] {
         : undefined,
   }))
 }
-

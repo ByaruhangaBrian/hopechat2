@@ -251,7 +251,10 @@ export type AutomationStepType =
   | 'send_webhook'
   | 'assign_to_ai'
   | 'close_conversation'
-  | 'lookup_spreadsheet';
+  | 'lookup_spreadsheet'
+  | 'whatsapp_interaction'
+  | 'whatsapp_flow'
+  | 'trigger_automation';
 
 export type AutomationLogStatus = 'success' | 'partial' | 'failed';
 
@@ -286,6 +289,28 @@ export interface SendTemplateStepConfig {
   template_name: string;
   language?: string;
   variables?: Record<string, string>;
+}
+
+export interface WhatsAppInteractionItem {
+  id: string;
+  label: string;
+}
+
+export interface WhatsAppInteractionStepConfig {
+  header?: string;
+  body: string;
+  footer?: string;
+  items: WhatsAppInteractionItem[];
+}
+
+export interface WhatsAppFlowStepConfig {
+  flow_id: string;
+  screen_id: string;
+  initial_data?: Record<string, unknown>;
+}
+
+export interface TriggerAutomationStepConfig {
+  automation_id: string;
 }
 
 export interface TagStepConfig {
@@ -349,6 +374,9 @@ export interface LookupSpreadsheetStepConfig {
 export type AutomationStepConfig =
   | SendMessageStepConfig
   | SendTemplateStepConfig
+  | WhatsAppInteractionStepConfig
+  | WhatsAppFlowStepConfig
+  | TriggerAutomationStepConfig
   | TagStepConfig
   | AssignConversationStepConfig
   | UpdateContactFieldStepConfig

@@ -31,6 +31,7 @@ export default function AdminSettingsPage() {
   const [whatsappSettings, setWhatsappSettings] = useState({
     verify_token: "",
     webhook_url: "",
+    default_interaction_timeout_hours: 24,
   });
   const [systemConfig, setSystemConfig] = useState({
     maintenance_mode: false,
@@ -226,6 +227,23 @@ export default function AdminSettingsPage() {
                 <p className="text-[11px] text-muted-foreground/60">
                   Must match the "Verify Token" you set in the Meta App Dashboard.
                 </p>
+              </div>
+
+              <div className="space-y-4 border-t border-border pt-6">
+                <h3 className="text-sm font-medium text-foreground">Interactive & Flows</h3>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">Default Interaction Timeout (hours)</Label>
+                  <Input
+                    type="number"
+                    value={whatsappSettings.default_interaction_timeout_hours || 24}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, default_interaction_timeout_hours: Number(e.target.value) }))}
+                    placeholder="24"
+                    className="bg-muted border-border text-foreground w-32"
+                  />
+                  <p className="text-[11px] text-muted-foreground/60">
+                    How long an automation should wait for a user to click a button before expiring.
+                  </p>
+                </div>
               </div>
 
               <div className="flex justify-end border-t border-border pt-6">
