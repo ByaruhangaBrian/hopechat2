@@ -8,8 +8,8 @@ export function createClient() {
   if (browserClient) return browserClient
 
   // Custom fetch to dynamically inject headers based on current context (pathname + cookies)
-  const customFetch = async (url: string, options: any = {}) => {
-    const headers = new Headers(options.headers || {});
+  const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const headers = new Headers(init?.headers);
     
     if (typeof window !== 'undefined') {
       const pathname = window.location.pathname;
@@ -29,7 +29,7 @@ export function createClient() {
       }
     }
 
-    return fetch(url, { ...options, headers });
+    return fetch(input, { ...init, headers });
   };
 
   browserClient = createBrowserClient(
