@@ -12,9 +12,12 @@ import { createClient } from "@/lib/supabase/client";
 // client components can't export Next's metadata object.
 
 function DashboardShellInner({ children }: { children: React.ReactNode }) {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const router = useRouter();
   const supabase = createClient();
+
+  // Profile loading state - wait for profile if user is present
+  const loading = authLoading || (user && !profile);
 
   // Sidebar drawer state — only used on mobile. On lg+ the sidebar is
   // always visible and this stays at `false` (ignored by the component).
@@ -25,7 +28,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     if (!loading) {
       if (!user) {
         router.push("/login");
-      } else if (profile && profile.business?.name === "My Business") {
+      } else if (profile?.business?.name === "My Business") {
         router.push("/onboarding");
       }
     }

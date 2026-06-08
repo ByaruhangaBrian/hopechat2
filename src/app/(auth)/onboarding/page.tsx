@@ -18,8 +18,11 @@ function OnboardingContent() {
   const supabase = createClient();
 
   useEffect(() => {
-    if (!authLoading && profile && profile.business?.name !== "My Business") {
-      router.push("/dashboard");
+    // Only redirect away if the profile is fully loaded AND the name is NOT the default
+    if (!authLoading && profile?.business?.name) {
+      if (profile.business.name !== "My Business") {
+        router.push("/dashboard");
+      }
     }
   }, [profile, authLoading, router]);
 
