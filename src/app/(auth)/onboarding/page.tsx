@@ -24,17 +24,15 @@ function OnboardingContent() {
   }, [profile, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("[Onboarding] Starting submission...");
-    console.log("[Onboarding] Profile state:", { 
-      business_id: profile?.business_id, 
-      user_id: profile?.id,
-      loading: authLoading 
-    });
+    e?.preventDefault();
+    console.log("[Onboarding] handleSubmit triggered");
+    alert("Submission started!"); // Direct feedback
 
     if (!profile?.business_id) {
-      console.error("[Onboarding] No business_id found in profile");
-      setError("Session error: Workspace ID not found. Please try logging out and back in.");
+      const msg = "Session error: Workspace ID not found.";
+      console.error("[Onboarding] " + msg);
+      setError(msg);
+      alert(msg);
       return;
     }
 
@@ -47,35 +45,46 @@ function OnboardingContent() {
     setLoading(true);
 
     try {
-      console.log("[Onboarding] Attempting to update business name to:", businessName);
-      const { error: updateError, data } = await supabase
+      console.log("[Onboarding] Updating business:", profile.business_id, "to", businessName.trim());
+      
+      const { error: updateError, data, status } = await supabase
         .from("businesses")
         .update({ name: businessName.trim() })
         .eq("id", profile.business_id)
         .select();
 
+      console.log("[Onboarding] Supabase response status:", status);
+
       if (updateError) {
-        console.error("[Onboarding] Supabase update error:", updateError);
-        setError(`Update failed: ${updateError.message}`);
+        console.error("[Onboarding] Update error:", updateError);
+        const errMsg = `Update failed: ${updateError.message} (Code: ${updateError.code})`;
+        setError(errMsg);
+        alert(errMsg);
         setLoading(false);
         return;
       }
 
-      console.log("[Onboarding] Update successful, result:", data);
-      console.log("[Onboarding] Refreshing profile...");
+      console.log("[Onboarding] Update successful:", data);
+      alert("Update successful! Refreshing profile...");
       
       await refreshProfile();
+      console.log("[Onboarding] Profile refreshed. Redirecting...");
       
-      console.log("[Onboarding] Redirection to dashboard...");
       router.push("/dashboard");
     } catch (err) {
-      console.error("[Onboarding] Unexpected error during submission:", err);
-      setError("An unexpected error occurred. Please try again.");
+      console.error("[Onboarding] Caught exception:", err);
+      const errMsg = "Unexpected error: " + (err instanceof Error ? err.message : String(err));
+      setError(errMsg);
+      alert(errMsg);
       setLoading(false);
     }
   };
 
-  if (authLoading) return null;
+  if (authLoading) return (
+    <div className="flex h-screen items-center justify-center bg-background">
+      <p className="text-muted-foreground">Loading Authentication...</p>
+    </div>
+  );
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
@@ -88,73 +97,54 @@ function OnboardingContent() {
           </div>
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center justify-center gap-2">
-              Let&apos;s name your workspace <Sparkles className="h-5 w-5 text-primary" />
+              Name your workspace <Sparkles className="h-5 w-5 text-primary" />
             </h1>
-            <p className="text-muted-foreground text-lg">
-              One last step to get you started with HopeChat.
-            </p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 bg-card p-8 rounded-2xl border border-border shadow-2xl shadow-black/20">
+        <div className="bg-card p-8 rounded-2xl border border-border shadow-2xl">
           {error && (
-            <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive animate-in shake duration-500">
+            <div className="mb-4 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
               {error}
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="businessName" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Business Name
-            </Label>
-            <Input
-              id="businessName"
-              placeholder="e.g. Acme Corporation"
-              value={businessName}
-              onChange={(e) => setBusinessName(e.target.value)}
-              required
-              autoFocus
-              disabled={loading || !profile?.business_id}
-              className="h-12 bg-muted/30 border-border text-lg focus-visible:ring-primary/20"
-            />
-            {!profile?.business_id && !authLoading && (
-              <p className="text-xs text-destructive pt-1">
-                Session still loading... If this takes too long, try{" "}
-                <button 
-                  type="button" 
-                  onClick={() => refreshProfile()} 
-                  className="underline hover:text-destructive/80"
-                >
-                  refreshing your session
-                </button>.
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground pt-1">
-              This is how your team and workspace will be identified.
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="businessName">Business Name</Label>
+              <Input
+                id="businessName"
+                placeholder="Acme Inc."
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                disabled={loading}
+                className="h-12"
+              />
+              {!profile?.business_id && (
+                <p className="text-xs text-destructive">
+                  Still connecting to workspace... 
+                  <button type="button" onClick={() => refreshProfile()} className="underline ml-1">Retry</button>
+                </p>
+              )}
+            </div>
+
+            <button 
+              type="button"
+              onClick={(e) => {
+                console.log("[Onboarding] Button clicked directly");
+                handleSubmit(e as any);
+              }}
+              disabled={loading || !businessName.trim() || !profile?.business_id}
+              className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {loading ? "Saving..." : "Enter Dashboard"}
+            </button>
+            
+            <p className="text-center text-xs text-muted-foreground pt-2">
+              Connected as: {profile?.email || "Unknown"}
             </p>
           </div>
-
-          <Button 
-            disabled={loading || !businessName.trim() || !profile?.business_id} 
-            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 group transition-all active:scale-[0.98]"
-          >
-            {loading ? (
-              <div className="flex items-center gap-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                Setting up...
-              </div>
-            ) : !profile?.business_id ? (
-              <div className="flex items-center gap-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                Initializing...
-              </div>
-            ) : (
-              <div className="flex items-center justify-center gap-2 font-bold text-lg">
-                Enter Dashboard <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </div>
-            )}
-          </Button>
-        </form>
+        </div>
       </div>
     </div>
   );
