@@ -114,21 +114,39 @@ function OnboardingContent() {
               onChange={(e) => setBusinessName(e.target.value)}
               required
               autoFocus
+              disabled={loading || !profile?.business_id}
               className="h-12 bg-muted/30 border-border text-lg focus-visible:ring-primary/20"
             />
+            {!profile?.business_id && !authLoading && (
+              <p className="text-xs text-destructive pt-1">
+                Session still loading... If this takes too long, try{" "}
+                <button 
+                  type="button" 
+                  onClick={() => refreshProfile()} 
+                  className="underline hover:text-destructive/80"
+                >
+                  refreshing your session
+                </button>.
+              </p>
+            )}
             <p className="text-xs text-muted-foreground pt-1">
               This is how your team and workspace will be identified.
             </p>
           </div>
 
           <Button 
-            disabled={loading || !businessName.trim()} 
+            disabled={loading || !businessName.trim() || !profile?.business_id} 
             className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 group transition-all active:scale-[0.98]"
           >
             {loading ? (
               <div className="flex items-center gap-2">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
                 Setting up...
+              </div>
+            ) : !profile?.business_id ? (
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                Initializing...
               </div>
             ) : (
               <div className="flex items-center justify-center gap-2 font-bold text-lg">
