@@ -362,7 +362,7 @@ export default function SignupPage() {
                 </div>
 
                 <div className="mt-4 flex flex-col gap-3">
-                  <Button disabled={loading} className="h-11 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all active:scale-[0.98]">
+                  <Button type="submit" disabled={loading} className="h-11 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all active:scale-[0.98]">
                     {loading ? (
                       <div className="flex items-center gap-2">
                         <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
