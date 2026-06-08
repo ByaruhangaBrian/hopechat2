@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MessageSquare, ArrowRight, Sparkles } from "lucide-react";
+import { MessageSquare, ArrowRight, Sparkles, Loader2 } from "lucide-react";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 
 function OnboardingContent() {
@@ -23,16 +23,11 @@ function OnboardingContent() {
     }
   }, [profile, authLoading, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    console.log("[Onboarding] handleSubmit triggered");
-    alert("Submission started!"); // Direct feedback
 
     if (!profile?.business_id) {
-      const msg = "Session error: Workspace ID not found.";
-      console.error("[Onboarding] " + msg);
-      setError(msg);
-      alert(msg);
+      setError("Session error: Workspace ID not found. Please try refreshing.");
       return;
     }
 
@@ -45,44 +40,31 @@ function OnboardingContent() {
     setLoading(true);
 
     try {
-      console.log("[Onboarding] Updating business:", profile.business_id, "to", businessName.trim());
-      
-      const { error: updateError, data, status } = await supabase
+      const { error: updateError } = await supabase
         .from("businesses")
         .update({ name: businessName.trim() })
-        .eq("id", profile.business_id)
-        .select();
-
-      console.log("[Onboarding] Supabase response status:", status);
+        .eq("id", profile.business_id);
 
       if (updateError) {
-        console.error("[Onboarding] Update error:", updateError);
-        const errMsg = `Update failed: ${updateError.message} (Code: ${updateError.code})`;
-        setError(errMsg);
-        alert(errMsg);
+        setError(`Update failed: ${updateError.message}`);
         setLoading(false);
         return;
       }
 
-      console.log("[Onboarding] Update successful:", data);
-      alert("Update successful! Refreshing profile...");
-      
       await refreshProfile();
-      console.log("[Onboarding] Profile refreshed. Redirecting...");
-      
       router.push("/dashboard");
     } catch (err) {
-      console.error("[Onboarding] Caught exception:", err);
-      const errMsg = "Unexpected error: " + (err instanceof Error ? err.message : String(err));
-      setError(errMsg);
-      alert(errMsg);
+      setError("An unexpected error occurred. Please try again.");
       setLoading(false);
     }
   };
 
   if (authLoading) return (
-    <div className="flex h-screen items-center justify-center bg-background">
-      <p className="text-muted-foreground">Loading Authentication...</p>
+    <div className="flex h-screen items-center justify-center bg-background text-muted-foreground">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm">Initializing your workspace...</p>
+      </div>
     </div>
   );
 
@@ -99,51 +81,62 @@ function OnboardingContent() {
             <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center justify-center gap-2">
               Name your workspace <Sparkles className="h-5 w-5 text-primary" />
             </h1>
+            <p className="text-muted-foreground">
+              Finalize your setup to enter the dashboard.
+            </p>
           </div>
         </div>
 
         <div className="bg-card p-8 rounded-2xl border border-border shadow-2xl">
           {error && (
-            <div className="mb-4 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+            <div className="mb-4 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive animate-in shake duration-500">
               {error}
             </div>
           )}
 
-          <div className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="businessName">Business Name</Label>
               <Input
                 id="businessName"
-                placeholder="Acme Inc."
+                placeholder="e.g. Acme Corp"
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
                 disabled={loading}
-                className="h-12"
+                autoFocus
+                className="h-12 bg-muted/30 border-border"
               />
               {!profile?.business_id && (
-                <p className="text-xs text-destructive">
-                  Still connecting to workspace... 
-                  <button type="button" onClick={() => refreshProfile()} className="underline ml-1">Retry</button>
+                <p className="text-xs text-destructive pt-1 flex items-center gap-1">
+                  Workspace sync pending...
+                  <button type="button" onClick={() => refreshProfile()} className="underline font-medium">
+                    Retry now
+                  </button>
                 </p>
               )}
             </div>
 
-            <button 
-              type="button"
-              onClick={(e) => {
-                console.log("[Onboarding] Button clicked directly");
-                handleSubmit(e as any);
-              }}
+            <Button 
+              type="submit"
               disabled={loading || !businessName.trim() || !profile?.business_id}
-              className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+              className="w-full h-12 bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20 transition-all active:scale-[0.98]"
             >
-              {loading ? "Saving..." : "Enter Dashboard"}
-            </button>
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  Enter Dashboard <ArrowRight className="h-4 w-4" />
+                </div>
+              )}
+            </Button>
             
             <p className="text-center text-xs text-muted-foreground pt-2">
-              Connected as: {profile?.email || "Unknown"}
+              Logged in as <span className="text-foreground font-medium">{profile?.email}</span>
             </p>
-          </div>
+          </form>
         </div>
       </div>
     </div>
