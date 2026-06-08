@@ -25,24 +25,54 @@ function OnboardingContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.business_id) return;
+    console.log("[Onboarding] Starting submission...");
+    console.log("[Onboarding] Profile state:", { 
+      business_id: profile?.business_id, 
+      user_id: profile?.id,
+      loading: authLoading 
+    });
+
+    if (!profile?.business_id) {
+      console.error("[Onboarding] No business_id found in profile");
+      setError("Session error: Workspace ID not found. Please try logging out and back in.");
+      return;
+    }
+
+    if (!businessName.trim()) {
+      setError("Please enter a business name.");
+      return;
+    }
 
     setError(null);
     setLoading(true);
 
-    const { error } = await supabase
-      .from("businesses")
-      .update({ name: businessName })
-      .eq("id", profile.business_id);
+    try {
+      console.log("[Onboarding] Attempting to update business name to:", businessName);
+      const { error: updateError, data } = await supabase
+        .from("businesses")
+        .update({ name: businessName.trim() })
+        .eq("id", profile.business_id)
+        .select();
 
-    if (error) {
-      setError(error.message);
+      if (updateError) {
+        console.error("[Onboarding] Supabase update error:", updateError);
+        setError(`Update failed: ${updateError.message}`);
+        setLoading(false);
+        return;
+      }
+
+      console.log("[Onboarding] Update successful, result:", data);
+      console.log("[Onboarding] Refreshing profile...");
+      
+      await refreshProfile();
+      
+      console.log("[Onboarding] Redirection to dashboard...");
+      router.push("/dashboard");
+    } catch (err) {
+      console.error("[Onboarding] Unexpected error during submission:", err);
+      setError("An unexpected error occurred. Please try again.");
       setLoading(false);
-      return;
     }
-
-    await refreshProfile();
-    router.push("/dashboard");
   };
 
   if (authLoading) return null;
