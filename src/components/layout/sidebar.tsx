@@ -152,19 +152,19 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       >
         {/* Logo row */}
         <div className={cn(
-          "flex h-20 shrink-0 flex-col justify-center border-b border-sidebar-border px-4 transition-all duration-300",
+          "flex h-16 shrink-0 flex-col justify-center border-b border-sidebar-border px-4 transition-all duration-300",
           isCollapsed && "items-center px-0"
         )}>
           <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="flex shrink-0 items-center justify-center rounded-xl bg-primary p-2 text-primary-foreground shadow-lg shadow-primary/20">
-              <MessageSquare className="size-5" />
+            <Link href="/dashboard" className="flex shrink-0 items-center justify-center rounded-xl bg-primary p-1.5 text-primary-foreground shadow-lg shadow-primary/20">
+              <MessageSquare className="size-4" />
             </Link>
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
-                <span className="block truncate text-base font-bold tracking-tight text-sidebar-foreground">
+                <span className="block truncate text-sm font-bold tracking-tight text-sidebar-foreground">
                   HopeChat
                 </span>
-                <span className="block truncate text-[11px] font-medium uppercase tracking-wider text-sidebar-foreground/50">
+                <span className="block truncate text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/50 leading-tight">
                   {profile?.business?.name || "Business"}
                 </span>
               </div>
@@ -173,7 +173,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex size-8 items-center justify-center rounded-lg text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground lg:hidden"
+                className="flex size-7 items-center justify-center rounded-lg text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground lg:hidden"
               >
                 <X className="size-4" />
               </button>
@@ -182,18 +182,18 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         </div>
 
         {impersonatedName && !isCollapsed && (
-          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-3">
-            <div className="flex items-start gap-3">
-              <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-              <div className="space-y-1.5">
-                <p className="text-[11px] font-medium text-amber-500 leading-tight">
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2">
+            <div className="flex items-start gap-2">
+              <ShieldAlert className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-[10px] font-medium text-amber-500 leading-tight">
                   Impersonating: <span className="text-foreground font-bold">{impersonatedName}</span>
                 </p>
                 <button 
                   onClick={stopImpersonating}
-                  className="text-[10px] text-amber-500/70 hover:text-amber-500 underline underline-offset-2 transition-colors"
+                  className="text-[9px] text-amber-500/70 hover:text-amber-500 underline underline-offset-2 transition-colors"
                 >
-                  Stop Impersonating
+                  Stop
                 </button>
               </div>
             </div>
@@ -201,8 +201,8 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         )}
 
         {/* Main navigation */}
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          <ul className="space-y-1">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto scrollbar-hide px-3 py-3">
+          <ul className="space-y-0.5">
             {filteredNavItems.map((item) => {
               const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
               const showUnreadDot = item.href === "/inbox" && totalUnread > 0 && !isActive;
@@ -211,26 +211,26 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 <Link
                   href={item.href}
                   className={cn(
-                    "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200",
+                    "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-all duration-200",
                     isActive
                       ? "bg-primary/10 text-primary shadow-sm"
                       : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                    isCollapsed && "justify-center px-0"
+                    isCollapsed && "justify-center px-0 py-2"
                   )}
                 >
-                  <item.icon className={cn("size-5 shrink-0 transition-transform duration-200 group-hover:scale-110", isActive && "text-primary")} />
-                  {!isCollapsed && <span className="flex-1 font-medium">{item.label}</span>}
+                  <item.icon className={cn("size-4 shrink-0 transition-transform duration-200 group-hover:scale-110", isActive && "text-primary")} />
+                  {!isCollapsed && <span className="flex-1 text-sm font-medium">{item.label}</span>}
                   {showUnreadDot && (
                     <span className={cn(
-                      "absolute flex h-2 w-2",
-                      isCollapsed ? "right-2 top-2" : "right-3"
+                      "absolute flex h-1.5 w-1.5",
+                      isCollapsed ? "right-1.5 top-1.5" : "right-2.5"
                     )}>
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
                     </span>
                   )}
                   {isActive && !isCollapsed && (
-                    <div className="absolute left-0 h-5 w-1 rounded-full bg-primary shadow-[0_0_8px_oklch(var(--primary))]" />
+                    <div className="absolute left-0 h-4 w-1 rounded-full bg-primary shadow-[0_0_8px_oklch(var(--primary))]" />
                   )}
                 </Link>
               );
@@ -250,24 +250,24 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             })}
           </ul>
 
-          {!isCollapsed && <div className="mx-2 my-4 h-px bg-sidebar-border/50" />}
+          {!isCollapsed && <div className="mx-2 my-2.5 h-px bg-sidebar-border/50" />}
 
-          <ul className="space-y-1">
+          <ul className="space-y-0.5">
             {bottomNavItems.map((item) => {
               const isActive = pathname.startsWith(item.href);
               const content = (
                 <Link
                   href={item.href}
                   className={cn(
-                    "group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200",
+                    "group flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-all duration-200",
                     isActive
                       ? "bg-primary/10 text-primary shadow-sm"
                       : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                    isCollapsed && "justify-center px-0"
+                    isCollapsed && "justify-center px-0 py-2"
                   )}
                 >
-                  <item.icon className="size-5 shrink-0 transition-transform duration-200 group-hover:scale-110" />
-                  {!isCollapsed && <span className="flex-1 font-medium">{item.label}</span>}
+                  <item.icon className="size-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                  {!isCollapsed && <span className="flex-1 text-sm font-medium">{item.label}</span>}
                 </Link>
               );
 
@@ -288,38 +288,38 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         </nav>
 
         {/* Bottom controls */}
-        <div className="shrink-0 p-3 flex justify-end">
+        <div className="shrink-0 p-2 flex justify-end">
           {/* Collapse toggle (Desktop only) */}
           <button
             onClick={toggleCollapse}
-            className="hidden size-8 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent/50 text-sidebar-foreground/40 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground lg:flex"
+            className="hidden size-7 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent/50 text-sidebar-foreground/40 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground lg:flex"
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            {isCollapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
+            {isCollapsed ? <ChevronRight className="size-3.5" /> : <ChevronLeft className="size-3.5" />}
           </button>
         </div>
 
         {/* User section */}
-        <div className="shrink-0 p-3">
+        <div className="shrink-0 p-2">
           <DropdownMenu>
             <DropdownMenuTrigger className={cn(
-              "flex w-full items-center gap-3 rounded-xl p-2 text-left transition-all duration-200 hover:bg-sidebar-accent/50 focus:outline-none",
-              isCollapsed && "justify-center p-0 h-12"
+              "flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left transition-all duration-200 hover:bg-sidebar-accent/50 focus:outline-none",
+              isCollapsed && "justify-center p-0 h-10"
             )}>
-              <Avatar className="size-8 shrink-0 ring-2 ring-sidebar-border">
+              <Avatar className="size-7 shrink-0 ring-1 ring-sidebar-border">
                 {profile?.avatar_url ? (
                   <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? "Avatar"} />
                 ) : null}
-                <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
+                <AvatarFallback className="bg-primary/10 text-[10px] font-bold text-primary">
                   {profile?.full_name?.charAt(0)?.toUpperCase() ?? profile?.email?.charAt(0)?.toUpperCase() ?? "U"}
                 </AvatarFallback>
               </Avatar>
               {!isCollapsed && (
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-sidebar-foreground">
+                  <p className="truncate text-xs font-bold text-sidebar-foreground">
                     {profile?.full_name ?? "User"}
                   </p>
-                  <p className="truncate text-[10px] uppercase tracking-tighter text-sidebar-foreground/40 font-bold">
+                  <p className="truncate text-[9px] uppercase tracking-tighter text-sidebar-foreground/40 font-bold">
                     {profile?.role || "Team Member"}
                   </p>
                 </div>
