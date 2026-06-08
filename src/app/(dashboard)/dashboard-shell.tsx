@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 // client components can't export Next's metadata object.
 
 function DashboardShellInner({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const router = useRouter();
   const supabase = createClient();
 
@@ -22,10 +22,14 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
+    if (!loading) {
+      if (!user) {
+        router.push("/login");
+      } else if (profile && profile.business?.name === "My Business") {
+        router.push("/onboarding");
+      }
     }
-  }, [user, loading, router]);
+  }, [user, profile, loading, router]);
 
   // Handle post-signup onboarding automation
   useEffect(() => {
