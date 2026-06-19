@@ -262,6 +262,38 @@ async function executeAiJob(job: any): Promise<void> {
     return;
   }
 
+  // 1.5 Fetch subscription tier details via inner join
+  const { data: bizWithTier } = await db
+    .from('businesses')
+    .select(`
+      id,
+      tier_id,
+      subscription_tiers!inner (
+        allow_broadcasts,
+        allow_flows,
+        allow_multimodal
+      )
+    `)
+    .eq('id', job.business_id)
+    .single();
+
+  // Enforce Bulk Template Broadcast constraint
+  const isBroadcast = job.payload?.type === 'broadcast' || job.payload?.is_broadcast === true || job.payload?.context?.type === 'broadcast';
+  if (isBroadcast && bizWithTier && !(bizWithTier.subscription_tiers as any).allow_broadcasts) {
+    console.error(`[ai-worker] Access restriction: Business ${job.business_id} does not allow broadcasts.`);
+    void logHttpEvent({
+      userId: job.user_id,
+      businessId: job.business_id,
+      direction: 'system',
+      service: 'ai-worker',
+      endpoint: 'execute',
+      payload: { error: 'Broadcasts disallowed on current subscription tier', tier: bizWithTier.tier_id },
+      statusCode: 403,
+      note: 'access_restriction_disallowed_broadcasts'
+    });
+    throw new Error('Access restriction: Broadcasts are not allowed on this subscription tier.');
+  }
+
   // 2. Load Context (Cached)
   const aiConfig = await getBusinessAiConfig(job.user_id);
   if (!aiConfig || !aiConfig.is_enabled) return;
@@ -283,6 +315,13 @@ async function executeAiJob(job: any): Promise<void> {
 
   const lastUserMessage = history.filter(h => h.role === 'user').pop()?.parts[0].text || '';
   
+  // Enforce Multimodal constraints:voice note or image confirmation
+  const isRichMedia = job.payload?.type === 'image' || job.payload?.type === 'audio' || !!job.payload?.image || !!job.payload?.audio;
+  let promptText = lastUserMessage;
+  if (isRichMedia && bizWithTier && !(bizWithTier.subscription_tiers as any).allow_multimodal) {
+    promptText = "The user sent an image or voice note. Inform them politely in plain text that voice notes and image processing are not supported on our current business plan, and they must upgrade their subscription to use this feature.";
+  }
+
   // Compact Prompt Assembly
   let systemInstruction = `${aiConfig.system_prompt}\n\n`;
   
@@ -308,7 +347,7 @@ async function executeAiJob(job: any): Promise<void> {
   });
   
   const aiText = await generateGeminiResponse(
-    lastUserMessage, 
+    promptText, 
     systemInstruction, 
     history.slice(0, -1), 
     aiConfig.api_key,
