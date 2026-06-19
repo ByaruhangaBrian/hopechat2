@@ -444,3 +444,14 @@ export interface AiSettings {
   created_at: string;
   updated_at: string;
 }
+
+export interface Transaction {
+  id: string;
+  business_id: string;
+  amount_ugx: number;
+  credits_added: number;
+  payment_method: "mobile_money" | "card" | "manual_admin";
+  payment_reference?: string;
+  status: "pending" | "success" | "successful" | "failed";
+  timestamp: string;
+}

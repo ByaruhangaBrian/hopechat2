@@ -15,6 +15,7 @@ import {
   X,
   LayoutDashboard,
   ArrowLeft,
+  Coins,
 } from "lucide-react";
 import {
   Avatar,
@@ -32,6 +33,7 @@ import {
 const adminNavItems = [
   { href: "/admin", label: "Admin Overview", icon: LayoutDashboard },
   { href: "/admin/businesses", label: "Businesses", icon: Building2 },
+  { href: "/admin/tenants", label: "Tenants Ledger", icon: Coins },
   { href: "/admin/logs", label: "System Logs", icon: FileCode },
   { href: "/admin/settings", label: "System Settings", icon: Settings },
 ];
