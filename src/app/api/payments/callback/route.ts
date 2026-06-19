@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
+import { logHttpEvent } from "@/lib/logs/http-logs";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -11,7 +12,15 @@ export async function GET(req: Request) {
   // If the status is not successful, redirect to failure directly
   if (status !== "successful" || !transactionId) {
     console.warn("Callback received non-successful status or missing transaction ID", { status, transactionId });
-    return NextResponse.redirect(`${siteUrl}/settings?topup=failed`);
+    await logHttpEvent({
+      direction: "incoming",
+      service: "payment",
+      endpoint: "/api/payments/callback",
+      note: `Callback failed: non-successful status (${status}) or missing transaction ID (${transactionId})`,
+      statusCode: 400,
+      payload: { status, transactionId }
+    });
+    return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed`);
   }
 
   try {
@@ -28,7 +37,14 @@ export async function GET(req: Request) {
 
     if (!secretKey) {
       console.error("Flutterwave credentials not configured on callback");
-      return NextResponse.redirect(`${siteUrl}/settings?topup=failed&error=credentials`);
+      await logHttpEvent({
+        direction: "incoming",
+        service: "payment",
+        endpoint: "/api/payments/callback",
+        note: "Callback failed: Flutterwave keys not configured in system settings",
+        statusCode: 500
+      });
+      return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed&error=credentials`);
     }
 
     // 2. Perform verification request to Flutterwave
@@ -44,7 +60,15 @@ export async function GET(req: Request) {
 
     if (!response.ok || responseData.status !== "success" || responseData.data.status !== "successful") {
       console.error("Flutterwave verification failed:", responseData);
-      return NextResponse.redirect(`${siteUrl}/settings?topup=failed&error=verification`);
+      await logHttpEvent({
+        direction: "incoming",
+        service: "payment",
+        endpoint: "/api/payments/callback",
+        note: `Callback verification failed for Flutterwave tx ID ${transactionId}`,
+        statusCode: response.status || 502,
+        payload: responseData
+      });
+      return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed&error=verification`);
     }
 
     const { tx_ref, amount, currency } = responseData.data;
@@ -52,7 +76,15 @@ export async function GET(req: Request) {
     // Verify it is UGX
     if (currency !== "UGX") {
       console.error("Currency mismatch:", currency);
-      return NextResponse.redirect(`${siteUrl}/settings?topup=failed&error=currency`);
+      await logHttpEvent({
+        direction: "incoming",
+        service: "payment",
+        endpoint: "/api/payments/callback",
+        note: `Callback currency mismatch: Expected UGX, received ${currency}`,
+        statusCode: 400,
+        payload: { currency, amount, tx_ref }
+      });
+      return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed&error=currency`);
     }
 
     // 3. Check db for duplicate tx_ref and process update atomically
@@ -65,13 +97,30 @@ export async function GET(req: Request) {
 
     if (fetchError || !tx) {
       console.error("Transaction record not found in database:", tx_ref, fetchError);
-      return NextResponse.redirect(`${siteUrl}/settings?topup=failed&error=not_found`);
+      await logHttpEvent({
+        direction: "incoming",
+        service: "payment",
+        endpoint: "/api/payments/callback",
+        note: `Callback transaction ref not found: ${tx_ref}`,
+        statusCode: 404,
+        payload: { tx_ref }
+      });
+      return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed&error=not_found`);
     }
 
     // If transaction has already been processed (e.g. webhook or double callback click)
     if (tx.status === "successful" || tx.status === "success") {
       console.warn("Transaction already marked successful:", tx_ref);
-      return NextResponse.redirect(`${siteUrl}/settings?topup=success`);
+      await logHttpEvent({
+        businessId: tx.business_id,
+        direction: "incoming",
+        service: "payment",
+        endpoint: "/api/payments/callback",
+        note: `Callback received for already completed transaction ref: ${tx_ref}`,
+        statusCode: 200,
+        payload: { tx_ref, status: tx.status }
+      });
+      return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=success`);
     }
 
     // Validate amount matches (handling float conversion carefully)
@@ -79,7 +128,16 @@ export async function GET(req: Request) {
     const apiAmount = parseFloat(amount);
     if (Math.abs(dbAmount - apiAmount) > 0.01) {
       console.error("Amount mismatch:", { dbAmount, apiAmount });
-      return NextResponse.redirect(`${siteUrl}/settings?topup=failed&error=amount_mismatch`);
+      await logHttpEvent({
+        businessId: tx.business_id,
+        direction: "incoming",
+        service: "payment",
+        endpoint: "/api/payments/callback",
+        note: `Callback verification failed: amount mismatch (DB: ${dbAmount}, API: ${apiAmount})`,
+        statusCode: 400,
+        payload: { tx_ref, dbAmount, apiAmount }
+      });
+      return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed&error=amount_mismatch`);
     }
 
     // 4. Update status atomically to "successful"
@@ -95,14 +153,42 @@ export async function GET(req: Request) {
 
     if (updateError || !updatedTx) {
       console.error("Failed to update transaction status atomically (possible concurrency lock):", updateError);
-      return NextResponse.redirect(`${siteUrl}/settings?topup=failed&error=concurrency`);
+      await logHttpEvent({
+        businessId: tx.business_id,
+        direction: "incoming",
+        service: "payment",
+        endpoint: "/api/payments/callback",
+        note: `Callback database status update failed for transaction ID ${tx.id}`,
+        statusCode: 500,
+        payload: { error: updateError, tx_id: tx.id }
+      });
+      return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed&error=concurrency`);
     }
 
+    // Log callback processing success
+    await logHttpEvent({
+      businessId: tx.business_id,
+      direction: "incoming",
+      service: "payment",
+      endpoint: "/api/payments/callback",
+      note: `Successfully verified and applied payment top-up of ${amount} UGX (+${tx.credits_added} credits) for ${tx_ref}`,
+      statusCode: 200,
+      payload: { tx_ref, amount, credits_added: tx.credits_added }
+    });
+
     // Redirect to settings with success parameter
-    return NextResponse.redirect(`${siteUrl}/settings?topup=success`);
+    return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=success`);
 
   } catch (error: any) {
     console.error("Callback route error:", error);
-    return NextResponse.redirect(`${siteUrl}/settings?topup=failed&error=system`);
+    await logHttpEvent({
+      direction: "incoming",
+      service: "payment",
+      endpoint: "/api/payments/callback",
+      note: `Callback route processing error: ${error?.message || "Unknown error"}`,
+      statusCode: 500,
+      payload: { error: error?.message || error }
+    });
+    return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed&error=system`);
   }
 }

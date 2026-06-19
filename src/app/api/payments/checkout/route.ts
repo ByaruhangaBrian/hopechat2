@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { logHttpEvent } from "@/lib/logs/http-logs";
 
 export async function POST(req: Request) {
   try {
@@ -23,6 +24,17 @@ export async function POST(req: Request) {
     if (!businessId) {
       return NextResponse.json({ error: "Invalid business ID" }, { status: 400 });
     }
+
+    // Log checkout attempt
+    await logHttpEvent({
+      userId: user.id,
+      businessId: businessId,
+      direction: "outgoing",
+      service: "payment",
+      endpoint: "/api/payments/checkout",
+      note: `Initiating checkout for ${amount.toLocaleString()} UGX via ${paymentMethod || "mobile_money"}`,
+      payload: { amount, paymentMethod }
+    });
 
     // 3. Verify user has access to the business (or is superadmin)
     const { data: profile, error: profileError } = await supabase
@@ -109,11 +121,33 @@ export async function POST(req: Request) {
 
     if (!response.ok || responseData.status !== "success") {
       console.error("Flutterwave response error:", responseData);
+      await logHttpEvent({
+        userId: user.id,
+        businessId: businessId,
+        direction: "outgoing",
+        service: "payment",
+        endpoint: "/api/payments/checkout",
+        note: `Flutterwave checkout failed: ${responseData?.message || "Payment gateway error"}`,
+        statusCode: response.status || 502,
+        payload: responseData
+      });
       return NextResponse.json(
         { error: responseData.message || "Failed to initiate payment gateway" },
         { status: 502 }
       );
     }
+
+    // Log checkout success
+    await logHttpEvent({
+      userId: user.id,
+      businessId: businessId,
+      direction: "outgoing",
+      service: "payment",
+      endpoint: "/api/payments/checkout",
+      note: `Flutterwave checkout link generated successfully for reference ${tx_ref}`,
+      statusCode: 200,
+      payload: { tx_ref, link: responseData.data.link }
+    });
 
     // Return the link
     return NextResponse.json({ link: responseData.data.link });

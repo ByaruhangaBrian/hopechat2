@@ -48,16 +48,6 @@ export default function TenantsDashboardPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"tenants" | "gateway">("tenants");
-
-  // Flutterwave Settings Form
-  const [fwSettings, setFwSettings] = useState({
-    public_key: "",
-    secret_key: "",
-    is_enabled: false
-  });
-  const [savingGateway, setSavingGateway] = useState(false);
-
   // Manual Top-up Modal
   const [selectedBiz, setSelectedBiz] = useState<Business | null>(null);
   const [creditsToAdd, setCreditsToAdd] = useState("");
@@ -75,7 +65,6 @@ export default function TenantsDashboardPage() {
   useEffect(() => {
     if (!authLoading && isSuperAdmin) {
       fetchBusinesses();
-      fetchGatewaySettings();
     }
   }, [authLoading, isSuperAdmin]);
 
@@ -107,48 +96,7 @@ export default function TenantsDashboardPage() {
     }
   }
 
-  async function fetchGatewaySettings() {
-    try {
-      const { data, error } = await supabase
-        .from("system_settings")
-        .select("value")
-        .eq("id", "flutterwave_global")
-        .maybeSingle();
-
-      if (error) throw error;
-      if (data?.value) {
-        setFwSettings({
-          public_key: data.value.public_key || "",
-          secret_key: data.value.secret_key || "",
-          is_enabled: !!data.value.is_enabled
-        });
-      }
-    } catch (err: any) {
-      console.error("Error fetching gateway settings:", err);
-    }
-  }
-
-  async function handleSaveGateway(e: React.FormEvent) {
-    e.preventDefault();
-    setSavingGateway(true);
-    try {
-      const { error } = await supabase
-        .from("system_settings")
-        .upsert({
-          id: "flutterwave_global",
-          value: fwSettings,
-          updated_at: new Date().toISOString()
-        });
-
-      if (error) throw error;
-      toast.success("Flutterwave gateway configurations saved successfully");
-    } catch (err: any) {
-      console.error("Error saving gateway:", err);
-      toast.error(err.message || "Failed to update gateway settings");
-    } finally {
-      setSavingGateway(false);
-    }
-  }
+  // Gateway Settings functions removed (moved to system settings)
 
   async function handleManualTopup(e: React.FormEvent) {
     e.preventDefault();
@@ -235,7 +183,7 @@ export default function TenantsDashboardPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Super Admin Center</h1>
           <p className="text-muted-foreground text-sm">
-            Manage system tenants, adjust service credits manually, and configure platform gateway settings.
+            Manage system tenants and adjust service credits manually.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -246,32 +194,7 @@ export default function TenantsDashboardPage() {
         </div>
       </div>
 
-      {/* Tabs Menu Navigation */}
-      <div className="flex border-b border-border">
-        <button
-          onClick={() => setActiveTab("tenants")}
-          className={`px-4 py-2 font-medium text-sm transition-all border-b-2 -mb-px ${
-            activeTab === "tenants"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Tenants Directory
-        </button>
-        <button
-          onClick={() => setActiveTab("gateway")}
-          className={`px-4 py-2 font-medium text-sm transition-all border-b-2 -mb-px ${
-            activeTab === "gateway"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Gateway Configuration
-        </button>
-      </div>
-
-      {/* TAB CONTENT: TENANTS DIRECTORY */}
-      {activeTab === "tenants" && (
+      {/* TENANTS DIRECTORY */}
         <Card className="border-border bg-card">
           <CardHeader>
             <CardTitle className="text-xl font-semibold flex items-center gap-2">
@@ -343,77 +266,7 @@ export default function TenantsDashboardPage() {
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* TAB CONTENT: GATEWAY SETTINGS */}
-      {activeTab === "gateway" && (
-        <Card className="max-w-3xl border-border bg-card">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold flex items-center gap-2">
-              <Key className="h-5 w-5 text-primary" />
-              Flutterwave Gateway Integration
-            </CardTitle>
-            <CardDescription>
-              Configure API keys to accept card and mobile money collections for credit top-ups dynamically.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSaveGateway} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="flw_public_key" className="text-sm font-semibold text-foreground">
-                  Flutterwave Public Key (Live / Test)
-                </Label>
-                <Input
-                  id="flw_public_key"
-                  placeholder="FLWPUBK_xxxxxx-xxxxxxxxxxxxxxxx-X"
-                  value={fwSettings.public_key}
-                  onChange={(e) => setFwSettings(prev => ({ ...prev, public_key: e.target.value }))}
-                  className="bg-background border-border text-foreground font-mono"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="flw_secret_key" className="text-sm font-semibold text-foreground">
-                  Flutterwave Secret Key (Live / Test)
-                </Label>
-                <Input
-                  id="flw_secret_key"
-                  type="password"
-                  placeholder="FLWSECK_xxxxxx-xxxxxxxxxxxxxxxx-X"
-                  value={fwSettings.secret_key}
-                  onChange={(e) => setFwSettings(prev => ({ ...prev, secret_key: e.target.value }))}
-                  className="bg-background border-border text-foreground font-mono"
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-muted/30 border border-border rounded-lg">
-                <div className="space-y-1">
-                  <Label className="text-sm font-semibold text-foreground cursor-pointer" htmlFor="gateway_active">
-                    Gateway Active Status
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Enables or disables Flutterwave standard checkout collection links.
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  id="gateway_active"
-                  checked={fwSettings.is_enabled}
-                  onChange={(e) => setFwSettings(prev => ({ ...prev, is_enabled: e.target.checked }))}
-                  className="h-5 w-5 rounded border-border bg-background text-primary focus:ring-primary focus:ring-2 cursor-pointer"
-                />
-              </div>
-
-              <div className="flex justify-end">
-                <Button type="submit" disabled={savingGateway} className="gap-2">
-                  <CheckCircle className="h-4 w-4" />
-                  {savingGateway ? "Saving Configs..." : "Save Configuration"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
 
       {/* RENDER ACCESSIBLE MODAL OVERLAY FOR TOPUP */}
       {selectedBiz && (

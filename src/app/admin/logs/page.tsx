@@ -11,6 +11,7 @@ import {
   Clock,
   ShieldCheck,
   Activity as ActivityIcon,
+  Coins,
 } from "lucide-react";
 import {
   Table,
@@ -80,6 +81,8 @@ export default function LogsPage() {
       case 'auth': return <ShieldCheck className="h-4 w-4 text-primary" />;
       case 'system': return <ActivityIcon className="h-4 w-4 text-blue-400" />;
       case 'whatsapp': return <FileCode className="h-4 w-4 text-emerald-400" />;
+      case 'payment':
+      case 'flutterwave': return <Coins className="h-4 w-4 text-amber-500" />;
       default: return <FileCode className="h-4 w-4 text-muted-foreground" />;
     }
   };

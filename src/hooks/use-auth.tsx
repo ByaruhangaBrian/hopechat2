@@ -22,6 +22,8 @@ interface Profile {
   business?: {
     name: string;
     features: Record<string, boolean>;
+    credits_remaining: number;
+    balance_ugx: number;
   };
 }
 
@@ -66,7 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           is_superadmin,
           business:businesses (
             name,
-            features
+            features,
+            credits_remaining,
+            balance_ugx
           )
         `)
         .eq("user_id", userId)

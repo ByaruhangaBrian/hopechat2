@@ -7,7 +7,9 @@ import {
   UserPlus,
   DollarSign,
   Send,
+  Coins,
 } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
 
 import {
   loadActivity,
@@ -35,6 +37,7 @@ import { ActivityFeed } from '@/components/dashboard/activity-feed'
 type RangeDays = 7 | 30 | 90
 
 export default function DashboardPage() {
+  const { profile } = useAuth()
   const [metrics, setMetrics] = useState<MetricsBundle | null>(null)
   const [metricsLoading, setMetricsLoading] = useState(true)
 
@@ -118,11 +121,19 @@ export default function DashboardPage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Live analytics across conversations, contacts, deals, broadcasts, and automations.
-        </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Live analytics across conversations, contacts, deals, broadcasts, and automations.
+          </p>
+        </div>
+        {profile?.business?.credits_remaining !== undefined && (
+          <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-500 self-start sm:self-center">
+            <Coins className="h-4 w-4" />
+            <span>{profile.business.credits_remaining.toLocaleString()} Credits Remaining</span>
+          </div>
+        )}
       </div>
 
       {/* Metric cards */}

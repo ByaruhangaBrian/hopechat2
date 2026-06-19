@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Settings, MessageSquare, Tag, User, Cpu, Blocks } from 'lucide-react';
+import { Settings, MessageSquare, Tag, User, Cpu, Blocks, Coins } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { WhatsAppConfig } from '@/components/settings/whatsapp-config';
 import { TemplateManager } from '@/components/settings/template-manager';
@@ -10,8 +10,9 @@ import { ProfileForm } from '@/components/settings/profile-form';
 import { PasswordForm } from '@/components/settings/password-form';
 import { SessionsCard } from '@/components/settings/sessions-card';
 import { IntegrationsHub } from '@/components/settings/integrations-hub';
+import { BillingPlan } from '@/components/settings/billing-plan';
 
-const TAB_VALUES = ['profile', 'whatsapp', 'templates', 'tags', 'integrations'] as const;
+const TAB_VALUES = ['profile', 'whatsapp', 'templates', 'tags', 'integrations', 'billing'] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
 function isTabValue(v: string | null): v is TabValue {
@@ -82,6 +83,13 @@ export default function SettingsPage() {
             <Blocks className="size-4" />
             Integrations
           </TabsTrigger>
+          <TabsTrigger
+            value="billing"
+            className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+          >
+            <Coins className="size-4" />
+            Plan & Billing
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="space-y-6">
@@ -104,6 +112,10 @@ export default function SettingsPage() {
 
         <TabsContent value="integrations">
           <IntegrationsHub />
+        </TabsContent>
+
+        <TabsContent value="billing">
+          <BillingPlan />
         </TabsContent>
       </Tabs>
     </div>

@@ -12,6 +12,7 @@ import {
   Key,
   Database,
   Cpu,
+  CreditCard,
 } from "lucide-react";
 import {
   Card,
@@ -53,6 +54,11 @@ export default function AdminSettingsPage() {
     meta_app_secret: "",
     gemini_global_key: "",
   });
+  const [flutterwaveGlobal, setFlutterwaveGlobal] = useState({
+    public_key: "",
+    secret_key: "",
+    is_enabled: false,
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const supabase = createClient();
@@ -63,18 +69,27 @@ export default function AdminSettingsPage() {
         { data: wa },
         { data: sys },
         { data: int },
-        { data: creds }
+        { data: creds },
+        { data: fw }
       ] = await Promise.all([
         supabase.from("system_settings").select("*").eq("id", "whatsapp_global").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "system_config").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "integrations_global").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "platform_credentials").maybeSingle(),
+        supabase.from("system_settings").select("*").eq("id", "flutterwave_global").maybeSingle(),
       ]);
 
       if (wa) setWhatsappSettings(wa.value);
       if (sys) setSystemConfig(sys.value);
       if (int) setIntegrationsGlobal(int.value);
       if (creds) setPlatformCredentials(creds.value);
+      if (fw?.value) {
+        setFlutterwaveGlobal({
+          public_key: fw.value.public_key || "",
+          secret_key: fw.value.secret_key || "",
+          is_enabled: !!fw.value.is_enabled,
+        });
+      }
       
       setLoading(false);
     }
@@ -153,6 +168,24 @@ export default function AdminSettingsPage() {
     setSaving(false);
   }
 
+  async function handleSaveGateway() {
+    setSaving(true);
+    const { error } = await supabase
+      .from("system_settings")
+      .upsert({
+        id: "flutterwave_global",
+        value: flutterwaveGlobal,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (error) {
+      toast.error("Failed to save Flutterwave settings");
+    } else {
+      toast.success("Flutterwave configurations saved successfully");
+    }
+    setSaving(false);
+  }
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard");
@@ -176,6 +209,9 @@ export default function AdminSettingsPage() {
           </TabsTrigger>
           <TabsTrigger value="platform" className="px-4 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
             Platform
+          </TabsTrigger>
+          <TabsTrigger value="gateway" className="px-4 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+            Gateway
           </TabsTrigger>
           <TabsTrigger value="credentials" className="px-4 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
             Credentials
@@ -474,6 +510,73 @@ export default function AdminSettingsPage() {
                   <Save className="mr-2 h-4 w-4" />
                   {saving ? "Saving..." : "Save Integrations"}
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="gateway" className="space-y-6 outline-none">
+          <Card className="max-w-3xl border-border bg-card">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
+                <CreditCard className="h-5 w-5 text-primary" />
+                Flutterwave Gateway Integration
+              </CardTitle>
+              <CardDescription>
+                Configure API keys to accept card and mobile money collections for credit top-ups dynamically.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="flw_public_key" className="text-sm font-semibold text-foreground">
+                    Flutterwave Public Key (Live / Test)
+                  </Label>
+                  <Input
+                    id="flw_public_key"
+                    placeholder="FLWPUBK_xxxxxx-xxxxxxxxxxxxxxxx-X"
+                    value={flutterwaveGlobal.public_key}
+                    onChange={(e) => setFlutterwaveGlobal(prev => ({ ...prev, public_key: e.target.value }))}
+                    className="bg-background border-border text-foreground font-mono"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="flw_secret_key" className="text-sm font-semibold text-foreground">
+                    Flutterwave Secret Key (Live / Test)
+                  </Label>
+                  <Input
+                    id="flw_secret_key"
+                    type="password"
+                    placeholder="FLWSECK_xxxxxx-xxxxxxxxxxxxxxxx-X"
+                    value={flutterwaveGlobal.secret_key}
+                    onChange={(e) => setFlutterwaveGlobal(prev => ({ ...prev, secret_key: e.target.value }))}
+                    className="bg-background border-border text-foreground font-mono"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-muted/30 border border-border rounded-lg">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-semibold text-foreground cursor-pointer" htmlFor="gateway_active">
+                      Gateway Active Status
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Enables or disables Flutterwave standard checkout collection links.
+                    </p>
+                  </div>
+                  <Switch 
+                    id="gateway_active"
+                    checked={flutterwaveGlobal.is_enabled}
+                    onCheckedChange={(val) => setFlutterwaveGlobal(prev => ({ ...prev, is_enabled: val }))}
+                  />
+                </div>
+
+                <div className="flex justify-end border-t border-border pt-6">
+                  <Button onClick={handleSaveGateway} disabled={saving || loading} className="bg-primary hover:bg-primary/90">
+                    <Save className="mr-2 h-4 w-4" />
+                    {saving ? "Saving..." : "Save Configuration"}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

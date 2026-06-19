@@ -13,7 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Radio, Plus, Loader2 } from 'lucide-react';
+import { Radio, Plus, Loader2, Coins } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 import { getBroadcastStatus } from '@/lib/broadcast-status';
 
 /**
@@ -56,6 +57,7 @@ function RateCell({
 
 export default function BroadcastsPage() {
   const router = useRouter();
+  const { profile } = useAuth();
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -174,20 +176,28 @@ export default function BroadcastsPage() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Broadcasts</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Send bulk messages to your contacts using approved templates.
           </p>
         </div>
-        <Button
-          onClick={() => router.push('/broadcasts/new')}
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" />
-          New Broadcast
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          {profile?.business?.credits_remaining !== undefined && (
+            <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-500 self-start sm:self-center">
+              <Coins className="h-4 w-4" />
+              <span>{profile.business.credits_remaining.toLocaleString()} Credits Remaining</span>
+            </div>
+          )}
+          <Button
+            onClick={() => router.push('/broadcasts/new')}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4" />
+            New Broadcast
+          </Button>
+        </div>
       </div>
 
       {broadcasts.length === 0 ? (
