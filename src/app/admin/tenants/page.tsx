@@ -45,7 +45,7 @@ interface Business {
 }
 
 export default function TenantsDashboardPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"tenants" | "gateway">("tenants");
@@ -67,7 +67,10 @@ export default function TenantsDashboardPage() {
   const supabase = createClient();
 
   // 1. Authorization check
-  const isSuperAdmin = user?.user_metadata?.role === "super_admin" || user?.app_metadata?.role === "super_admin";
+  const isSuperAdmin = 
+    user?.app_metadata?.is_superadmin === true || 
+    profile?.is_superadmin === true || 
+    user?.user_metadata?.role === "super_admin";
 
   useEffect(() => {
     if (!authLoading && isSuperAdmin) {
