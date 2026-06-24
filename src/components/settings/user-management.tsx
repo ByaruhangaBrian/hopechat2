@@ -78,33 +78,18 @@ export function UserManagement() {
     try {
       setLoading(true);
 
-      // 1. Fetch current users list via the API endpoint
+      // 1. Fetch current users list and plan limits via the API endpoint
       const res = await fetch('/api/tenant/users');
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.error || 'Failed to fetch team members');
       }
       const data = await res.json();
-      setUsers(data || []);
+      setUsers(data.users || []);
 
-      // 2. Fetch business plan tier and seats details from DB directly (RLS allows SELECT)
-      const { data: business, error: bizError } = await supabase
-        .from('businesses')
-        .select(`
-          tier_id,
-          subscription_tiers (
-            name,
-            max_team_seats
-          )
-        `)
-        .single();
-
-      if (bizError) throw bizError;
-
-      if (business) {
-        const tierInfo = business.subscription_tiers as any;
-        setPlanName(tierInfo?.name || 'Bronze Plan');
-        setMaxSeats(tierInfo?.max_team_seats ?? 1);
+      if (data.business) {
+        setPlanName(data.business.plan_name || 'Bronze Plan');
+        setMaxSeats(data.business.max_team_seats ?? 1);
       }
     } catch (err: any) {
       console.error('Error fetching tenant users details:', err);

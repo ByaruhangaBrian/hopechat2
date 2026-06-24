@@ -50,7 +50,35 @@ export async function GET() {
       throw selectError;
     }
 
-    return NextResponse.json(users);
+    // Fetch plan limits and tier information
+    const { data: business, error: bizError } = await adminClient
+      .from("businesses")
+      .select(`
+        name,
+        tier_id,
+        subscription_tiers (
+          name,
+          max_team_seats
+        )
+      `)
+      .eq("id", businessId)
+      .single();
+
+    if (bizError || !business) {
+      return NextResponse.json({ error: "Failed to load business subscription info" }, { status: 400 });
+    }
+
+    const tierInfo = business.subscription_tiers as any;
+
+    return NextResponse.json({
+      users: users || [],
+      business: {
+        name: business.name,
+        tier_id: business.tier_id,
+        plan_name: tierInfo?.name || "Bronze Plan",
+        max_team_seats: tierInfo?.max_team_seats ?? 1
+      }
+    });
   } catch (error: any) {
     console.error("GET tenant users error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
