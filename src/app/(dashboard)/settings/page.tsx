@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Settings, MessageSquare, Tag, User, Cpu, Blocks, Coins } from 'lucide-react';
+import { Settings, MessageSquare, Tag, User, Cpu, Blocks, Coins, Users } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { WhatsAppConfig } from '@/components/settings/whatsapp-config';
 import { TemplateManager } from '@/components/settings/template-manager';
@@ -11,8 +11,10 @@ import { PasswordForm } from '@/components/settings/password-form';
 import { SessionsCard } from '@/components/settings/sessions-card';
 import { IntegrationsHub } from '@/components/settings/integrations-hub';
 import { BillingPlan } from '@/components/settings/billing-plan';
+import { UserManagement } from '@/components/settings/user-management';
+import { useAuth } from '@/hooks/use-auth';
 
-const TAB_VALUES = ['profile', 'whatsapp', 'templates', 'tags', 'integrations', 'billing'] as const;
+const TAB_VALUES = ['profile', 'whatsapp', 'templates', 'tags', 'integrations', 'billing', 'users'] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
 function isTabValue(v: string | null): v is TabValue {
@@ -22,6 +24,9 @@ function isTabValue(v: string | null): v is TabValue {
 export default function SettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { profile } = useAuth();
+
+  const showUserManagement = profile?.role === 'owner' || profile?.role === 'admin' || profile?.is_superadmin;
 
   // The URL is the single source of truth for the active tab — no
   // local state, no sync effect. A previous revision duplicated this
@@ -90,6 +95,15 @@ export default function SettingsPage() {
             <Coins className="size-4" />
             Plan & Billing
           </TabsTrigger>
+          {showUserManagement && (
+            <TabsTrigger
+              value="users"
+              className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+            >
+              <Users className="size-4" />
+              Users
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="profile" className="space-y-6">
@@ -117,6 +131,12 @@ export default function SettingsPage() {
         <TabsContent value="billing">
           <BillingPlan />
         </TabsContent>
+
+        {showUserManagement && (
+          <TabsContent value="users">
+            <UserManagement />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
