@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#020617",
+  themeColor: "#f4f9f6",
 };
 
 export default function RootLayout({
@@ -44,7 +44,7 @@ export default function RootLayout({
       <body className="min-h-full bg-background font-sans">
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
