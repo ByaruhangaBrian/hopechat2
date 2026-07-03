@@ -6,6 +6,8 @@ export interface GoogleSheetsConfig {
   spreadsheet_id: string;
   client_email?: string;
   private_key?: string;
+  reference_column?: string;
+  return_columns?: string;
 }
 
 async function getClient(businessId: string) {
@@ -59,7 +61,8 @@ async function getClient(businessId: string) {
 
   return {
     sheets: google.sheets({ version: 'v4', auth }),
-    spreadsheetId: config.spreadsheet_id
+    spreadsheetId: config.spreadsheet_id,
+    config
   };
 }
 
@@ -99,7 +102,7 @@ export async function lookupRow(businessId: string, sheetName: string, searchCol
  */
 export async function searchSheets(businessId: string, query: string) {
   try {
-    const { sheets, spreadsheetId } = await getClient(businessId);
+    const { sheets, spreadsheetId, config } = await getClient(businessId);
 
     const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
     const firstSheetName = spreadsheet.data.sheets?.[0]?.properties?.title;
@@ -114,14 +117,41 @@ export async function searchSheets(businessId: string, query: string) {
     if (!rows || rows.length < 2) return "Spreadsheet is empty.";
 
     const header = rows[0];
-    const results = rows.slice(1).filter(row => 
-      row.some(cell => String(cell).toLowerCase().includes(query.toLowerCase()))
-    );
+    const refCol = config.reference_column?.trim();
+    const retColsRaw = config.return_columns?.trim();
 
-    if (results.length === 0) return `No matches found for "${query}" in sheet "${firstSheetName}".`;
+    let refColIndex = -1;
+    if (refCol) {
+      refColIndex = header.findIndex(h => String(h).toLowerCase() === refCol.toLowerCase());
+    }
+
+    const results = rows.slice(1).filter(row => {
+      if (refColIndex !== -1) {
+        const cellValue = row[refColIndex];
+        return cellValue !== undefined && String(cellValue).toLowerCase().includes(query.toLowerCase());
+      } else {
+        return row.some(cell => String(cell).toLowerCase().includes(query.toLowerCase()));
+      }
+    });
+
+    if (results.length === 0) {
+      return `No matches found for "${query}" in sheet "${firstSheetName}".`;
+    }
+
+    let columnsToReturn: string[] = [];
+    if (retColsRaw) {
+      columnsToReturn = retColsRaw.split(',').map(c => c.trim().toLowerCase());
+    }
 
     return results.slice(0, 5).map(row => {
-      return header.map((h, i) => `${h}: ${row[i] || ''}`).join(', ');
+      return header
+        .map((h, i) => {
+          const isAllowed = columnsToReturn.length === 0 || columnsToReturn.includes(String(h).trim().toLowerCase());
+          if (!isAllowed) return null;
+          return `${h}: ${row[i] || ''}`;
+        })
+        .filter(val => val !== null)
+        .join(', ');
     }).join('\n---\n');
   } catch (err: any) {
     console.error('[google-sheets] search failed:', err);

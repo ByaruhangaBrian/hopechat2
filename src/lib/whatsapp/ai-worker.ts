@@ -333,6 +333,28 @@ async function executeAiJob(job: any): Promise<void> {
     systemInstruction += `Dynamic Business Knowledge:\n${aiConfig.knowledge_items.map(item => `[${item.title}]: ${item.content}`).join('\n')}\n\n`;
   }
 
+  // Load Google Sheets integration config if enabled to instruct AI on reference key lookup
+  const { data: sheetsIntegration } = await db
+    .from('business_integrations')
+    .select('config, is_enabled')
+    .eq('business_id', job.business_id)
+    .eq('type', 'google_sheets')
+    .maybeSingle();
+
+  if (sheetsIntegration && sheetsIntegration.is_enabled) {
+    const sheetsConfig = sheetsIntegration.config as any;
+    const refCol = sheetsConfig?.reference_column?.trim();
+    const retCols = sheetsConfig?.return_columns?.trim();
+    if (refCol) {
+      systemInstruction += `SPREADSHEET LOOKUP ROLE:\n`;
+      systemInstruction += `- Customers can query information. You MUST ask the customer for the specific reference: '${refCol}'. Do not guess it. Once they provide it, use the 'search_business_data' tool to search for it.\n`;
+      if (retCols) {
+        systemInstruction += `- The spreadsheet will only return columns: '${retCols}'. Only explain or show these fields to the customer.\n`;
+      }
+      systemInstruction += `\n`;
+    }
+  }
+
   systemInstruction += `RULES:\n1. Be concise.\n2. If user is angry or asks for a refund, say "I am escalating this to a human manager" and end your message with [ESCALATE].\n3. Never repeat yourself.`;
 
   // 4. AI Generation

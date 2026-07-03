@@ -13,6 +13,7 @@ import {
   Database,
   Cpu,
   CreditCard,
+  Info,
 } from "lucide-react";
 import {
   Card,
@@ -450,6 +451,18 @@ export default function AdminSettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 flex gap-3 text-xs leading-relaxed text-blue-600 dark:text-blue-100">
+                <Info className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold mb-1">Super Admin Instructions:</p>
+                  <ul className="list-disc ml-4 space-y-1">
+                    <li><strong>Service Account (Fallback):</strong> Configure a fallback Google Service Account so businesses do not need their own Google Cloud Projects. They will share their sheets with this email.</li>
+                    <li><strong>Dynamic Lookup:</strong> Business admins configure their Sheet URL, a "Reference Column" (e.g. `Order ID`), and "Return Columns" (e.g. `Status, Delivery Date`) in their portal.</li>
+                    <li><strong>How it works:</strong> The WhatsApp AI worker will detect these settings, ask the client for the reference key, look up the row, and return only the specified fields.</li>
+                  </ul>
+                </div>
+              </div>
+
               <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border">
                 <div className="space-y-0.5">
                   <Label className="text-base text-foreground">Google Sheets Integration</Label>

@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { searchSheets } from '@/lib/integrations/google-sheets';
+import { supabaseAdmin } from '@/lib/automations/admin-client';
 
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF_MS = 1000;
@@ -31,6 +32,27 @@ export async function generateGeminiResponse(
   // Standardize model to gemini-2.5-flash as requested
   const MODEL_NAME = 'gemini-2.5-flash';
 
+  // Load integration config to dynamically adjust tool parameter descriptions
+  let toolDescription = 'The search query (e.g., a product name, order ID, or keyword).';
+  if (businessId) {
+    try {
+      const db = supabaseAdmin();
+      const { data: integration } = await db
+        .from('business_integrations')
+        .select('config, is_enabled')
+        .eq('business_id', businessId)
+        .eq('type', 'google_sheets')
+        .maybeSingle();
+
+      if (integration?.is_enabled && (integration.config as any)?.reference_column) {
+        const refCol = (integration.config as any).reference_column.trim();
+        toolDescription = `The search query (specifically looking up values matching the '${refCol}' column in the spreadsheet).`;
+      }
+    } catch (e) {
+      console.error('[gemini-client] failed to read dynamic tool config:', e);
+    }
+  }
+
   const tools: any = businessId ? [
     {
       functionDeclarations: [
@@ -42,7 +64,7 @@ export async function generateGeminiResponse(
             properties: {
               query: {
                 type: Type.STRING,
-                description: 'The search query (e.g., a product name, order ID, or keyword).'
+                description: toolDescription
               }
             },
             required: ['query']

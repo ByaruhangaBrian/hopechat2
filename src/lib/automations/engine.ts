@@ -727,7 +727,13 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       if (!userMessage) throw new Error('assign_to_ai has no user message to generate from')
 
       try {
-        const replyText = await generateGeminiResponse(userMessage, systemInstruction, conversationHistory.slice(0, -1), apiKey)
+        const replyText = await generateGeminiResponse(
+          userMessage,
+          systemInstruction,
+          conversationHistory.slice(0, -1),
+          apiKey,
+          args.businessId
+        )
         
         const { whatsapp_message_id } = await engineSendText({
           userId: args.automation.user_id,
