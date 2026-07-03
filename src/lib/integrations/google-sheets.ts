@@ -36,8 +36,8 @@ async function getClient(businessId: string) {
     
     config = {
       ...config,
-      client_email: config.client_email || globalConfig.default_service_account?.client_email,
-      private_key: config.private_key || globalConfig.default_service_account?.private_key,
+      client_email: config.client_email || globalConfig.default_service_account?.client_email || process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
+      private_key: config.private_key || globalConfig.default_service_account?.private_key || process.env.GOOGLE_SHEETS_PRIVATE_KEY,
     };
   }
 
