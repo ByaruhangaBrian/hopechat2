@@ -48,8 +48,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  let requestBody: any = null;
   try {
     const body = await req.json();
+    requestBody = body;
     const { type, is_enabled, config } = body;
     
     const supabase = await createClient();
@@ -101,6 +103,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, integration: data });
   } catch (err: any) {
     console.error('[integrations] POST failed:', err);
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      fs.appendFileSync(
+        path.join(process.cwd(), 'error_log.txt'),
+        `[${new Date().toISOString()}] POST failed: ${err.message}\nStack: ${err.stack}\nPayload config: ${JSON.stringify(requestBody?.config)}\n\n`
+      );
+    } catch (logErr) {
+      console.error('Failed to write to error_log.txt:', logErr);
+    }
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
 }
