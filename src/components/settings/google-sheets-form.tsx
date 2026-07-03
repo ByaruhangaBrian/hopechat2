@@ -87,13 +87,16 @@ export function GoogleSheetsForm() {
         }),
       });
 
-      if (!res.ok) throw new Error('Save failed');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Save failed');
+      }
       
       toast.success('Settings saved successfully');
       fetchSettings();
-    } catch (err) {
+    } catch (err: any) {
       console.error('[google-sheets] save failed:', err);
-      toast.error('Failed to save settings');
+      toast.error(err.message || 'Failed to save settings');
     } finally {
       setSaving(false);
     }
