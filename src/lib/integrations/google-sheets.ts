@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import { decrypt } from '@/lib/whatsapp/encryption';
 import { supabaseAdmin } from '@/lib/automations/admin-client';
+import { logHttpEvent } from '@/lib/logs/http-logs';
 
 export interface GoogleSheetsConfig {
   spreadsheet_id: string;
@@ -91,7 +92,7 @@ export async function lookupRow(businessId: string, sheetName: string, searchCol
   // Map row to object using headers
   const result: Record<string, string> = {};
   header.forEach((h, i) => {
-    result[h] = foundRow[i] || '';
+    result[h] = foundRow[i] ?? '';
   });
 
   return result;
@@ -125,6 +126,15 @@ export async function searchSheets(businessId: string, query: string) {
       refColIndex = header.findIndex(h => String(h).toLowerCase() === refCol.toLowerCase());
     }
 
+    await logHttpEvent({
+      businessId,
+      direction: 'system',
+      service: 'google_sheets',
+      endpoint: 'searchSheets',
+      payload: { headers: header, refCol, refColIndex, query, totalRows: rows.length - 1 },
+      note: `Searching for "${query}" in "${refCol}" column`,
+    });
+
     const results = rows.slice(1).filter(row => {
       if (refColIndex !== -1) {
         const cellValue = row[refColIndex];
@@ -135,6 +145,14 @@ export async function searchSheets(businessId: string, query: string) {
     });
 
     if (results.length === 0) {
+      await logHttpEvent({
+        businessId,
+        direction: 'system',
+        service: 'google_sheets',
+        endpoint: 'searchSheets',
+        payload: { query, sheetName: firstSheetName },
+        note: `No results found for "${query}"`,
+      });
       return `No matches found for "${query}" in sheet "${firstSheetName}".`;
     }
 
@@ -143,18 +161,36 @@ export async function searchSheets(businessId: string, query: string) {
       columnsToReturn = retColsRaw.split(',').map(c => c.trim().toLowerCase());
     }
 
-    return results.slice(0, 5).map(row => {
+    const formatted = results.slice(0, 5).map(row => {
       return header
         .map((h, i) => {
           const isAllowed = columnsToReturn.length === 0 || columnsToReturn.includes(String(h).trim().toLowerCase());
           if (!isAllowed) return null;
-          return `${h}: ${row[i] || ''}`;
+          return `${h}: ${row[i] ?? ''}`;
         })
         .filter(val => val !== null)
         .join(', ');
     }).join('\n---\n');
+
+    await logHttpEvent({
+      businessId,
+      direction: 'system',
+      service: 'google_sheets',
+      endpoint: 'searchSheets',
+      payload: { query, matchCount: results.length, columnsToReturn, formatted },
+      note: `Returned ${results.length} result(s) for "${query}"`,
+    });
+    return formatted;
   } catch (err: any) {
     console.error('[google-sheets] search failed:', err);
+    await logHttpEvent({
+      businessId,
+      direction: 'system',
+      service: 'google_sheets',
+      endpoint: 'searchSheets',
+      payload: { error: err.message, stack: err.stack },
+      note: `Error: ${err.message}`,
+    });
     return `Error searching spreadsheet: ${err.message}`;
   }
 }
