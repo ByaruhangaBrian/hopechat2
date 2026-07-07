@@ -46,13 +46,18 @@ async function getClient(businessId: string) {
     throw new Error('Google Sheets integration is not fully configured.');
   }
 
-  // Decrypt private key if it looks like it's encrypted (has colons)
-  const privateKeyRaw = config.private_key.includes(':') 
-    ? decrypt(config.private_key) 
-    : config.private_key;
-    
+  // Decrypt private key if it looks like it's encrypted (GCM format: iv:ct:tag)
+  const isEncrypted = /^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/i.test(config.private_key);
+  const privateKeyRaw = isEncrypted ? decrypt(config.private_key) : config.private_key;
+
   // Handle escaped newlines that often appear in JSON environment variables or form inputs
   const privateKey = privateKeyRaw.replace(/\\n/g, '\n');
+
+  // Validate that the result looks like a PEM private key
+  if (!privateKey.includes('-----BEGIN')) {
+    console.error('[google-sheets] Resolved private key is not valid PEM format. Source:', 
+      isEncrypted ? 'decrypted from DB' : 'plaintext from config/env');
+  }
 
   const auth = new google.auth.JWT({
     email: config.client_email,
