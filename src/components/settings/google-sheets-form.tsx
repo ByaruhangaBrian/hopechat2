@@ -250,12 +250,12 @@ export function GoogleSheetsForm() {
               </div>
               <div className="space-y-2">
                 <Label className="text-muted-foreground/60 text-xs uppercase tracking-wider">Private Key</Label>
-                <Input
-                  type="password"
+                <Textarea
                   value={config.private_key}
                   onChange={(e) => setConfig({ ...config, private_key: e.target.value })}
-                  placeholder={hasLocalKeys ? '••••••••••••••••' : 'Paste private key here'}
-                  className="bg-muted border-border text-foreground"
+                  placeholder={hasLocalKeys ? '••••••••••••••••' : 'Paste private key here (PEM format starting with -----BEGIN)'}
+                  className="bg-muted border-border text-foreground font-mono text-xs min-h-[80px]"
+                  rows={4}
                 />
               </div>
             </div>
