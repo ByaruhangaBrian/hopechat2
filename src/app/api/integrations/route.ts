@@ -69,7 +69,14 @@ export async function POST(req: Request) {
     // Prepare config (encrypt private key if provided)
     const finalConfig = { ...config };
     if (config.private_key && config.private_key.trim().length > 0) {
-      finalConfig.private_key = encrypt(config.private_key.trim());
+      const normalizedKey = config.private_key
+        .replace(/\\r\\n/g, '\n')
+        .replace(/\\r/g, '\n')
+        .replace(/\\n/g, '\n')
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .trim();
+      finalConfig.private_key = encrypt(normalizedKey);
     } else {
       // If no new key, keep existing if it exists
       const { data: existing } = await supabase

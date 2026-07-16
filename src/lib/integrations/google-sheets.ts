@@ -50,12 +50,17 @@ async function getClient(businessId: string) {
   const isEncrypted = /^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/i.test(config.private_key);
   const privateKeyRaw = isEncrypted ? decrypt(config.private_key) : config.private_key;
 
-  // Handle escaped newlines that often appear in JSON environment variables or form inputs
-  const privateKey = privateKeyRaw.replace(/\\n/g, '\n');
+  // Normalize PEM key newlines: handle literal \n, \r\n, double-escaped \\n, etc.
+  const privateKey = privateKeyRaw
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\r/g, '\n');
 
   // Validate that the result looks like a PEM private key
   if (!privateKey.includes('-----BEGIN')) {
-    console.error('[google-sheets] Resolved private key is not valid PEM format. Source:', 
+    console.error('[google-sheets] Resolved private key is not valid PEM format. Source:',
       isEncrypted ? 'decrypted from DB' : 'plaintext from config/env');
   }
 

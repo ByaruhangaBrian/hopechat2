@@ -135,11 +135,26 @@ export default function AdminSettingsPage() {
 
   async function handleSaveIntegrations() {
     setSaving(true);
+    const normalized = { ...integrationsGlobal };
+    if (normalized.google_sheets?.default_service_account?.private_key) {
+      normalized.google_sheets = {
+        ...normalized.google_sheets,
+        default_service_account: {
+          ...normalized.google_sheets.default_service_account,
+          private_key: normalized.google_sheets.default_service_account.private_key
+            .replace(/\\r\\n/g, '\n')
+            .replace(/\\r/g, '\n')
+            .replace(/\\n/g, '\n')
+            .replace(/\r\n/g, '\n')
+            .replace(/\r/g, '\n'),
+        },
+      };
+    }
     const { error } = await supabase
       .from("system_settings")
       .upsert({
         id: "integrations_global",
-        value: integrationsGlobal,
+        value: normalized,
         updated_at: new Date().toISOString(),
       });
 
