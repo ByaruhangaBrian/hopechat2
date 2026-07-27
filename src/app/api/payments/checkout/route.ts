@@ -3,6 +3,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { logHttpEvent } from "@/lib/logs/http-logs";
+import {
+  getPesapalSettings,
+  getPesapalBaseUrl,
+  authenticatePesapal,
+  createPesapalOrder,
+} from "@/lib/payments/pesapal";
 
 export async function POST(req: Request) {
   try {
@@ -49,33 +55,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // 4. Resolve Flutterwave Credentials (DB first, then Env fallback)
-    const adminSupabase = createAdminClient();
-    const { data: fwSettings } = await adminSupabase
-      .from("system_settings")
-      .select("value")
-      .eq("id", "flutterwave_global")
-      .maybeSingle();
+    // 4. Resolve Pesapal Credentials (DB first, then Env fallback)
+    const pesapalConfig = await getPesapalSettings();
 
-    const secretKey = fwSettings?.value?.secret_key || process.env.FLUTTERWAVE_SECRET_KEY;
-    const publicKey = fwSettings?.value?.public_key || process.env.FLUTTERWAVE_PUBLIC_KEY;
-
-    if (!secretKey) {
+    if (!pesapalConfig.consumer_key || !pesapalConfig.consumer_secret) {
       return NextResponse.json(
-        { error: "Flutterwave credentials are not configured on the server." },
+        { error: "Pesapal credentials are not configured on the server." },
         { status: 500 }
       );
     }
 
-    // 5. Generate unique tx_ref and calculate credits
+    // 5. Generate unique merchant reference and calculate credits
     const timestamp = Date.now();
     const uuidSuffix = crypto.randomUUID().substring(0, 8);
-    const tx_ref = `HC2-${timestamp}-${uuidSuffix}`;
+    const merchantReference = `HC2-${timestamp}-${uuidSuffix}`;
 
     // Credit calculation: 10,000 UGX = 250 credits
     const credits_added = Math.round((amount / 10000) * 250);
 
     // 6. Insert pending record in payment_transactions
+    const adminSupabase = createAdminClient();
     const { error: dbError } = await adminSupabase
       .from("payment_transactions")
       .insert({
@@ -83,7 +82,7 @@ export async function POST(req: Request) {
         amount_ugx: amount,
         credits_added: credits_added,
         payment_method: paymentMethod === "card" ? "card" : "mobile_money",
-        payment_reference: tx_ref,
+        payment_reference: merchantReference,
         status: "pending"
       });
 
@@ -92,50 +91,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Failed to create transaction record" }, { status: 500 });
     }
 
-    // 7. Call Flutterwave payment gateway API
+    // 7. Authenticate with Pesapal and create order
+    const baseUrl = getPesapalBaseUrl(pesapalConfig.site_url);
+    const token = await authenticatePesapal(
+      pesapalConfig.consumer_key,
+      pesapalConfig.consumer_secret,
+      baseUrl
+    );
+
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    const response = await fetch("https://api.flutterwave.com/v3/payments", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${secretKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        tx_ref: tx_ref,
+    const orderResult = await createPesapalOrder(
+      token,
+      {
         amount: amount,
         currency: "UGX",
-        redirect_url: `${siteUrl}/api/payments/callback`,
-        payment_options: "card,mobilemoneyuganda",
-        customer: {
-          email: user.email || "support@hopechat.com",
-          name: user.user_metadata?.full_name || "HopeChat Customer"
-        },
-        customizations: {
-          title: "HopeChat Balance Top-up",
-          description: `Purchase ${credits_added} message credits for your business`
-        }
-      })
-    });
-
-    const responseData = await response.json();
-
-    if (!response.ok || responseData.status !== "success") {
-      console.error("Flutterwave response error:", responseData);
-      await logHttpEvent({
-        userId: user.id,
-        businessId: businessId,
-        direction: "outgoing",
-        service: "payment",
-        endpoint: "/api/payments/checkout",
-        note: `Flutterwave checkout failed: ${responseData?.message || "Payment gateway error"}`,
-        statusCode: response.status || 502,
-        payload: responseData
-      });
-      return NextResponse.json(
-        { error: responseData.message || "Failed to initiate payment gateway" },
-        { status: 502 }
-      );
-    }
+        description: `HopeChat Balance Top-up: ${credits_added} message credits`,
+        callbackUrl: `${siteUrl}/api/payments/callback`,
+        merchantReference: merchantReference,
+        billingEmail: user.email || "support@hopechat.com",
+        billingFirstName: user.user_metadata?.full_name?.split(" ")[0] || "HopeChat",
+        billingLastName: user.user_metadata?.full_name?.split(" ").slice(1).join(" ") || "Customer",
+      },
+      baseUrl
+    );
 
     // Log checkout success
     await logHttpEvent({
@@ -144,13 +122,13 @@ export async function POST(req: Request) {
       direction: "outgoing",
       service: "payment",
       endpoint: "/api/payments/checkout",
-      note: `Flutterwave checkout link generated successfully for reference ${tx_ref}`,
+      note: `Pesapal checkout link generated successfully for reference ${merchantReference}`,
       statusCode: 200,
-      payload: { tx_ref, link: responseData.data.link }
+      payload: { merchantReference, redirectUrl: orderResult.redirectUrl }
     });
 
-    // Return the link
-    return NextResponse.json({ link: responseData.data.link });
+    // Return the redirect URL
+    return NextResponse.json({ link: orderResult.redirectUrl });
 
   } catch (error: any) {
     console.error("Checkout route error:", error);

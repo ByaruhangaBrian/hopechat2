@@ -36,7 +36,7 @@ export function BillingPlan() {
     } else if (topup === 'failed') {
       let desc = 'The transaction was cancelled or failed to verify.';
       if (error === 'credentials') desc = 'Payment gateway keys are not configured on the server.';
-      else if (error === 'verification') desc = 'Verification with Flutterwave failed.';
+      else if (error === 'verification') desc = 'Verification with Pesapal failed.';
       else if (error === 'currency') desc = 'Only UGX transactions are accepted.';
       else if (error === 'amount_mismatch') desc = 'Transaction amount mismatch detected.';
       
@@ -173,7 +173,7 @@ export function BillingPlan() {
               Purchase Message Credits
             </CardTitle>
             <CardDescription>
-              Instantly add credits to your account using Flutterwave.
+              Instantly add credits to your account using Pesapal.
             </CardDescription>
           </CardHeader>
           <CardContent>

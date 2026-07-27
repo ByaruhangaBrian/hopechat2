@@ -55,9 +55,10 @@ export default function AdminSettingsPage() {
     meta_app_secret: "",
     gemini_global_key: "",
   });
-  const [flutterwaveGlobal, setFlutterwaveGlobal] = useState({
-    public_key: "",
-    secret_key: "",
+  const [pesapalGlobal, setPesapalGlobal] = useState({
+    consumer_key: "",
+    consumer_secret: "",
+    site_url: "live.pesapal.com",
     is_enabled: false,
   });
   const [loading, setLoading] = useState(true);
@@ -71,24 +72,25 @@ export default function AdminSettingsPage() {
         { data: sys },
         { data: int },
         { data: creds },
-        { data: fw }
+        { data: pp }
       ] = await Promise.all([
         supabase.from("system_settings").select("*").eq("id", "whatsapp_global").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "system_config").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "integrations_global").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "platform_credentials").maybeSingle(),
-        supabase.from("system_settings").select("*").eq("id", "flutterwave_global").maybeSingle(),
+        supabase.from("system_settings").select("*").eq("id", "pesapal_global").maybeSingle(),
       ]);
 
       if (wa) setWhatsappSettings(wa.value);
       if (sys) setSystemConfig(sys.value);
       if (int) setIntegrationsGlobal(int.value);
       if (creds) setPlatformCredentials(creds.value);
-      if (fw?.value) {
-        setFlutterwaveGlobal({
-          public_key: fw.value.public_key || "",
-          secret_key: fw.value.secret_key || "",
-          is_enabled: !!fw.value.is_enabled,
+      if (pp?.value) {
+        setPesapalGlobal({
+          consumer_key: pp.value.consumer_key || "",
+          consumer_secret: pp.value.consumer_secret || "",
+          site_url: pp.value.site_url || "live.pesapal.com",
+          is_enabled: !!pp.value.is_enabled,
         });
       }
       
@@ -189,15 +191,15 @@ export default function AdminSettingsPage() {
     const { error } = await supabase
       .from("system_settings")
       .upsert({
-        id: "flutterwave_global",
-        value: flutterwaveGlobal,
+        id: "pesapal_global",
+        value: pesapalGlobal,
         updated_at: new Date().toISOString(),
       });
 
     if (error) {
-      toast.error("Failed to save Flutterwave settings");
+      toast.error("Failed to save Pesapal settings");
     } else {
-      toast.success("Flutterwave configurations saved successfully");
+      toast.success("Pesapal gateway configuration saved successfully");
     }
     setSaving(false);
   }
@@ -548,39 +550,57 @@ export default function AdminSettingsPage() {
             <CardHeader>
               <CardTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
                 <CreditCard className="h-5 w-5 text-primary" />
-                Flutterwave Gateway Integration
+                Pesapal Gateway Integration
               </CardTitle>
               <CardDescription>
-                Configure API keys to accept card and mobile money collections for credit top-ups dynamically.
+                Configure Pesapal API 3.0 credentials to accept card and mobile money collections for credit top-ups.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="flw_public_key" className="text-sm font-semibold text-foreground">
-                    Flutterwave Public Key (Live / Test)
+                  <Label htmlFor="pp_consumer_key" className="text-sm font-semibold text-foreground">
+                    Consumer Key
                   </Label>
                   <Input
-                    id="flw_public_key"
-                    placeholder="FLWPUBK_xxxxxx-xxxxxxxxxxxxxxxx-X"
-                    value={flutterwaveGlobal.public_key}
-                    onChange={(e) => setFlutterwaveGlobal(prev => ({ ...prev, public_key: e.target.value }))}
+                    id="pp_consumer_key"
+                    placeholder="Enter your Pesapal consumer key"
+                    value={pesapalGlobal.consumer_key}
+                    onChange={(e) => setPesapalGlobal(prev => ({ ...prev, consumer_key: e.target.value }))}
                     className="bg-background border-border text-foreground font-mono"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="flw_secret_key" className="text-sm font-semibold text-foreground">
-                    Flutterwave Secret Key (Live / Test)
+                  <Label htmlFor="pp_consumer_secret" className="text-sm font-semibold text-foreground">
+                    Consumer Secret
                   </Label>
                   <Input
-                    id="flw_secret_key"
+                    id="pp_consumer_secret"
                     type="password"
-                    placeholder="FLWSECK_xxxxxx-xxxxxxxxxxxxxxxx-X"
-                    value={flutterwaveGlobal.secret_key}
-                    onChange={(e) => setFlutterwaveGlobal(prev => ({ ...prev, secret_key: e.target.value }))}
+                    placeholder="Enter your Pesapal consumer secret"
+                    value={pesapalGlobal.consumer_secret}
+                    onChange={(e) => setPesapalGlobal(prev => ({ ...prev, consumer_secret: e.target.value }))}
                     className="bg-background border-border text-foreground font-mono"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="pp_site_url" className="text-sm font-semibold text-foreground">
+                    Environment
+                  </Label>
+                  <select
+                    id="pp_site_url"
+                    value={pesapalGlobal.site_url}
+                    onChange={(e) => setPesapalGlobal(prev => ({ ...prev, site_url: e.target.value }))}
+                    className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground font-mono"
+                  >
+                    <option value="live.pesapal.com">Live (pay.pesapal.com)</option>
+                    <option value="demo.pesapal.com">Sandbox (demo.pesapal.com)</option>
+                  </select>
+                  <p className="text-[11px] text-muted-foreground/60">
+                    Use Sandbox for testing. Switch to Live before going to production.
+                  </p>
                 </div>
 
                 <div className="flex items-center justify-between p-4 bg-muted/30 border border-border rounded-lg">
@@ -589,13 +609,13 @@ export default function AdminSettingsPage() {
                       Gateway Active Status
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      Enables or disables Flutterwave standard checkout collection links.
+                      Enables or disables Pesapal checkout collection links.
                     </p>
                   </div>
                   <Switch 
                     id="gateway_active"
-                    checked={flutterwaveGlobal.is_enabled}
-                    onCheckedChange={(val) => setFlutterwaveGlobal(prev => ({ ...prev, is_enabled: val }))}
+                    checked={pesapalGlobal.is_enabled}
+                    onCheckedChange={(val) => setPesapalGlobal(prev => ({ ...prev, is_enabled: val }))}
                   />
                 </div>
 

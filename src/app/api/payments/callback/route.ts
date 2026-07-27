@@ -1,24 +1,30 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { logHttpEvent } from "@/lib/logs/http-logs";
+import {
+  getPesapalSettings,
+  getPesapalBaseUrl,
+  authenticatePesapal,
+  queryPesapalTransactionStatus,
+} from "@/lib/payments/pesapal";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const status = searchParams.get("status");
-  const transactionId = searchParams.get("transaction_id");
+  const orderTrackingId = searchParams.get("OrderTrackingId");
+  const merchantReference = searchParams.get("OrderMerchantReference");
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
-  // If the status is not successful, redirect to failure directly
-  if (status !== "successful" || !transactionId) {
-    console.warn("Callback received non-successful status or missing transaction ID", { status, transactionId });
+  // If Pesapal did not provide the required params, redirect to failure
+  if (!orderTrackingId || !merchantReference) {
+    console.warn("Pesapal callback missing required params", { orderTrackingId, merchantReference });
     await logHttpEvent({
       direction: "incoming",
       service: "payment",
       endpoint: "/api/payments/callback",
-      note: `Callback failed: non-successful status (${status}) or missing transaction ID (${transactionId})`,
+      note: `Pesapal callback failed: missing OrderTrackingId or OrderMerchantReference`,
       statusCode: 400,
-      payload: { status, transactionId }
+      payload: { orderTrackingId, merchantReference }
     });
     return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed`);
   }
@@ -26,123 +32,86 @@ export async function GET(req: Request) {
   try {
     const adminSupabase = createAdminClient();
 
-    // 1. Resolve Flutterwave secret key (DB first, then Env fallback)
-    const { data: fwSettings } = await adminSupabase
-      .from("system_settings")
-      .select("value")
-      .eq("id", "flutterwave_global")
-      .maybeSingle();
+    // 1. Resolve Pesapal credentials
+    const pesapalConfig = await getPesapalSettings();
 
-    const secretKey = fwSettings?.value?.secret_key || process.env.FLUTTERWAVE_SECRET_KEY;
-
-    if (!secretKey) {
-      console.error("Flutterwave credentials not configured on callback");
+    if (!pesapalConfig.consumer_key || !pesapalConfig.consumer_secret) {
+      console.error("Pesapal credentials not configured on callback");
       await logHttpEvent({
         direction: "incoming",
         service: "payment",
         endpoint: "/api/payments/callback",
-        note: "Callback failed: Flutterwave keys not configured in system settings",
+        note: "Pesapal callback failed: credentials not configured in system settings",
         statusCode: 500
       });
       return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed&error=credentials`);
     }
 
-    // 2. Perform verification request to Flutterwave
-    const response = await fetch(`https://api.flutterwave.com/v3/transactions/${transactionId}/verify`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${secretKey}`,
-        "Content-Type": "application/json"
-      }
-    });
+    // 2. Authenticate with Pesapal and verify transaction status
+    const baseUrl = getPesapalBaseUrl(pesapalConfig.site_url);
+    const token = await authenticatePesapal(
+      pesapalConfig.consumer_key,
+      pesapalConfig.consumer_secret,
+      baseUrl
+    );
 
-    const responseData = await response.json();
+    const txStatus = await queryPesapalTransactionStatus(
+      token,
+      orderTrackingId,
+      merchantReference,
+      baseUrl
+    );
 
-    if (!response.ok || responseData.status !== "success" || responseData.data.status !== "successful") {
-      console.error("Flutterwave verification failed:", responseData);
+    // Pesapal status: "0" = completed/success, "1" = pending, "2" = failed/invalid
+    if (txStatus.status !== "0") {
+      console.error("Pesapal transaction not completed:", txStatus);
       await logHttpEvent({
         direction: "incoming",
         service: "payment",
         endpoint: "/api/payments/callback",
-        note: `Callback verification failed for Flutterwave tx ID ${transactionId}`,
-        statusCode: response.status || 502,
-        payload: responseData
+        note: `Pesapal callback verification failed: status=${txStatus.status} (${txStatus.statusDescription}) for ref ${merchantReference}`,
+        statusCode: 400,
+        payload: txStatus
       });
       return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed&error=verification`);
     }
 
-    const { tx_ref, amount, currency } = responseData.data;
-
-    // Verify it is UGX
-    if (currency !== "UGX") {
-      console.error("Currency mismatch:", currency);
-      await logHttpEvent({
-        direction: "incoming",
-        service: "payment",
-        endpoint: "/api/payments/callback",
-        note: `Callback currency mismatch: Expected UGX, received ${currency}`,
-        statusCode: 400,
-        payload: { currency, amount, tx_ref }
-      });
-      return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed&error=currency`);
-    }
-
-    // 3. Check db for duplicate tx_ref and process update atomically
-    // Fetch transaction record first to confirm it matches amount and is pending
+    // 3. Check db for matching merchant reference and process update atomically
     const { data: tx, error: fetchError } = await adminSupabase
       .from("payment_transactions")
       .select("*")
-      .eq("payment_reference", tx_ref)
+      .eq("payment_reference", merchantReference)
       .maybeSingle();
 
     if (fetchError || !tx) {
-      console.error("Transaction record not found in database:", tx_ref, fetchError);
+      console.error("Transaction record not found in database:", merchantReference, fetchError);
       await logHttpEvent({
         direction: "incoming",
         service: "payment",
         endpoint: "/api/payments/callback",
-        note: `Callback transaction ref not found: ${tx_ref}`,
+        note: `Pesapal callback transaction ref not found: ${merchantReference}`,
         statusCode: 404,
-        payload: { tx_ref }
+        payload: { merchantReference }
       });
       return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed&error=not_found`);
     }
 
-    // If transaction has already been processed (e.g. webhook or double callback click)
+    // If transaction has already been processed (e.g. IPN or double callback click)
     if (tx.status === "successful" || tx.status === "success") {
-      console.warn("Transaction already marked successful:", tx_ref);
+      console.warn("Transaction already marked successful:", merchantReference);
       await logHttpEvent({
         businessId: tx.business_id,
         direction: "incoming",
         service: "payment",
         endpoint: "/api/payments/callback",
-        note: `Callback received for already completed transaction ref: ${tx_ref}`,
+        note: `Pesapal callback received for already completed transaction ref: ${merchantReference}`,
         statusCode: 200,
-        payload: { tx_ref, status: tx.status }
+        payload: { merchantReference, status: tx.status }
       });
       return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=success`);
     }
 
-    // Validate amount matches (handling float conversion carefully)
-    const dbAmount = parseFloat(tx.amount_ugx);
-    const apiAmount = parseFloat(amount);
-    if (Math.abs(dbAmount - apiAmount) > 0.01) {
-      console.error("Amount mismatch:", { dbAmount, apiAmount });
-      await logHttpEvent({
-        businessId: tx.business_id,
-        direction: "incoming",
-        service: "payment",
-        endpoint: "/api/payments/callback",
-        note: `Callback verification failed: amount mismatch (DB: ${dbAmount}, API: ${apiAmount})`,
-        statusCode: 400,
-        payload: { tx_ref, dbAmount, apiAmount }
-      });
-      return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed&error=amount_mismatch`);
-    }
-
     // 4. Update status atomically to "successful"
-    // Since the database trigger 'trigger_process_transaction_ledger' executes AFTER UPDATE inside the same transaction block,
-    // this single atomic query updates transaction status and increments business balance/credits in one strict ACID block.
     const { data: updatedTx, error: updateError } = await adminSupabase
       .from("payment_transactions")
       .update({ status: "successful" })
@@ -152,13 +121,13 @@ export async function GET(req: Request) {
       .maybeSingle();
 
     if (updateError || !updatedTx) {
-      console.error("Failed to update transaction status atomically (possible concurrency lock):", updateError);
+      console.error("Failed to update transaction status atomically:", updateError);
       await logHttpEvent({
         businessId: tx.business_id,
         direction: "incoming",
         service: "payment",
         endpoint: "/api/payments/callback",
-        note: `Callback database status update failed for transaction ID ${tx.id}`,
+        note: `Pesapal callback database status update failed for transaction ID ${tx.id}`,
         statusCode: 500,
         payload: { error: updateError, tx_id: tx.id }
       });
@@ -171,21 +140,21 @@ export async function GET(req: Request) {
       direction: "incoming",
       service: "payment",
       endpoint: "/api/payments/callback",
-      note: `Successfully verified and applied payment top-up of ${amount} UGX (+${tx.credits_added} credits) for ${tx_ref}`,
+      note: `Successfully verified and applied Pesapal payment of ${tx.amount_ugx} UGX (+${tx.credits_added} credits) for ${merchantReference}`,
       statusCode: 200,
-      payload: { tx_ref, amount, credits_added: tx.credits_added }
+      payload: { merchantReference, amount: tx.amount_ugx, credits_added: tx.credits_added }
     });
 
     // Redirect to settings with success parameter
     return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=success`);
 
   } catch (error: any) {
-    console.error("Callback route error:", error);
+    console.error("Pesapal callback route error:", error);
     await logHttpEvent({
       direction: "incoming",
       service: "payment",
       endpoint: "/api/payments/callback",
-      note: `Callback route processing error: ${error?.message || "Unknown error"}`,
+      note: `Pesapal callback route processing error: ${error?.message || "Unknown error"}`,
       statusCode: 500,
       payload: { error: error?.message || error }
     });
