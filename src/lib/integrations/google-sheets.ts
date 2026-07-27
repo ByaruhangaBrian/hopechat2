@@ -1,4 +1,5 @@
 import { google } from 'googleapis';
+import crypto from 'crypto';
 import { decrypt } from '@/lib/whatsapp/encryption';
 import { supabaseAdmin } from '@/lib/automations/admin-client';
 import { logHttpEvent } from '@/lib/logs/http-logs';
@@ -9,6 +10,54 @@ export interface GoogleSheetsConfig {
   private_key?: string;
   reference_column?: string;
   return_columns?: string;
+}
+
+function normalizePemKey(raw: string): string {
+  let key = raw;
+
+  // Strip surrounding quotes that may come from env var misconfiguration
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1);
+  }
+
+  // Strip BOM if present
+  key = key.replace(/^\uFEFF/, '');
+
+  // Collapse all newline variants (escaped and actual) into real newlines
+  key = key
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\r/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+
+  // Remove any whitespace between PEM header/footer and content
+  key = key.replace(/(-----BEGIN [A-Z ]+-----)\s+/g, '$1\n');
+  key = key.replace(/\s+(-----END [A-Z ]+-----)/g, '\n$1');
+
+  return key;
+}
+
+function validatePrivateKey(key: string, source: string): string {
+  const normalized = normalizePemKey(key);
+
+  console.log(`[google-sheets] Key source: ${source}, length: ${normalized.length}, starts: ${normalized.substring(0, 30)}..., ends: ...${normalized.substring(normalized.length - 30)}`);
+
+  if (!normalized.includes('-----BEGIN PRIVATE KEY-----')) {
+    console.error(`[google-sheets] Key from ${source} does not contain valid PEM header`);
+    throw new Error(`Invalid private key format from ${source}: missing PEM header`);
+  }
+
+  // Test with Node.js crypto to catch OpenSSL errors early with a clear message
+  try {
+    const keyObj = crypto.createPrivateKey(normalized);
+    console.log(`[google-sheets] Key validated OK via crypto.createPrivateKey (type: ${keyObj.asymmetricKeyType})`);
+  } catch (err: any) {
+    console.error(`[google-sheets] crypto.createPrivateKey FAILED for key from ${source}:`, err.message);
+    throw new Error(`Private key from ${source} is invalid: ${err.message}`);
+  }
+
+  return normalized;
 }
 
 async function getClient(businessId: string) {
@@ -24,6 +73,7 @@ async function getClient(businessId: string) {
     .maybeSingle();
 
   let config = (integration?.config as unknown as GoogleSheetsConfig) || {};
+  let keySource = 'business_integration';
 
   // 2. Fallback to global settings if local config is missing keys
   if (!config.client_email || !config.private_key) {
@@ -35,6 +85,14 @@ async function getClient(businessId: string) {
 
     const globalConfig = (globalSettings?.value as any)?.google_sheets || {};
     
+    if (config.private_key) {
+      keySource = 'business_integration';
+    } else if (globalConfig.default_service_account?.private_key) {
+      keySource = 'system_settings_global';
+    } else {
+      keySource = 'env_var';
+    }
+
     config = {
       ...config,
       client_email: config.client_email || globalConfig.default_service_account?.client_email || process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
@@ -48,20 +106,27 @@ async function getClient(businessId: string) {
 
   // Decrypt private key if it looks like it's encrypted (GCM format: iv:ct:tag)
   const isEncrypted = /^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/i.test(config.private_key);
-  const privateKeyRaw = isEncrypted ? decrypt(config.private_key) : config.private_key;
+  let privateKeyRaw: string;
+  try {
+    privateKeyRaw = isEncrypted ? decrypt(config.private_key) : config.private_key;
+    if (isEncrypted) keySource += ' (decrypted)';
+  } catch (decryptErr: any) {
+    console.error(`[google-sheets] Decryption failed for key from ${keySource}:`, decryptErr.message);
+    throw new Error(`Failed to decrypt private key: ${decryptErr.message}`);
+  }
 
-  // Normalize PEM key newlines: handle literal \n, \r\n, double-escaped \\n, etc.
-  const privateKey = privateKeyRaw
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    .replace(/\\n/g, '\n')
-    .replace(/\\r\\n/g, '\n')
-    .replace(/\\r/g, '\n');
-
-  // Validate that the result looks like a PEM private key
-  if (!privateKey.includes('-----BEGIN')) {
-    console.error('[google-sheets] Resolved private key is not valid PEM format. Source:',
-      isEncrypted ? 'decrypted from DB' : 'plaintext from config/env');
+  let privateKey: string;
+  try {
+    privateKey = validatePrivateKey(privateKeyRaw, keySource);
+  } catch (validationErr: any) {
+    // If the DB key failed, try the env var as a fallback
+    const envKey = process.env.GOOGLE_SHEETS_PRIVATE_KEY;
+    if (envKey && envKey !== config.private_key) {
+      console.warn(`[google-sheets] DB key from ${keySource} failed validation, falling back to env var`);
+      privateKey = validatePrivateKey(envKey, 'env_var_fallback');
+    } else {
+      throw validationErr;
+    }
   }
 
   const auth = new google.auth.JWT({
