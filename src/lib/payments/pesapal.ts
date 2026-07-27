@@ -53,8 +53,10 @@ export async function authenticatePesapal(
 
   const data = await response.json();
 
+  console.log("[Pesapal Auth]", JSON.stringify({ status: response.status, keys: Object.keys(data), hasToken: !!data.token }));
+
   if (!response.ok || !data.token) {
-    throw new Error(`Pesapal auth failed: ${data.message || response.statusText}`);
+    throw new Error(`Pesapal auth failed (${response.status}): ${JSON.stringify(data)}`);
   }
 
   return data.token;
