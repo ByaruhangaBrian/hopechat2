@@ -15,7 +15,6 @@ export async function GET(req: Request) {
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
-  // If Pesapal did not provide the required params, redirect to failure
   if (!orderTrackingId || !merchantReference) {
     console.warn("Pesapal callback missing required params", { orderTrackingId, merchantReference });
     await logHttpEvent({
@@ -55,28 +54,23 @@ export async function GET(req: Request) {
       baseUrl
     );
 
-    const txStatus = await queryPesapalTransactionStatus(
-      token,
-      orderTrackingId,
-      merchantReference,
-      baseUrl
-    );
+    const txStatus = await queryPesapalTransactionStatus(token, orderTrackingId, baseUrl);
 
-    // Pesapal status: "0" = completed/success, "1" = pending, "2" = failed/invalid
-    if (txStatus.status !== "0") {
+    // Pesapal status_code: 0=INVALID, 1=COMPLETED, 2=FAILED, 3=REVERSED
+    if (txStatus.statusCode !== 1) {
       console.error("Pesapal transaction not completed:", txStatus);
       await logHttpEvent({
         direction: "incoming",
         service: "payment",
         endpoint: "/api/payments/callback",
-        note: `Pesapal callback verification failed: status=${txStatus.status} (${txStatus.statusDescription}) for ref ${merchantReference}`,
+        note: `Pesapal callback verification failed: status_code=${txStatus.statusCode} (${txStatus.statusDescription}) for ref ${merchantReference}`,
         statusCode: 400,
         payload: txStatus
       });
       return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed&error=verification`);
     }
 
-    // 3. Check db for matching merchant reference and process update atomically
+    // 3. Check db for matching merchant reference
     const { data: tx, error: fetchError } = await adminSupabase
       .from("payment_transactions")
       .select("*")
@@ -96,7 +90,7 @@ export async function GET(req: Request) {
       return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed&error=not_found`);
     }
 
-    // If transaction has already been processed (e.g. IPN or double callback click)
+    // If already processed (idempotent)
     if (tx.status === "successful" || tx.status === "success") {
       console.warn("Transaction already marked successful:", merchantReference);
       await logHttpEvent({
@@ -116,7 +110,7 @@ export async function GET(req: Request) {
       .from("payment_transactions")
       .update({ status: "successful" })
       .eq("id", tx.id)
-      .eq("status", "pending") // Strict optimistic lock preventing concurrent updates
+      .eq("status", "pending")
       .select()
       .maybeSingle();
 
@@ -134,18 +128,16 @@ export async function GET(req: Request) {
       return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=failed&error=concurrency`);
     }
 
-    // Log callback processing success
     await logHttpEvent({
       businessId: tx.business_id,
       direction: "incoming",
       service: "payment",
       endpoint: "/api/payments/callback",
-      note: `Successfully verified and applied Pesapal payment of ${tx.amount_ugx} UGX (+${tx.credits_added} credits) for ${merchantReference}`,
+      note: `Successfully verified Pesapal payment: ${tx.amount_ugx} UGX (+${tx.credits_added} credits) for ${merchantReference}`,
       statusCode: 200,
-      payload: { merchantReference, amount: tx.amount_ugx, credits_added: tx.credits_added }
+      payload: { merchantReference, amount: tx.amount_ugx, credits_added: tx.credits_added, paymentMethod: txStatus.paymentMethod, confirmationCode: txStatus.confirmationCode }
     });
 
-    // Redirect to settings with success parameter
     return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=success`);
 
   } catch (error: any) {

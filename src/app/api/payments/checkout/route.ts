@@ -8,6 +8,7 @@ import {
   getPesapalBaseUrl,
   authenticatePesapal,
   createPesapalOrder,
+  getOrCreateIpnId,
 } from "@/lib/payments/pesapal";
 
 export async function POST(req: Request) {
@@ -66,11 +67,7 @@ export async function POST(req: Request) {
     }
 
     // 5. Generate unique merchant reference and calculate credits
-    const timestamp = Date.now();
-    const uuidSuffix = crypto.randomUUID().substring(0, 8);
-    const merchantReference = `HC2-${timestamp}-${uuidSuffix}`;
-
-    // Credit calculation: 10,000 UGX = 250 credits
+    const merchantReference = `HC2-${Date.now()}-${crypto.randomUUID().substring(0, 8)}`;
     const credits_added = Math.round((amount / 10000) * 250);
 
     // 6. Insert pending record in payment_transactions
@@ -91,7 +88,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Failed to create transaction record" }, { status: 500 });
     }
 
-    // 7. Authenticate with Pesapal and create order
+    // 7. Authenticate with Pesapal and get IPN notification_id
     const baseUrl = getPesapalBaseUrl(pesapalConfig.site_url);
     const token = await authenticatePesapal(
       pesapalConfig.consumer_key,
@@ -100,17 +97,26 @@ export async function POST(req: Request) {
     );
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const ipnUrl = `${siteUrl}/api/payments/ipn`;
+
+    // Register IPN URL (reuses existing if already registered)
+    const notificationId = await getOrCreateIpnId(token, ipnUrl, baseUrl);
+
+    // 8. Create order with Pesapal
     const orderResult = await createPesapalOrder(
       token,
       {
+        id: merchantReference,
         amount: amount,
         currency: "UGX",
         description: `HopeChat Balance Top-up: ${credits_added} message credits`,
         callbackUrl: `${siteUrl}/api/payments/callback`,
-        merchantReference: merchantReference,
+        notificationId: notificationId,
         billingEmail: user.email || "support@hopechat.com",
+        billingPhone: user.user_metadata?.phone || "",
         billingFirstName: user.user_metadata?.full_name?.split(" ")[0] || "HopeChat",
         billingLastName: user.user_metadata?.full_name?.split(" ").slice(1).join(" ") || "Customer",
+        billingCountryCode: "UG",
       },
       baseUrl
     );
@@ -122,12 +128,11 @@ export async function POST(req: Request) {
       direction: "outgoing",
       service: "payment",
       endpoint: "/api/payments/checkout",
-      note: `Pesapal checkout link generated successfully for reference ${merchantReference}`,
+      note: `Pesapal checkout link generated for ref ${merchantReference}`,
       statusCode: 200,
       payload: { merchantReference, redirectUrl: orderResult.redirectUrl }
     });
 
-    // Return the redirect URL
     return NextResponse.json({ link: orderResult.redirectUrl });
 
   } catch (error: any) {

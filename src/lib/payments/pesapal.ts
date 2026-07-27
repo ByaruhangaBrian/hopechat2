@@ -39,9 +39,12 @@ export async function authenticatePesapal(
   consumerSecret: string,
   baseUrl: string
 ): Promise<string> {
-  const response = await fetch(`${baseUrl}/api/Auth/GetToken`, {
+  const response = await fetch(`${baseUrl}/api/Auth/RequestToken`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({
       consumer_key: consumerKey,
       consumer_secret: consumerSecret,
@@ -58,14 +61,17 @@ export async function authenticatePesapal(
 }
 
 export interface PesapalOrderParams {
+  id: string;
   amount: number;
   currency: string;
   description: string;
   callbackUrl: string;
-  merchantReference: string;
+  notificationId: string;
   billingEmail?: string;
+  billingPhone?: string;
   billingFirstName?: string;
   billingLastName?: string;
+  billingCountryCode?: string;
 }
 
 export interface PesapalOrderResult {
@@ -79,28 +85,34 @@ export async function createPesapalOrder(
   params: PesapalOrderParams,
   baseUrl: string
 ): Promise<PesapalOrderResult> {
-  const response = await fetch(`${baseUrl}/api/Orders/SubmitOrderRequest`, {
+  const response = await fetch(`${baseUrl}/api/Transactions/SubmitOrderRequest`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
+      Accept: "application/json",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      amount: params.amount,
+      id: params.id,
       currency: params.currency,
+      amount: params.amount,
       description: params.description,
       callback_url: params.callbackUrl,
-      merchant_reference: params.merchantReference,
-      billing_email_address: params.billingEmail || "",
-      billing_first_name: params.billingFirstName || "",
-      billing_last_name: params.billingLastName || "",
+      notification_id: params.notificationId,
+      billing_address: {
+        email_address: params.billingEmail || "",
+        phone_number: params.billingPhone || "",
+        country_code: params.billingCountryCode || "UG",
+        first_name: params.billingFirstName || "",
+        last_name: params.billingLastName || "",
+      },
     }),
   });
 
   const data = await response.json();
 
   if (!response.ok || !data.redirect_url) {
-    throw new Error(`Pesapal order creation failed: ${data.message || response.statusText}`);
+    throw new Error(`Pesapal order creation failed: ${data.message || JSON.stringify(data)}`);
   }
 
   return {
@@ -113,27 +125,28 @@ export async function createPesapalOrder(
 export interface PesapalTransactionStatus {
   orderTrackingId: string;
   merchantReference: string;
-  status: string; // "0" = completed, "1" = pending, "2" = failed
+  statusCode: number; // 0=INVALID, 1=COMPLETED, 2=FAILED, 3=REVERSED
   statusDescription: string;
+  amount: number;
+  paymentMethod: string;
+  confirmationCode: string;
 }
 
 export async function queryPesapalTransactionStatus(
   token: string,
   orderTrackingId: string,
-  merchantReference: string,
   baseUrl: string
 ): Promise<PesapalTransactionStatus> {
-  const response = await fetch(`${baseUrl}/api/Transactions/GetTransactionStatus`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      OrderTrackingId: orderTrackingId,
-      OrderMerchantReference: merchantReference,
-    }),
-  });
+  const response = await fetch(
+    `${baseUrl}/api/Transactions/GetTransactionStatus?orderTrackingId=${encodeURIComponent(orderTrackingId)}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+    }
+  );
 
   const data = await response.json();
 
@@ -142,9 +155,85 @@ export async function queryPesapalTransactionStatus(
   }
 
   return {
-    orderTrackingId: data.order_tracking_id || orderTrackingId,
-    merchantReference: data.merchant_reference || merchantReference,
-    status: String(data.status),
-    statusDescription: data.status_description || "",
+    orderTrackingId: orderTrackingId,
+    merchantReference: data.merchant_reference || "",
+    statusCode: data.status_code ?? -1,
+    statusDescription: data.payment_status_description || "",
+    amount: data.amount || 0,
+    paymentMethod: data.payment_method || "",
+    confirmationCode: data.confirmation_code || "",
   };
+}
+
+export interface PesapalIpnRegistration {
+  ipnId: string;
+  url: string;
+}
+
+export async function registerPesapalIpn(
+  token: string,
+  ipnUrl: string,
+  baseUrl: string
+): Promise<PesapalIpnRegistration> {
+  const response = await fetch(`${baseUrl}/api/URLSetup/RegisterIPN`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      url: ipnUrl,
+      ipn_notification_type: "POST",
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data.ipn_id) {
+    throw new Error(`Pesapal IPN registration failed: ${data.message || JSON.stringify(data)}`);
+  }
+
+  return {
+    ipnId: data.ipn_id,
+    url: data.url || ipnUrl,
+  };
+}
+
+export async function getPesapalRegisteredIpn(
+  token: string,
+  baseUrl: string
+): Promise<Array<{ ipn_id: string; url: string; ipn_notification_type: string }>> {
+  const response = await fetch(`${baseUrl}/api/URLSetup/GetIpnList`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(`Pesapal IPN list failed: ${data.message || response.statusText}`);
+  }
+
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getOrCreateIpnId(
+  token: string,
+  ipnUrl: string,
+  baseUrl: string
+): Promise<string> {
+  // Check existing IPNs
+  const existing = await getPesapalRegisteredIpn(token, baseUrl);
+  const match = existing.find((ipn) => ipn.url === ipnUrl);
+  if (match) {
+    return match.ipn_id;
+  }
+
+  // Register new IPN
+  const registered = await registerPesapalIpn(token, ipnUrl, baseUrl);
+  return registered.ipnId;
 }

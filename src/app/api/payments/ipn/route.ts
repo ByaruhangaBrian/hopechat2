@@ -11,19 +11,22 @@ import {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { OrderTrackingId, OrderMerchantReference, Status, StatusDescription } = body;
+    const { OrderTrackingId, OrderMerchantReference, OrderNotificationType } = body;
 
     await logHttpEvent({
       direction: "incoming",
       service: "payment",
       endpoint: "/api/payments/ipn",
-      note: `Pesapal IPN received: ref=${OrderMerchantReference}, status=${Status} (${StatusDescription})`,
+      note: `Pesapal IPN received: ref=${OrderMerchantReference}, type=${OrderNotificationType}`,
       statusCode: 200,
       payload: body
     });
 
     if (!OrderTrackingId || !OrderMerchantReference) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return NextResponse.json(
+        { orderNotificationType: "IPNCHANGE", orderTrackingId: "", orderMerchantReference: "", status: 500 },
+        { status: 200 }
+      );
     }
 
     const adminSupabase = createAdminClient();
@@ -33,7 +36,10 @@ export async function POST(req: Request) {
 
     if (!pesapalConfig.consumer_key || !pesapalConfig.consumer_secret) {
       console.error("Pesapal credentials not configured for IPN verification");
-      return NextResponse.json({ error: "Credentials not configured" }, { status: 500 });
+      return NextResponse.json(
+        { orderNotificationType: "IPNCHANGE", orderTrackingId: OrderTrackingId, orderMerchantReference: OrderMerchantReference, status: 500 },
+        { status: 200 }
+      );
     }
 
     // 2. Authenticate and verify the transaction status with Pesapal directly
@@ -44,24 +50,22 @@ export async function POST(req: Request) {
       baseUrl
     );
 
-    const txStatus = await queryPesapalTransactionStatus(
-      token,
-      OrderTrackingId,
-      OrderMerchantReference,
-      baseUrl
-    );
+    const txStatus = await queryPesapalTransactionStatus(token, OrderTrackingId, baseUrl);
 
-    // Only process completed transactions (Pesapal status "0" = success)
-    if (txStatus.status !== "0") {
+    // Pesapal status_code: 0=INVALID, 1=COMPLETED, 2=FAILED, 3=REVERSED
+    if (txStatus.statusCode !== 1) {
       await logHttpEvent({
         direction: "incoming",
         service: "payment",
         endpoint: "/api/payments/ipn",
-        note: `Pesapal IPN: transaction not completed, status=${txStatus.status} for ref ${OrderMerchantReference}`,
+        note: `Pesapal IPN: transaction not completed, status_code=${txStatus.statusCode} for ref ${OrderMerchantReference}`,
         statusCode: 200,
         payload: txStatus
       });
-      return NextResponse.json({ received: true });
+      return NextResponse.json(
+        { orderNotificationType: "IPNCHANGE", orderTrackingId: OrderTrackingId, orderMerchantReference: OrderMerchantReference, status: 200 },
+        { status: 200 }
+      );
     }
 
     // 3. Find the transaction in our database
@@ -73,12 +77,18 @@ export async function POST(req: Request) {
 
     if (fetchError || !tx) {
       console.error("IPN: Transaction record not found:", OrderMerchantReference);
-      return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
+      return NextResponse.json(
+        { orderNotificationType: "IPNCHANGE", orderTrackingId: OrderTrackingId, orderMerchantReference: OrderMerchantReference, status: 500 },
+        { status: 200 }
+      );
     }
 
     // If already processed, return success (idempotent)
     if (tx.status === "successful" || tx.status === "success") {
-      return NextResponse.json({ received: true });
+      return NextResponse.json(
+        { orderNotificationType: "IPNCHANGE", orderTrackingId: OrderTrackingId, orderMerchantReference: OrderMerchantReference, status: 200 },
+        { status: 200 }
+      );
     }
 
     // 4. Update status atomically
@@ -92,7 +102,10 @@ export async function POST(req: Request) {
 
     if (updateError || !updatedTx) {
       console.error("IPN: Failed to update transaction:", updateError);
-      return NextResponse.json({ error: "Update failed" }, { status: 500 });
+      return NextResponse.json(
+        { orderNotificationType: "IPNCHANGE", orderTrackingId: OrderTrackingId, orderMerchantReference: OrderMerchantReference, status: 500 },
+        { status: 200 }
+      );
     }
 
     await logHttpEvent({
@@ -105,7 +118,10 @@ export async function POST(req: Request) {
       payload: { OrderMerchantReference, amount: tx.amount_ugx, credits_added: tx.credits_added }
     });
 
-    return NextResponse.json({ received: true });
+    return NextResponse.json(
+      { orderNotificationType: "IPNCHANGE", orderTrackingId: OrderTrackingId, orderMerchantReference: OrderMerchantReference, status: 200 },
+      { status: 200 }
+    );
 
   } catch (error: any) {
     console.error("Pesapal IPN route error:", error);
@@ -117,6 +133,9 @@ export async function POST(req: Request) {
       statusCode: 500,
       payload: { error: error?.message || error }
     });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { orderNotificationType: "IPNCHANGE", orderTrackingId: "", orderMerchantReference: "", status: 500 },
+      { status: 200 }
+    );
   }
 }
