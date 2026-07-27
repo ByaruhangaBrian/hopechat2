@@ -3,11 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { Coins, CreditCard, Landmark, Loader2, ArrowRight, ShieldCheck, Check } from 'lucide-react';
+import { format } from 'date-fns';
+import { Coins, CreditCard, Landmark, Loader2, ArrowRight, ShieldCheck, Check, Clock, History } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import {
   Card,
   CardContent,
@@ -15,6 +18,24 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+
+interface Transaction {
+  id: string;
+  amount_ugx: number;
+  credits_added: number;
+  payment_method: string;
+  status: string;
+  payment_reference: string | null;
+  timestamp: string;
+}
 
 export function BillingPlan() {
   const { profile } = useAuth();
@@ -23,6 +44,8 @@ export function BillingPlan() {
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'card'>('mobile_money');
   const [loading, setLoading] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
 
   // Check top-up status from URL query parameters
   useEffect(() => {
@@ -46,6 +69,23 @@ export function BillingPlan() {
       });
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    async function fetchTransactions() {
+      if (!profile?.business_id) return;
+      setHistoryLoading(true);
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('payment_transactions')
+        .select('id, amount_ugx, credits_added, payment_method, status, payment_reference, timestamp')
+        .eq('business_id', profile.business_id!)
+        .order('timestamp', { ascending: false })
+        .limit(50);
+      if (!error && data) setTransactions(data);
+      setHistoryLoading(false);
+    }
+    fetchTransactions();
+  }, [profile?.business_id]);
 
   const creditsToAdd = amount && !isNaN(Number(amount))
     ? Math.round((Number(amount) / 10000) * 250)
@@ -261,6 +301,89 @@ export function BillingPlan() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Payment History */}
+      <Card className="bg-card border-border shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-lg font-bold flex items-center gap-2">
+            <History className="h-5 w-5 text-primary" />
+            Payment History
+          </CardTitle>
+          <CardDescription>
+            Your recent credit purchases and admin top-ups.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-xl border border-border overflow-hidden">
+            <Table>
+              <TableHeader className="bg-muted/50">
+                <TableRow className="hover:bg-transparent border-border">
+                  <TableHead className="text-muted-foreground">Date</TableHead>
+                  <TableHead className="text-muted-foreground">Method</TableHead>
+                  <TableHead className="text-muted-foreground text-right">Amount</TableHead>
+                  <TableHead className="text-muted-foreground text-right">Credits</TableHead>
+                  <TableHead className="text-muted-foreground">Status</TableHead>
+                  <TableHead className="text-muted-foreground">Reference</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {historyLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-16 text-center text-muted-foreground">
+                      <div className="flex items-center justify-center gap-2">
+                        <Clock className="h-4 w-4 animate-spin" />
+                        Loading payment history...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : transactions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-16 text-center text-muted-foreground">
+                      No payment transactions yet.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  transactions.map((tx) => (
+                    <TableRow key={tx.id} className="border-border hover:bg-muted/30">
+                      <TableCell className="text-xs font-mono text-muted-foreground/60">
+                        {format(new Date(tx.timestamp), 'MMM d, HH:mm')}
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs font-medium capitalize text-muted-foreground">
+                          {tx.payment_method.replace('_', ' ')}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right text-sm font-semibold text-foreground">
+                        UGX {tx.amount_ugx.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right text-sm font-medium text-emerald-500">
+                        +{tx.credits_added.toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] font-semibold ${
+                            tx.status === 'successful' || tx.status === 'success'
+                              ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                              : tx.status === 'pending'
+                              ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                              : 'bg-red-500/10 text-red-500 border-red-500/20'
+                          }`}
+                        >
+                          {tx.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-[10px] font-mono text-muted-foreground/40 max-w-[120px] truncate">
+                        {tx.payment_reference || '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
