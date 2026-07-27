@@ -59,14 +59,6 @@ export async function POST(req: Request) {
     // 4. Resolve Pesapal Credentials (DB first, then Env fallback)
     const pesapalConfig = await getPesapalSettings();
 
-    console.log("[Pesapal Config]", JSON.stringify({
-      hasKey: !!pesapalConfig.consumer_key,
-      hasSecret: !!pesapalConfig.consumer_secret,
-      siteUrl: pesapalConfig.site_url,
-      baseUrl: getPesapalBaseUrl(pesapalConfig.site_url),
-      enabled: pesapalConfig.is_enabled,
-    }));
-
     if (!pesapalConfig.consumer_key || !pesapalConfig.consumer_secret) {
       return NextResponse.json(
         { error: "Pesapal credentials are not configured on the server." },

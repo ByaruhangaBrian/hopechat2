@@ -53,7 +53,11 @@ export async function authenticatePesapal(
 
   const data = await response.json();
 
-  console.log("[Pesapal Auth]", JSON.stringify({ status: response.status, keys: Object.keys(data), hasToken: !!data.token }));
+  // Pesapal returns HTTP 200 even on auth errors — check for error object
+  if (data.error && (data.error.code || data.error.message)) {
+    const msg = data.error.code || data.error.message || "unknown";
+    throw new Error(`Pesapal auth rejected: ${msg}`);
+  }
 
   if (!response.ok || !data.token) {
     throw new Error(`Pesapal auth failed (${response.status}): ${JSON.stringify(data)}`);
