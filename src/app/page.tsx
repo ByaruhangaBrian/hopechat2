@@ -31,9 +31,9 @@ const MOCK_MESSAGES = [
   { sender: "customer", text: "Hi! We run a Kampala-based retail chain. Can HopeChat handle our WhatsApp Business queries?" },
   { sender: "typing", text: "" },
   { sender: "bot", text: "Absolutely! HopeChat is built for East African businesses. You get a shared WhatsApp inbox for your whole team plus AI-powered replies that handle customer questions 24/7." },
-  { sender: "customer", text: "Nice. Can the AI respond to customers in English and Swahili?" },
+  { sender: "customer", text: "Nice. Can it handle customer questions even when the office is closed?" },
   { sender: "typing", text: "" },
-  { sender: "bot", text: "Yes! HopeChat AI supports multiple languages. Just upload your FAQ documents and product catalogues and it learns your business automatically." },
+  { sender: "bot", text: "Yes! HopeChat AI works 24/7. Just upload your FAQ documents and product catalogues and it learns your business automatically." },
   { sender: "customer", text: "We also need to track deals. Can we link WhatsApp chats to a sales pipeline?" },
   { sender: "typing", text: "" },
   { sender: "bot", text: "Of course! HopeChat has a built-in sales pipeline where deal cards are linked directly to live WhatsApp conversations. Track every lead from first message to closed deal." }
@@ -497,7 +497,7 @@ export default function LandingPage() {
                 {
                   icon: Cpu,
                   title: "AI-Powered Auto-Replies",
-                  desc: "HopeChat AI responds to customers 24/7 using your business documents. Supports multilingual replies with automatic escalation to human agents when needed."
+                  desc: "HopeChat AI responds to customers 24/7 using your business documents. Automatic escalation to human agents when needed."
                 },
                 {
                   icon: KanbanSquare,
@@ -721,10 +721,10 @@ export default function LandingPage() {
                   <span className="px-2.5 py-1 rounded-md bg-[oklch(0.88_0.1_165)] border border-[oklch(0.5_0.15_170)]/10 text-[oklch(0.2_0.04_170)] font-bold text-xs uppercase tracking-wider">AI AUTOMATION</span>
                   <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight text-[oklch(0.2_0.04_170)]">Train Your AI Agent on Your Business Documents</h2>
                   <p className="text-base sm:text-lg text-muted-foreground leading-relaxed font-medium">
-                    Upload your product catalogues, FAQs, and brand guidelines. HopeChat AI learns your business and responds to customers 24/7 in any language.
+                    Upload your product catalogues, FAQs, and brand guidelines. HopeChat AI learns your business and responds to customers 24/7.
                   </p>
                   <ul className="space-y-3 text-sm sm:text-base font-semibold text-foreground">
-                    {["Multilingual AI responses in any language", "Automatic escalation when customers need a human agent", "Knowledge base with expiry dates and active/inactive toggles"].map((li, i) => (
+                    {["AI responds 24/7 using your business documents", "Automatic escalation when customers need a human agent", "Knowledge base with expiry dates and active/inactive toggles"].map((li, i) => (
                       <li key={i} className="flex items-center gap-3">
                         <CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" />
                         <span>{li}</span>
@@ -1068,8 +1068,8 @@ export default function LandingPage() {
                   a: "Sign up and you can be chatting with customers within minutes. We handle the WhatsApp Business API setup and infrastructure—you just invite your team and start replying." 
                 },
                 { 
-                  q: "Can the AI understand local languages?", 
-                  a: "Yes! HopeChat AI supports multiple languages including English and Swahili. Just upload your business documents and it learns to answer customer questions accurately in the languages your customers speak." 
+                  q: "Can I train the AI on my own business documents?", 
+                  a: "Yes. Upload your product catalogues, price lists, and FAQs and HopeChat AI learns your business. It answers customer questions based on what you teach it and escalates when it doesn't know the answer." 
                 },
                 { 
                   q: "How do payments work?", 
