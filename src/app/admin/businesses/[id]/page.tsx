@@ -373,7 +373,14 @@ export default function BusinessDetailsPage() {
           </div>
         </div>
         <div className="flex gap-2">
-           <Button variant="outline" className="border-border text-muted-foreground hover:text-foreground" onClick={() => {
+           <Button variant="outline" className="border-border text-muted-foreground hover:text-foreground" onClick={async () => {
+              try {
+                await fetch("/api/admin/impersonation-log", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ businessId: business.id, businessName: business.name, action: "start" }),
+                });
+              } catch (err) { console.error(err); }
               document.cookie = `impersonated_business_id=${business.id}; path=/; max-age=3600; SameSite=Lax`;
               document.cookie = `impersonated_business_name=${encodeURIComponent(business.name)}; path=/; max-age=3600; SameSite=Lax`;
               toast.success(`Impersonating ${business.name}`);

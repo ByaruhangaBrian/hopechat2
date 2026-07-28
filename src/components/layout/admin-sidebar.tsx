@@ -18,6 +18,12 @@ import {
   Coins,
   CreditCard,
   Tag,
+  Bell,
+  Shield,
+  Cpu,
+  Activity,
+  TrendingUp,
+  Radio,
 } from "lucide-react";
 import {
   Avatar,
@@ -38,6 +44,14 @@ const adminNavItems = [
   { href: "/admin/tenants", label: "Tenant Directory", icon: Coins },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/pricing-tiers", label: "Pricing Tiers", icon: Tag },
+  { divider: true },
+  { href: "/admin/alerts", label: "Alerts", icon: Bell },
+  { href: "/admin/health", label: "System Health", icon: Activity },
+  { href: "/admin/ai-usage", label: "AI Usage", icon: Cpu },
+  { href: "/admin/broadcast-monitor", label: "Broadcast Monitor", icon: Radio },
+  { href: "/admin/revenue", label: "Revenue & Ledger", icon: TrendingUp },
+  { href: "/admin/impersonation-logs", label: "Impersonation Logs", icon: Shield },
+  { divider: true },
   { href: "/admin/logs", label: "System Logs", icon: FileCode },
   { href: "/admin/settings", label: "System Settings", icon: Settings },
 ];
@@ -115,13 +129,17 @@ export function AdminSidebar({ open = false, onClose }: AdminSidebarProps) {
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <ul className="flex flex-col gap-1">
-            {adminNavItems.map((item) => {
-              const isActive = pathname === item.href;
+            {adminNavItems.map((item, index) => {
+              if ('divider' in item && item.divider) {
+                return <li key={`divider-${index}`} className="my-2 border-t border-border" />;
+              }
+              const navItem = item as { href: string; label: string; icon: any };
+              const isActive = pathname === navItem.href;
 
               return (
-                <li key={item.href}>
+                <li key={navItem.href}>
                   <Link
-                    href={item.href}
+                    href={navItem.href}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
                       isActive
@@ -129,8 +147,8 @@ export function AdminSidebar({ open = false, onClose }: AdminSidebarProps) {
                         : "text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                   >
-                    <item.icon className="h-4 w-4" />
-                    <span className="flex-1">{item.label}</span>
+                    <navItem.icon className="h-4 w-4" />
+                    <span className="flex-1">{navItem.label}</span>
                   </Link>
                 </li>
               );

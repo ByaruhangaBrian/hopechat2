@@ -22,6 +22,7 @@ import {
   Users,
   CreditCard,
   CoinsIcon,
+  Search,
 } from "lucide-react";
 import {
   Table,
@@ -121,6 +122,11 @@ export default function BusinessesPage() {
   const [creditsToAdd, setCreditsToAdd] = useState("");
   const [refillReason, setRefillReason] = useState("Cash Deposit Received");
   const [isRefilling, setIsRefilling] = useState(false);
+
+  // Search/filter
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [tierFilter, setTierFilter] = useState<string>("all");
 
   const supabase = createClient();
 
@@ -343,7 +349,16 @@ export default function BusinessesPage() {
     }
   }
 
-  const impersonate = (businessId: string, businessName: string) => {
+  const impersonate = async (businessId: string, businessName: string) => {
+    try {
+      await fetch("/api/admin/impersonation-log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businessId, businessName, action: "start" }),
+      });
+    } catch (err) {
+      console.error("Failed to log impersonation:", err);
+    }
     document.cookie = `impersonated_business_id=${businessId}; path=/; max-age=3600; SameSite=Lax`;
     document.cookie = `impersonated_business_name=${encodeURIComponent(businessName)}; path=/; max-age=3600; SameSite=Lax`;
     toast.success(`Impersonating ${businessName}`);
@@ -364,6 +379,16 @@ export default function BusinessesPage() {
   const totalCredits = businesses.reduce((sum, b) => sum + (b.credits_remaining || 0), 0);
   const totalBalance = businesses.reduce((sum, b) => sum + parseFloat(b.balance_ugx as any || "0"), 0);
   const activeCount = businesses.filter(b => b.status === "active").length;
+
+  // Filtered businesses
+  const filteredBusinesses = businesses.filter(biz => {
+    const matchesSearch = !search || 
+      biz.name.toLowerCase().includes(search.toLowerCase()) ||
+      biz.id.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === "all" || biz.status === statusFilter;
+    const matchesTier = tierFilter === "all" || biz.tier_id === tierFilter;
+    return matchesSearch && matchesStatus && matchesTier;
+  });
 
   return (
     <div className="space-y-6">
@@ -443,6 +468,47 @@ export default function BusinessesPage() {
         </Card>
       </div>
 
+      {/* Search & Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or ID..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-card border-border text-foreground"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v || "all")}>
+          <SelectTrigger className="w-[140px] bg-card border-border text-foreground">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent className="bg-card border-border text-foreground">
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="trialing">Trialing</SelectItem>
+            <SelectItem value="past_due">Past Due</SelectItem>
+            <SelectItem value="canceled">Canceled</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={tierFilter} onValueChange={(v) => setTierFilter(v || "all")}>
+          <SelectTrigger className="w-[140px] bg-card border-border text-foreground">
+            <SelectValue placeholder="All Tiers" />
+          </SelectTrigger>
+          <SelectContent className="bg-card border-border text-foreground">
+            <SelectItem value="all">All Tiers</SelectItem>
+            {tiers.map(t => (
+              <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {(search || statusFilter !== "all" || tierFilter !== "all") && (
+          <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setStatusFilter("all"); setTierFilter("all"); }} className="text-xs text-muted-foreground">
+            Clear filters
+          </Button>
+        )}
+      </div>
+
       {/* Businesses Table */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <Table>
@@ -465,14 +531,14 @@ export default function BusinessesPage() {
                   Loading businesses...
                 </TableCell>
               </TableRow>
-            ) : businesses.length === 0 ? (
+            ) : filteredBusinesses.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                  No businesses found.
+                  {search || statusFilter !== "all" || tierFilter !== "all" ? "No businesses match your filters." : "No businesses found."}
                 </TableCell>
               </TableRow>
             ) : (
-              businesses.map((biz) => {
+              filteredBusinesses.map((biz) => {
                 const tier = getTierForBusiness(biz);
                 return (
                   <TableRow key={biz.id} className="border-border hover:bg-muted/30">
