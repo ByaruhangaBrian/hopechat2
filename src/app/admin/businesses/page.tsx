@@ -350,17 +350,23 @@ export default function BusinessesPage() {
   }
 
   const impersonate = async (businessId: string, businessName: string) => {
+    let logId: string | null = null;
     try {
-      await fetch("/api/admin/impersonation-log", {
+      const res = await fetch("/api/admin/impersonation-log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ businessId, businessName, action: "start" }),
       });
+      const data = await res.json();
+      logId = data.log_id || null;
     } catch (err) {
       console.error("Failed to log impersonation:", err);
     }
     document.cookie = `impersonated_business_id=${businessId}; path=/; max-age=3600; SameSite=Lax`;
     document.cookie = `impersonated_business_name=${encodeURIComponent(businessName)}; path=/; max-age=3600; SameSite=Lax`;
+    if (logId) {
+      document.cookie = `impersonation_log_id=${logId}; path=/; max-age=3600; SameSite=Lax`;
+    }
     toast.success(`Impersonating ${businessName}`);
     setTimeout(() => { window.location.href = "/dashboard"; }, 500);
   };

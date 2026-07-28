@@ -32,13 +32,30 @@ interface AuthContextValue {
   profile: Profile | null;
   loading: boolean;
   signOut: () => Promise<void>;
-  /** Re-fetch the current user's profile row — call after a save from
-   *  the settings form so header/sidebar reflect the change without a
-   *  full page reload. */
   refreshProfile: () => Promise<void>;
+  /** True when the superadmin is viewing a tenant's dashboard */
+  impersonating: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function getImpersonationCookie(): { id: string; name: string } | null {
+  if (typeof document === "undefined") return null;
+  const cookies = document.cookie.split(";");
+  const idCookie = cookies.find((c) =>
+    c.trim().startsWith("impersonated_business_id="),
+  );
+  const nameCookie = cookies.find((c) =>
+    c.trim().startsWith("impersonated_business_name="),
+  );
+  if (!idCookie) return null;
+  return {
+    id: idCookie.trim().split("=")[1],
+    name: nameCookie
+      ? decodeURIComponent(nameCookie.split("=")[1])
+      : "Unknown",
+  };
+}
 
 /**
  * AuthProvider — wrap this around the dashboard layout.
@@ -50,21 +67,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Shared across init, auth-state-change listener, and the exposed
-  // refreshProfile() callback. Reads the current session's user id and
-  // pulls the matching profile row.
   const fetchProfile = useCallback(async (userId: string) => {
     const supabase = createClient();
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select(`
-          id, 
-          full_name, 
-          email, 
-          avatar_url, 
-          role, 
-          business_id, 
+        .select(
+          `
+          id,
+          full_name,
+          email,
+          avatar_url,
+          role,
+          business_id,
           is_superadmin,
           business:businesses (
             name,
@@ -72,7 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             credits_remaining,
             balance_ugx
           )
-        `)
+        `,
+        )
         .eq("user_id", userId)
         .maybeSingle();
 
@@ -86,7 +102,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (data) setProfile(data as unknown as Profile);
+      if (!data) return;
+
+      let finalProfile = data as unknown as Profile;
+
+      // If superadmin is impersonating, overlay the tenant's business data
+      const imp = getImpersonationCookie();
+      if (imp && finalProfile.is_superadmin) {
+        const { data: tenantBiz } = await supabase
+          .from("businesses")
+          .select("name, features, credits_remaining, balance_ugx")
+          .eq("id", imp.id)
+          .maybeSingle();
+
+        if (tenantBiz) {
+          finalProfile = {
+            ...finalProfile,
+            business: tenantBiz as Profile["business"],
+          };
+        }
+      }
+
+      setProfile(finalProfile);
     } catch (err) {
       console.error("[AuthProvider] fetchProfile threw:", err);
     }
@@ -110,15 +147,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           error,
         } = await supabase.auth.getSession();
 
-        if (error) console.error("[AuthProvider] getSession error:", error.message);
+        if (error)
+          console.error("[AuthProvider] getSession error:", error.message);
 
         if (!mounted) return;
         const currentUser = session?.user ?? null;
         setUser(currentUser);
 
         if (currentUser) {
-          // Don't block loading on profile fetch — let the UI render
-          // with the user info we already have, profile enriches async.
           fetchProfile(currentUser.id);
         }
       } catch (err) {
@@ -167,9 +203,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await fetchProfile(user.id);
   }, [user?.id, fetchProfile]);
 
+  const impersonating = !!getImpersonationCookie();
+
   return (
     <AuthContext.Provider
-      value={{ user, profile, loading, signOut, refreshProfile }}
+      value={{ user, profile, loading, signOut, refreshProfile, impersonating }}
     >
       {children}
     </AuthContext.Provider>
@@ -183,8 +221,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) {
-    // Fallback for components rendered outside the provider (shouldn't
-    // happen in normal flow, but don't crash the page).
     return {
       user: null,
       profile: null,
@@ -193,6 +229,7 @@ export function useAuth(): AuthContextValue {
         window.location.href = "/login";
       },
       refreshProfile: async () => {},
+      impersonating: false,
     };
   }
   return ctx;

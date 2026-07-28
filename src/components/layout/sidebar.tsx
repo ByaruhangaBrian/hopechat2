@@ -95,9 +95,30 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
     }
   }, []);
 
-  const stopImpersonating = () => {
+  const stopImpersonating = async () => {
+    const cookies = document.cookie.split(';');
+    const idCookie = cookies.find(c => c.trim().startsWith('impersonated_business_id='));
+    const nameCookie = cookies.find(c => c.trim().startsWith('impersonated_business_name='));
+    const logIdCookie = cookies.find(c => c.trim().startsWith('impersonation_log_id='));
+    const businessId = idCookie?.trim().split('=')[1];
+    const businessName = nameCookie ? decodeURIComponent(nameCookie.split('=')[1]) : "";
+    const logId = logIdCookie?.trim().split('=')[1] || undefined;
+
+    if (businessId && businessName) {
+      try {
+        await fetch("/api/admin/impersonation-log", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ businessId, businessName, action: "end", logId }),
+        });
+      } catch (err) {
+        console.error("Failed to log impersonation end:", err);
+      }
+    }
+
     document.cookie = "impersonated_business_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     document.cookie = "impersonated_business_name=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = "impersonation_log_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     window.location.href = "/admin/businesses";
   };
 

@@ -374,15 +374,21 @@ export default function BusinessDetailsPage() {
         </div>
         <div className="flex gap-2">
            <Button variant="outline" className="border-border text-muted-foreground hover:text-foreground" onClick={async () => {
+              let logId: string | null = null;
               try {
-                await fetch("/api/admin/impersonation-log", {
+                const res = await fetch("/api/admin/impersonation-log", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ businessId: business.id, businessName: business.name, action: "start" }),
                 });
+                const data = await res.json();
+                logId = data.log_id || null;
               } catch (err) { console.error(err); }
               document.cookie = `impersonated_business_id=${business.id}; path=/; max-age=3600; SameSite=Lax`;
               document.cookie = `impersonated_business_name=${encodeURIComponent(business.name)}; path=/; max-age=3600; SameSite=Lax`;
+              if (logId) {
+                document.cookie = `impersonation_log_id=${logId}; path=/; max-age=3600; SameSite=Lax`;
+              }
               toast.success(`Impersonating ${business.name}`);
               setTimeout(() => { window.location.href = "/dashboard"; }, 500);
            }}>
