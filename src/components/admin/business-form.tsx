@@ -19,15 +19,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, User, Phone, CheckCircle2, ChevronRight, ChevronLeft } from "lucide-react";
+import { Building2, User, Phone, CheckCircle2, ChevronRight, ChevronLeft, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+interface SubscriptionTier {
+  id: string;
+  name: string;
+  price_ugx: number;
+  base_credits_monthly: number;
+  max_team_seats: number;
+  allow_broadcasts: boolean;
+  allow_flows: boolean;
+  allow_multimodal: boolean;
+}
 
 interface BusinessFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: any) => Promise<void>;
   initialData?: any;
+  tiers?: SubscriptionTier[];
   title: string;
   description: string;
 }
@@ -37,6 +49,7 @@ export function BusinessForm({
   onOpenChange,
   onSubmit,
   initialData,
+  tiers = [],
   title,
   description,
 }: BusinessFormProps) {
@@ -46,14 +59,14 @@ export function BusinessForm({
   // Step 1: Business
   const [name, setName] = useState(initialData?.name ?? "");
   const [status, setStatus] = useState(initialData?.status ?? "active");
-  const [planTier, setPlanTier] = useState(initialData?.plan_tier ?? "basic");
+  const [tierId, setTierId] = useState(initialData?.tier_id ?? "bronze");
 
   // Reset form when initialData changes or dialog opens
   useEffect(() => {
     if (open) {
       setName(initialData?.name ?? "");
       setStatus(initialData?.status ?? "active");
-      setPlanTier(initialData?.plan_tier ?? "basic");
+      setTierId(initialData?.tier_id ?? "bronze");
       setStep(1);
     }
   }, [initialData, open]);
@@ -79,15 +92,25 @@ export function BusinessForm({
 
     setLoading(true);
     try {
+      const selectedTier = tiers.find(t => t.id === tierId);
       const data = isEdit 
         ? { 
             name, 
             status, 
-            plan_tier: planTier
+            tier_id: tierId,
+            plan_tier: tierId,
+            features: {
+              ai_enabled: true,
+              broadcasts_enabled: selectedTier?.allow_broadcasts ?? false,
+              flows_enabled: selectedTier?.allow_flows ?? false,
+              multimodal_enabled: selectedTier?.allow_multimodal ?? false,
+              automations_enabled: true,
+            }
           }
         : {
             business_name: name,
-            plan_tier: planTier,
+            tier_id: tierId,
+            plan_tier: tierId,
             owner_name: ownerName,
             owner_email: ownerEmail,
             owner_password: ownerPassword,
@@ -126,6 +149,8 @@ export function BusinessForm({
     { id: 2, title: "Owner", icon: User },
     { id: 3, title: "WhatsApp", icon: Phone },
   ];
+
+  const selectedTier = tiers.find(t => t.id === tierId);
 
   return (
     <Dialog open={open} onOpenChange={(val) => {
@@ -171,7 +196,7 @@ export function BusinessForm({
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Acme Corp"
+                  placeholder="e.g. Kampala Retail Shop"
                   required
                   className="bg-muted border-border text-foreground focus:ring-primary"
                 />
@@ -192,19 +217,55 @@ export function BusinessForm({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground">Plan Tier</Label>
-                  <Select value={planTier} onValueChange={setPlanTier}>
+                  <Label className="text-muted-foreground">Subscription Tier</Label>
+                  <Select value={tierId} onValueChange={setTierId}>
                     <SelectTrigger className="bg-muted border-border text-foreground">
-                      <SelectValue placeholder="Select plan" />
+                      <SelectValue placeholder="Select tier" />
                     </SelectTrigger>
                     <SelectContent className="bg-muted border-border text-foreground">
-                      <SelectItem value="basic">Basic</SelectItem>
-                      <SelectItem value="pro">Pro</SelectItem>
-                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                      {tiers.length > 0 ? tiers.map(t => (
+                        <SelectItem key={t.id} value={t.id}>
+                          <div className="flex items-center gap-2">
+                            <Zap className="h-3 w-3" />
+                            {t.name}
+                            <span className="text-xs text-muted-foreground">UGX {t.price_ugx.toLocaleString()}/mo</span>
+                          </div>
+                        </SelectItem>
+                      )) : (
+                        <>
+                          <SelectItem value="bronze">Bronze (UGX 65,000/mo)</SelectItem>
+                          <SelectItem value="silver">Silver (UGX 180,000/mo)</SelectItem>
+                          <SelectItem value="gold">Gold (UGX 450,000/mo)</SelectItem>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
+
+              {/* Tier Preview */}
+              {selectedTier && (
+                <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={cn(
+                      "h-2.5 w-2.5 rounded-full",
+                      selectedTier.id === "bronze" ? "bg-amber-600" :
+                      selectedTier.id === "silver" ? "bg-slate-400" : "bg-yellow-500"
+                    )} />
+                    <span className="text-sm font-bold text-foreground">{selectedTier.name}</span>
+                    <span className="text-xs text-muted-foreground ml-auto">UGX {selectedTier.price_ugx.toLocaleString()}/mo</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                    <div><span className="font-semibold text-foreground">{selectedTier.base_credits_monthly.toLocaleString()}</span> credits/mo</div>
+                    <div><span className="font-semibold text-foreground">{selectedTier.max_team_seats}</span> seats</div>
+                    <div className="flex gap-1">
+                      {selectedTier.allow_broadcasts && <span className="px-1 py-0.5 rounded bg-primary/10 text-primary text-[9px]">Broadcasts</span>}
+                      {selectedTier.allow_flows && <span className="px-1 py-0.5 rounded bg-primary/10 text-primary text-[9px]">Flows</span>}
+                      {selectedTier.allow_multimodal && <span className="px-1 py-0.5 rounded bg-primary/10 text-primary text-[9px]">Multimodal</span>}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -216,7 +277,7 @@ export function BusinessForm({
                   id="ownerName"
                   value={ownerName}
                   onChange={(e) => setOwnerName(e.target.value)}
-                  placeholder="John Doe"
+                  placeholder="e.g. Nnalubega Sarah"
                   required
                   className="bg-muted border-border text-foreground"
                 />
@@ -228,7 +289,7 @@ export function BusinessForm({
                   type="email"
                   value={ownerEmail}
                   onChange={(e) => setOwnerEmail(e.target.value)}
-                  placeholder="john@example.com"
+                  placeholder="sarah@example.com"
                   required
                   className="bg-muted border-border text-foreground"
                 />
@@ -251,7 +312,7 @@ export function BusinessForm({
           {step === 3 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-400">
-                Optional: You can provision WhatsApp credentials now or let the tenant do it later.
+                Optional: You can provision WhatsApp credentials now or let the tenant configure them later from their dashboard.
               </div>
               <div className="space-y-2">
                 <Label htmlFor="waPhone" className="text-muted-foreground">Phone Number ID</Label>
@@ -331,4 +392,3 @@ export function BusinessForm({
     </Dialog>
   );
 }
-
