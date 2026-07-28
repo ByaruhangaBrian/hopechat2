@@ -30,13 +30,13 @@ import { cn } from "@/lib/utils";
 const MOCK_MESSAGES = [
   { sender: "customer", text: "Hi! We run a Kampala-based retail chain. Can HopeChat handle our WhatsApp Business queries?" },
   { sender: "typing", text: "" },
-  { sender: "bot", text: "Absolutely! HopeChat is built for East African businesses. You can self-host it on your own server with zero per-seat fees, and it connects directly to WhatsApp Business API for your Kampala stores." },
-  { sender: "customer", text: "Nice. Can the AI agent respond to customers in Luganda or English?" },
+  { sender: "bot", text: "Absolutely! HopeChat is built for East African businesses. You get a shared WhatsApp inbox for your whole team plus AI-powered replies that handle customer questions 24/7." },
+  { sender: "customer", text: "Nice. Can the AI respond to customers in English and Swahili?" },
   { sender: "typing", text: "" },
-  { sender: "bot", text: "Yes! HopeChat uses Google Gemini AI, which supports multilingual responses. You can train it on your own FAQ documents, product catalogues, and brand guidelines in any language." },
+  { sender: "bot", text: "Yes! HopeChat AI supports multiple languages. Just upload your FAQ documents and product catalogues and it learns your business automatically." },
   { sender: "customer", text: "We also need to track deals. Can we link WhatsApp chats to a sales pipeline?" },
   { sender: "typing", text: "" },
-  { sender: "bot", text: "Of course! HopeChat has a built-in Kanban pipeline where deal cards are linked directly to live WhatsApp conversations. Track conversions from first message to close, all in UGX." }
+  { sender: "bot", text: "Of course! HopeChat has a built-in sales pipeline where deal cards are linked directly to live WhatsApp conversations. Track every lead from first message to closed deal." }
 ];
 
 // Reusable IntersectionObserver-based FadeIn component for smooth, staggering scroll animations
@@ -273,17 +273,17 @@ export default function LandingPage() {
             {/* Top Tagline Badge */}
             <div className="inline-flex items-center gap-2 rounded-full border border-[oklch(0.5_0.15_170)]/20 bg-[oklch(0.88_0.1_165)] px-4 py-1.5 text-xs sm:text-sm font-bold text-[oklch(0.2_0.04_170)] animate-in fade-in slide-in-from-bottom-2 duration-700">
               <Zap className="h-3.5 w-3.5 text-[oklch(0.5_0.15_170)]" />
-              <span>Self-Hosted • Privacy First • Advanced AI Integrations</span>
+              <span>WhatsApp CRM • AI Auto-Replies • Sales Pipeline</span>
             </div>
             
             {/* Main Headline */}
             <h1 className="mx-auto max-w-4xl text-4xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl leading-[1.15] text-[oklch(0.2_0.04_170)] animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
-              The Self-Hosted <span className="text-[oklch(0.5_0.15_170)]">Chat CRM</span> & <span className="text-[oklch(0.5_0.15_170)]">AI Agent Platform</span>
+              Turn WhatsApp Into Your <span className="text-[oklch(0.5_0.15_170)]">Business Command Center</span>
             </h1>
             
             {/* Description */}
             <p className="mx-auto max-w-2xl text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed font-medium animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200">
-              Built for African businesses. HopeChat connects your team and AI agents to WhatsApp with complete data sovereignty, UGX billing via Pesapal, and zero per-seat licensing fees.
+              Built for African businesses. HopeChat connects your team and AI agents to WhatsApp so you never miss a customer enquiry and close more deals.
             </p>
             
             {/* CTAs */}
@@ -295,7 +295,7 @@ export default function LandingPage() {
                   "w-full sm:w-auto h-12 px-8 text-base bg-[oklch(0.5_0.15_170)] hover:bg-[oklch(0.5_0.15_170)]/90 text-white gap-2 font-bold shadow-lg shadow-[oklch(0.5_0.15_170)]/25 hover:shadow-xl hover:shadow-[oklch(0.5_0.15_170)]/30 hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 rounded-xl border-0 flex items-center justify-center group"
                 )}
               >
-                Deploy Free Trial 
+                Start Free Trial 
                 <ArrowRight className="ml-2 h-4.5 w-4.5 transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
               <Link 
@@ -444,7 +444,7 @@ export default function LandingPage() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-semibold text-muted-foreground">Value:</span>
-                      <span className="font-bold text-[oklch(0.2_0.04_170)]">UGX 4,500,000</span>
+                      <span className="font-bold text-[oklch(0.2_0.04_170)]">4,500,000</span>
                     </div>
                     <div className="h-1.5 w-full bg-[oklch(0.98_0.01_170)] rounded-full overflow-hidden">
                       <div className="h-full bg-[oklch(0.5_0.15_170)] rounded-full w-1/3" />
@@ -482,7 +482,7 @@ export default function LandingPage() {
             <div className="text-center space-y-4 max-w-3xl mx-auto">
               <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[oklch(0.2_0.04_170)]">Everything You Need to Scale Customer Communication</h2>
               <p className="text-base sm:text-lg text-muted-foreground leading-relaxed font-medium">
-                Skip vendor lock-in. Get a robust, secure customer chat stack deployed straight to your cloud, fully customized for human support and autonomous AI workflows.
+                Everything you need to manage customer conversations, automate replies, and grow sales—all inside WhatsApp.
               </p>
             </div>
 
@@ -497,12 +497,12 @@ export default function LandingPage() {
                 {
                   icon: Cpu,
                   title: "AI-Powered Auto-Replies",
-                  desc: "Google Gemini AI responds to customers 24/7 using your trained documents. Supports multilingual replies in English, Luganda, and Swahili with automatic escalation to human agents."
+                  desc: "HopeChat AI responds to customers 24/7 using your business documents. Supports multilingual replies with automatic escalation to human agents when needed."
                 },
                 {
                   icon: KanbanSquare,
                   title: "Visual Sales Pipeline",
-                  desc: "Drag-and-drop Kanban boards linked to WhatsApp chats. Track deals from first enquiry to close in UGX, with pipeline analytics and conversion metrics."
+                  desc: "Drag-and-drop pipeline boards linked to WhatsApp chats. Track deals from first enquiry to close with analytics and conversion metrics."
                 },
                 {
                   icon: Zap,
@@ -510,14 +510,14 @@ export default function LandingPage() {
                   desc: "Build visual workflows with 16 step types: auto-replies, keyword triggers, time delays, webhooks, Google Sheets lookups, and interactive WhatsApp Flow forms."
                 },
                 {
-                  icon: Server,
-                  title: "Self-Hosted on Your Cloud",
-                  desc: "Deploy on Hostinger, AWS, or any VPS. Run your own Supabase database with full data sovereignty. Zero per-seat licensing fees."
+                  icon: Lock,
+                  title: "Your Data, Your Control",
+                  desc: "Your customer conversations stay on your own private infrastructure. No third-party servers, no data sharing—complete privacy by default."
                 },
                 {
-                  icon: Lock,
-                  title: "Bank-Grade Security",
-                  desc: "AES-256-GCM encryption for all tokens and messages. Postgres Row-Level Security on every table. Pesapal-powered payments with Mobile Money support."
+                  icon: Shield,
+                  title: "Enterprise Privacy",
+                  desc: "Every message and token is encrypted. Your data is isolated from other accounts with strict access controls. Built for businesses that take privacy seriously."
                 }
               ].map((item, index) => (
                 <FadeIn key={index} delay={index * 100}>
@@ -536,7 +536,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Pricing Section (Bright, Staggered, 3-Tier UGX Grid) */}
+        {/* Pricing Section (Bright, Staggered, 3-Tier Grid) */}
         <section id="pricing" className="py-20 lg:py-28 bg-white relative">
           {/* Subtle Mint background glow */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[oklch(0.88_0.1_165)]/20 rounded-full blur-[130px] -z-10 pointer-events-none animate-pulse-glow" />
@@ -544,9 +544,9 @@ export default function LandingPage() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
             <div className="text-center space-y-4 max-w-3xl mx-auto">
               <span className="px-2.5 py-1 rounded-md bg-[oklch(0.5_0.15_170)]/10 border border-[oklch(0.5_0.15_170)]/20 text-[oklch(0.5_0.15_170)] font-bold text-xs uppercase tracking-wider">Simple Pricing</span>
-              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[oklch(0.2_0.04_170)]">Sovereignty-Focused Pricing Plans</h2>
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[oklch(0.2_0.04_170)]">Simple, Transparent Pricing</h2>
               <p className="text-base sm:text-lg text-muted-foreground leading-relaxed font-medium">
-                Choose the best fit for your team size. Pay only for the resources you deploy, with zero per-agent seat markup.
+                Choose the best fit for your team size. Simple, transparent pricing with no hidden fees.
               </p>
             </div>
 
@@ -562,7 +562,7 @@ export default function LandingPage() {
                       <p className="text-xs text-muted-foreground font-semibold mt-1">Perfect for solo founders and startup testing</p>
                     </div>
                     <div className="py-2 border-y border-[oklch(0.94_0.02_170)]">
-                      <span className="text-3xl font-extrabold text-[oklch(0.2_0.04_170)]">UGX 65,000</span>
+                      <span className="text-3xl font-extrabold text-[oklch(0.2_0.04_170)]">65,000</span>
                       <span className="text-xs text-muted-foreground font-bold"> / month</span>
                     </div>
                     <ul className="space-y-3 text-xs md:text-sm font-semibold">
@@ -596,7 +596,7 @@ export default function LandingPage() {
                         "w-full h-11 border-[oklch(0.94_0.02_170)] hover:bg-[oklch(0.98_0.01_170)] text-[oklch(0.2_0.04_170)] font-bold rounded-xl active:scale-[0.98] transition-transform flex items-center justify-center"
                       )}
                     >
-                      Deploy Bronze Plan
+                      Start Bronze Plan
                     </Link>
                   </div>
                 </div>
@@ -614,7 +614,7 @@ export default function LandingPage() {
                       <p className="text-xs text-muted-foreground font-semibold mt-1">Great for growing customer support teams</p>
                     </div>
                     <div className="py-2 border-y border-[oklch(0.94_0.02_170)]">
-                      <span className="text-3xl font-extrabold text-[oklch(0.2_0.04_170)]">UGX 180,000</span>
+                      <span className="text-3xl font-extrabold text-[oklch(0.2_0.04_170)]">180,000</span>
                       <span className="text-xs text-muted-foreground font-bold"> / month</span>
                     </div>
                     <ul className="space-y-3 text-xs md:text-sm font-semibold">
@@ -648,7 +648,7 @@ export default function LandingPage() {
                         "w-full h-11 bg-[oklch(0.5_0.15_170)] hover:bg-[oklch(0.5_0.15_170)]/90 text-white font-bold rounded-xl active:scale-[0.98] transition-transform shadow-md border-0 flex items-center justify-center"
                       )}
                     >
-                      Deploy Silver Plan
+                      Start Silver Plan
                     </Link>
                   </div>
                 </div>
@@ -663,7 +663,7 @@ export default function LandingPage() {
                       <p className="text-xs text-muted-foreground font-semibold mt-1">For power users running full automation at scale</p>
                     </div>
                     <div className="py-2 border-y border-[oklch(0.94_0.02_170)]">
-                      <span className="text-3xl font-extrabold text-[oklch(0.2_0.04_170)]">UGX 450,000</span>
+                      <span className="text-3xl font-extrabold text-[oklch(0.2_0.04_170)]">450,000</span>
                       <span className="text-xs text-muted-foreground font-bold"> / month</span>
                     </div>
                     <ul className="space-y-3 text-xs md:text-sm font-semibold">
@@ -697,7 +697,7 @@ export default function LandingPage() {
                         "w-full h-11 border-[oklch(0.94_0.02_170)] hover:bg-[oklch(0.98_0.01_170)] text-[oklch(0.2_0.04_170)] font-bold rounded-xl active:scale-[0.98] transition-transform flex items-center justify-center"
                       )}
                     >
-                      Deploy Gold Plan
+                      Start Gold Plan
                     </Link>
                   </div>
                 </div>
@@ -721,10 +721,10 @@ export default function LandingPage() {
                   <span className="px-2.5 py-1 rounded-md bg-[oklch(0.88_0.1_165)] border border-[oklch(0.5_0.15_170)]/10 text-[oklch(0.2_0.04_170)] font-bold text-xs uppercase tracking-wider">AI AUTOMATION</span>
                   <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight text-[oklch(0.2_0.04_170)]">Train Your AI Agent on Your Business Documents</h2>
                   <p className="text-base sm:text-lg text-muted-foreground leading-relaxed font-medium">
-                    Upload your product catalogues, FAQs, and brand guidelines. Google Gemini AI learns your business and responds to customers 24/7 in English, Luganda, or Swahili.
+                    Upload your product catalogues, FAQs, and brand guidelines. HopeChat AI learns your business and responds to customers 24/7 in any language.
                   </p>
                   <ul className="space-y-3 text-sm sm:text-base font-semibold text-foreground">
-                    {["Multilingual AI responses in any East African language", "Automatic escalation when customers need a human agent", "Knowledge base with expiry dates and active/inactive toggles"].map((li, i) => (
+                    {["Multilingual AI responses in any language", "Automatic escalation when customers need a human agent", "Knowledge base with expiry dates and active/inactive toggles"].map((li, i) => (
                       <li key={i} className="flex items-center gap-3">
                         <CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" />
                         <span>{li}</span>
@@ -821,12 +821,12 @@ export default function LandingPage() {
               <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
                 <div className="flex-1 space-y-6 max-w-xl text-left">
                   <span className="px-2.5 py-1 rounded-md bg-[oklch(0.88_0.1_165)] border border-[oklch(0.5_0.15_170)]/10 text-[oklch(0.2_0.04_170)] font-bold text-xs uppercase tracking-wider">SALES CONVERSIONS</span>
-                  <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight text-[oklch(0.2_0.04_170)]">Visual Pipeline Management in UGX</h2>
+                  <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight text-[oklch(0.2_0.04_170)]">Visual Pipeline Management</h2>
                   <p className="text-base sm:text-lg text-muted-foreground leading-relaxed font-medium">
-                    Track deal values in Ugandan Shillings. Connect WhatsApp chats to pipeline cards, drag-and-drop between stages, and monitor conversion metrics.
+                    Track deal values and monitor your pipeline. Connect WhatsApp chats to deal cards, move them between stages, and watch conversion metrics grow.
                   </p>
                   <ul className="space-y-3 text-sm sm:text-base font-semibold text-foreground">
-                    {["Link WhatsApp contacts to pipeline deals", "Drag-and-drop deal stages with UGX values", "Full deal history logged within conversation archives"].map((li, i) => (
+                    {["Link WhatsApp contacts to pipeline deals", "Drag-and-drop deal stages with custom values", "Full deal history logged within conversation archives"].map((li, i) => (
                       <li key={i} className="flex items-center gap-3">
                         <CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" />
                         <span>{li}</span>
@@ -837,9 +837,9 @@ export default function LandingPage() {
                 <div className="flex-1 w-full max-w-xl aspect-square md:aspect-[4/3] rounded-2xl bg-white border border-[oklch(0.94_0.02_170)] shadow-md flex items-center justify-center p-4 relative hover:shadow-xl hover:shadow-[oklch(0.5_0.15_170)]/10 hover:border-[oklch(0.5_0.15_170)]/30 transition-all duration-500">
                   <div className="w-full h-full flex gap-3 overflow-x-auto text-[11px] sm:text-xs">
                     {[
-                      { title: "New Lead", count: 2, cards: [{ title: "Nalukenge Kate", company: "Kampala Retail", value: "UGX 4.5M" }] },
-                      { title: "Qualified", count: 1, cards: [{ title: "Ochieng Kevin", company: "Entebbe Logistics", value: "UGX 2.8M" }] },
-                      { title: "Proposal Sent", count: 1, cards: [{ title: "Jean Mugisha", company: "Kigali Exports", value: "UGX 7.2M" }] }
+                      { title: "New Lead", count: 2, cards: [{ title: "Nalukenge Kate", company: "Kampala Retail", value: "4.5M" }] },
+                      { title: "Qualified", count: 1, cards: [{ title: "Ochieng Kevin", company: "Entebbe Logistics", value: "2.8M" }] },
+                      { title: "Proposal Sent", count: 1, cards: [{ title: "Jean Mugisha", company: "Kigali Exports", value: "7.2M" }] }
                     ].map((column, i) => (
                       <div key={i} className="flex-1 min-w-[130px] bg-[oklch(0.98_0.01_170)]/40 border border-[oklch(0.94_0.02_170)] rounded-xl p-2.5 flex flex-col justify-between">
                         <div>
@@ -877,9 +877,9 @@ export default function LandingPage() {
             </h2>
             <div className="grid sm:grid-cols-3 gap-6 max-w-5xl mx-auto">
               {[
-                { label: "Sovereignty Savings", value: "85%", desc: "Decrease in licensing overhead compared to standard SaaS platform models." },
-                { label: "Autonomous Support", value: "60%", desc: "Average drop in human support inquiries through self-learning AI agents." },
-                { label: "Conversion Lift", value: "24%", desc: "Increase in lead-to-deal conversion rates using active pipeline chat routing." }
+                { label: "Cost Savings", value: "85%", desc: "Less overhead compared to traditional per-seat customer service platforms." },
+                { label: "Faster Replies", value: "60%", desc: "Average decrease in support tickets handled by AI before they reach your team." },
+                { label: "More Sales", value: "24%", desc: "Increase in lead-to-deal conversion rates with WhatsApp pipeline routing." }
               ].map((metric, index) => (
                 <FadeIn key={index} delay={index * 150}>
                   <div className="p-8 rounded-2xl bg-white border border-[oklch(0.94_0.02_170)] shadow-sm flex flex-col justify-between text-left space-y-4 hover:border-[oklch(0.5_0.15_170)]/40 hover:shadow-xl hover:shadow-[oklch(0.5_0.15_170)]/10 hover:-translate-y-2 transition-all duration-500 h-full group">
@@ -949,8 +949,8 @@ export default function LandingPage() {
                       <div className="space-y-4">
                         <p className="text-sm md:text-base text-muted-foreground leading-relaxed">Secure WhatsApp support for fintechs, SACCOs, and mobile money operators:</p>
                         <div className="space-y-3 text-xs md:text-sm font-medium">
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Self-hosted infrastructure for BOU/CKU compliance requirements.</span></div>
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>AES-256-GCM encryption for all transaction messages.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Your own private infrastructure for BOU/CKU compliance requirements.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>End-to-end encryption for all transaction messages.</span></div>
                           <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Automated KYC document collection via WhatsApp flows.</span></div>
                         </div>
                       </div>
@@ -984,7 +984,7 @@ export default function LandingPage() {
                         <div className="space-y-3 text-xs md:text-sm font-medium">
                           <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Multi-agent workspaces with role-based access control.</span></div>
                           <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Separate conversation partitions for Kampala, Nairobi, Dar branches.</span></div>
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>High-throughput WhatsApp API with Pesapal payment integration.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>High-throughput WhatsApp API with payment integration.</span></div>
                         </div>
                       </div>
                     )}
@@ -1016,23 +1016,23 @@ export default function LandingPage() {
         {/* Enterprise Security Section */}
         <section id="security" className="py-20 lg:py-28 bg-white border-b border-[oklch(0.94_0.02_170)]">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-12">
-            <h2 className="text-3xl font-extrabold tracking-tight text-[oklch(0.2_0.04_170)]">Zero Trust. Full Control.</h2>
+            <h2 className="text-3xl font-extrabold tracking-tight text-[oklch(0.2_0.04_170)]">Your Data Stays Yours. Always.</h2>
             <div className="grid sm:grid-cols-3 gap-6 max-w-5xl mx-auto text-left">
               {[
                 {
-                  icon: Server,
-                  title: "Self-Hosted sovereignty",
-                  desc: "Your code, your credentials, your database. Deploy on Hostinger or AWS and retain absolute ownership over client communication logs."
+                  icon: Lock,
+                  title: "Private by Design",
+                  desc: "Your data stays on your own infrastructure. No third-party servers access your customer conversations or business information."
                 },
                 {
-                  icon: Database,
-                  title: "Postgres RLS Isolation",
-                  desc: "Strict Row-Level Security on every Supabase table guarantees logic separation between accounts, preventing database bleed risks."
+                  icon: Shield,
+                  title: "Account Isolation",
+                  desc: "Every business account is fully isolated. Your conversations, contacts, and deals are visible only to your team."
                 },
                 {
                   icon: Key,
-                  title: "AES-256 Encryption",
-                  desc: "All incoming message data, API tokens, and webhook secrets are encrypted at rest using industry-standard AES-256-GCM configurations."
+                  title: "Encrypted Everywhere",
+                  desc: "All messages, tokens, and sensitive data are encrypted automatically. Built for businesses that handle sensitive customer information."
                 }
               ].map((item, i) => (
                 <FadeIn key={i} delay={i * 100}>
@@ -1061,19 +1061,19 @@ export default function LandingPage() {
               {[
                 { 
                   q: "How does HopeChat differ from Intercom or Zendesk?", 
-                  a: "Traditional SaaS platforms charge per team member per month and store your data on their servers. HopeChat is self-hosted: you own your data, pay zero per-seat fees, and get WhatsApp-native CRM features built for East African businesses with UGX billing via Pesapal." 
+                  a: "Traditional platforms charge per team member and store your data on their servers. HopeChat gives you a WhatsApp-native CRM where you control your own data, pay a flat rate, and get AI-powered automation built for East African businesses." 
                 },
                 { 
-                  q: "What do I need to self-host HopeChat?", 
-                  a: "You need a VPS (Hostinger, AWS EC2, or any Node.js host), a free Supabase account for the database, and a Meta Developer account for WhatsApp Business API. We handle the rest with one-click deployment." 
+                  q: "How fast can I get started?", 
+                  a: "Sign up and you can be chatting with customers within minutes. We handle the WhatsApp Business API setup and infrastructure—you just invite your team and start replying." 
                 },
                 { 
-                  q: "Which AI models does HopeChat support?", 
-                  a: "HopeChat uses Google Gemini AI (gemini-2.5-flash) as the primary model. You can train it on your own documents, product catalogues, and FAQs. The AI responds in English, Luganda, Swahili, or any language your business needs." 
+                  q: "Can the AI understand local languages?", 
+                  a: "Yes! HopeChat AI supports multiple languages including English and Swahili. Just upload your business documents and it learns to answer customer questions accurately in the languages your customers speak." 
                 },
                 { 
-                  q: "How do payments work? Can I use Mobile Money?", 
-                  a: "Yes! HopeChat integrates with Pesapal for UGX payments. Customers can pay via MTN Mobile Money, Airtel Money, or credit card. Credits start at UGX 1,000 with 250 credits per UGX 10,000." 
+                  q: "How do payments work?", 
+                  a: "HopeChat uses a simple credit-based system. You top up your account and usage is deducted automatically. No long-term contracts or surprise bills." 
                 }
               ].map((faq, i) => (
                 <FadeIn key={i} delay={i * 100}>
@@ -1114,7 +1114,7 @@ export default function LandingPage() {
                 <div className="relative z-10 space-y-6 max-w-2xl mx-auto">
                   <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-none text-[oklch(0.2_0.04_170)]">Ready to Own Your WhatsApp CRM?</h2>
                   <p className="text-sm sm:text-base text-muted-foreground leading-relaxed font-medium">
-                    Deploy HopeChat in minutes. Start managing customer conversations, deals, and AI agents on your own cloud with UGX billing via Pesapal.
+                    Get HopeChat in minutes. Start managing customer conversations, deals, and AI agents—all inside WhatsApp.
                   </p>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                     <Link 
@@ -1158,7 +1158,7 @@ export default function LandingPage() {
                 <span className="font-bold tracking-tight text-[oklch(0.2_0.04_170)]">HopeChat</span>
               </Link>
               <p className="text-xs text-muted-foreground leading-relaxed font-medium">
-                The self-hosted WhatsApp CRM and AI agent platform built for East African businesses. UGX billing via Pesapal. MIT Licensed.
+                The WhatsApp CRM and AI platform built for East African businesses. Private, secure, and designed to help you grow.
               </p>
             </div>
 
@@ -1186,19 +1186,19 @@ export default function LandingPage() {
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-[oklch(0.2_0.04_170)] mb-4">Resources</h4>
               <ul className="space-y-2.5 text-xs text-muted-foreground font-semibold">
                 <li><Link href="#" className="hover:text-primary transition-colors">Documentation</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">GitHub Repository</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Supabase Setup</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Pesapal Integration</Link></li>
+                <li><Link href="#" className="hover:text-primary transition-colors">Help Center</Link></li>
+                <li><Link href="#" className="hover:text-primary transition-colors">API Reference</Link></li>
+                <li><Link href="#" className="hover:text-primary transition-colors">Contact Support</Link></li>
               </ul>
             </div>
           </div>
 
           <div className="pt-6 border-t border-[oklch(0.94_0.02_170)] flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-            <p>© {new Date().getFullYear()} HopeChat by HopeTech Solutions Ltd. Uganda. MIT Licensed.</p>
+            <p>© {new Date().getFullYear()} HopeChat by HopeTech Solutions Ltd. Uganda.</p>
             <div className="flex gap-6">
-              <span>UGX Billing</span>
-              <span>256-bit AES</span>
-              <span>Self-Hosted</span>
+              <span>Privacy First</span>
+              <span>Always Encrypted</span>
+              <span>Made in Uganda</span>
             </div>
           </div>
 
