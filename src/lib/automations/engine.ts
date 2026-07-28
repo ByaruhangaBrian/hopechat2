@@ -25,6 +25,7 @@ import { generateGeminiResponse } from './gemini-client'
 import { logHttpEvent } from '@/lib/logs/http-logs'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import { lookupRow } from '@/lib/integrations/google-sheets'
+import { consumeCredits } from '@/lib/credits'
 
 // ------------------------------------------------------------
 // Public API
@@ -425,6 +426,14 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
     case 'whatsapp_interaction': {
       const cfg = step.step_config as WhatsAppInteractionStepConfig
       if (!args.contactId) throw new Error('whatsapp_interaction needs a contact')
+
+      // Credit gate for interactive form/flow
+      const creditResult = await consumeCredits(args.businessId, 'interactive_form')
+      if (!creditResult.ok) {
+        console.error(`[automations] Insufficient credits for interactive_form on business ${args.businessId}: ${creditResult.reason}`)
+        throw new Error(`Insufficient credits: ${creditResult.reason}`)
+      }
+
       const conversationId = await resolveConversationId(args)
 
       const { data: settings } = await db
@@ -466,6 +475,14 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
     case 'whatsapp_flow': {
       const cfg = step.step_config as WhatsAppFlowStepConfig
       if (!args.contactId) throw new Error('whatsapp_flow needs a contact')
+
+      // Credit gate for interactive form/flow
+      const flowCreditResult = await consumeCredits(args.businessId, 'interactive_form')
+      if (!flowCreditResult.ok) {
+        console.error(`[automations] Insufficient credits for interactive_form on business ${args.businessId}: ${flowCreditResult.reason}`)
+        throw new Error(`Insufficient credits: ${flowCreditResult.reason}`)
+      }
+
       const conversationId = await resolveConversationId(args)
 
       const { whatsapp_message_id } = await engineSendFlow({

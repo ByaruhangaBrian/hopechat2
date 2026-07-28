@@ -14,6 +14,7 @@ import {
   Cpu,
   CreditCard,
   Info,
+  Coins,
 } from "lucide-react";
 import {
   Card,
@@ -61,6 +62,12 @@ export default function AdminSettingsPage() {
     site_url: "live.pesapal.com",
     is_enabled: false,
   });
+  const [creditCosts, setCreditCosts] = useState({
+    ai_chat: { credits: 1, label: "Inbound AI Chat Session" },
+    interactive_form: { credits: 1, label: "Interactive Form / Flow" },
+    bulk_broadcast: { credits: 15, label: "Bulk Broadcast" },
+    credit_ugx_rate: 40,
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const supabase = createClient();
@@ -72,13 +79,15 @@ export default function AdminSettingsPage() {
         { data: sys },
         { data: int },
         { data: creds },
-        { data: pp }
+        { data: pp },
+        { data: cc },
       ] = await Promise.all([
         supabase.from("system_settings").select("*").eq("id", "whatsapp_global").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "system_config").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "integrations_global").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "platform_credentials").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "pesapal_global").maybeSingle(),
+        supabase.from("system_settings").select("*").eq("id", "credit_costs").maybeSingle(),
       ]);
 
       if (wa) setWhatsappSettings(wa.value);
@@ -91,6 +100,14 @@ export default function AdminSettingsPage() {
           consumer_secret: pp.value.consumer_secret || "",
           site_url: pp.value.site_url || "live.pesapal.com",
           is_enabled: !!pp.value.is_enabled,
+        });
+      }
+      if (cc?.value) {
+        setCreditCosts({
+          ai_chat: cc.value.ai_chat ?? { credits: 1, label: "Inbound AI Chat Session" },
+          interactive_form: cc.value.interactive_form ?? { credits: 1, label: "Interactive Form / Flow" },
+          bulk_broadcast: cc.value.bulk_broadcast ?? { credits: 15, label: "Bulk Broadcast" },
+          credit_ugx_rate: cc.value.credit_ugx_rate ?? 40,
         });
       }
       
@@ -204,6 +221,24 @@ export default function AdminSettingsPage() {
     setSaving(false);
   }
 
+  async function handleSaveCreditCosts() {
+    setSaving(true);
+    const { error } = await supabase
+      .from("system_settings")
+      .upsert({
+        id: "credit_costs",
+        value: creditCosts,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (error) {
+      toast.error("Failed to save credit configuration");
+    } else {
+      toast.success("Credit system configuration updated");
+    }
+    setSaving(false);
+  }
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard");
@@ -236,6 +271,9 @@ export default function AdminSettingsPage() {
           </TabsTrigger>
           <TabsTrigger value="integrations" className="px-4 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
             Integrations
+          </TabsTrigger>
+          <TabsTrigger value="credits" className="px-4 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+            Credits
           </TabsTrigger>
         </TabsList>
 
@@ -625,6 +663,147 @@ export default function AdminSettingsPage() {
                     {saving ? "Saving..." : "Save Configuration"}
                   </Button>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="credits" className="space-y-6 outline-none">
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <Coins className="h-5 w-5 text-amber-500" />
+                Credit System Configuration
+              </CardTitle>
+              <CardDescription>
+                Configure how many credits each action costs and the UGX rate per credit.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex gap-3 text-xs leading-relaxed text-amber-600 dark:text-amber-100">
+                <Info className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold mb-1">How Credits Work:</p>
+                  <ul className="list-disc ml-4 space-y-1">
+                    <li>Each <strong>Inbound AI Chat</strong> response costs the configured number of credits.</li>
+                    <li>Each <strong>Interactive Form / Flow</strong> sent via automation costs credits.</li>
+                    <li>Each <strong>Bulk Broadcast</strong> action costs credits (per broadcast, not per recipient).</li>
+                    <li>The UGX rate determines how much each credit costs when displayed to businesses.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-foreground">Action Credit Costs</h3>
+
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs">
+                      {creditCosts.ai_chat.label}
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={creditCosts.ai_chat.credits}
+                        onChange={(e) =>
+                          setCreditCosts((prev) => ({
+                            ...prev,
+                            ai_chat: { ...prev.ai_chat, credits: Number(e.target.value) },
+                          }))
+                        }
+                        className="bg-muted border-border text-foreground font-semibold text-lg pr-12"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        credits
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs">
+                      {creditCosts.interactive_form.label}
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={creditCosts.interactive_form.credits}
+                        onChange={(e) =>
+                          setCreditCosts((prev) => ({
+                            ...prev,
+                            interactive_form: { ...prev.interactive_form, credits: Number(e.target.value) },
+                          }))
+                        }
+                        className="bg-muted border-border text-foreground font-semibold text-lg pr-12"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        credits
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs">
+                      {creditCosts.bulk_broadcast.label}
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={creditCosts.bulk_broadcast.credits}
+                        onChange={(e) =>
+                          setCreditCosts((prev) => ({
+                            ...prev,
+                            bulk_broadcast: { ...prev.bulk_broadcast, credits: Number(e.target.value) },
+                          }))
+                        }
+                        className="bg-muted border-border text-foreground font-semibold text-lg pr-12"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        credits
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 border-t border-border pt-6">
+                <h3 className="text-sm font-medium text-foreground">Pricing</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs">Credit Cost (UGX per credit)</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
+                        UGX
+                      </span>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={creditCosts.credit_ugx_rate}
+                        onChange={(e) =>
+                          setCreditCosts((prev) => ({
+                            ...prev,
+                            credit_ugx_rate: Number(e.target.value),
+                          }))
+                        }
+                        className="bg-muted border-border text-foreground font-semibold text-lg pl-12"
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground/60">
+                      Current rate: {creditCosts.credit_ugx_rate > 0
+                        ? `${creditCosts.credit_ugx_rate.toLocaleString()} UGX = 1 credit`
+                        : "Rate not set"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end border-t border-border pt-6">
+                <Button onClick={handleSaveCreditCosts} disabled={saving || loading} className="bg-primary hover:bg-primary/90">
+                  <Save className="mr-2 h-4 w-4" />
+                  {saving ? "Saving..." : "Save Credit Config"}
+                </Button>
               </div>
             </CardContent>
           </Card>

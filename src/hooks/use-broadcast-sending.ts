@@ -421,6 +421,31 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         contactIds,
       );
 
+      // ── Credit gate: deduct bulk_broadcast credits before sending ──
+      const { data: profile } = await supabase
+        .from('users')
+        .select('business_id')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.business_id) {
+        const creditRes = await fetch('/api/credits/deduct', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            businessId: profile.business_id,
+            action: 'bulk_broadcast',
+          }),
+        });
+
+        if (!creditRes.ok) {
+          const creditData = await creditRes.json();
+          throw new Error(
+            creditData.error || 'Insufficient credits to send this broadcast.'
+          );
+        }
+      }
+
       let failedCount = 0;
       const totalRecipients = recipients.length;
 

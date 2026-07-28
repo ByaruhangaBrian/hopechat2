@@ -6,6 +6,7 @@ import { generateGeminiResponse } from '@/lib/automations/gemini-client';
 import { getBusinessAiConfig } from './ai-config-cache';
 import { runAutomationsForTrigger, resumeAutomationWithInteraction } from '@/lib/automations/engine';
 import { decrypt } from './encryption';
+import { consumeCredits } from '@/lib/credits';
 import { GoogleGenAI } from '@google/genai'; // Strict requirement: import from the new SDK package
 
 const DEBOUNCE_DELAY_MS = 5000; // 5 seconds
@@ -292,6 +293,23 @@ async function executeAiJob(job: any): Promise<void> {
       note: 'access_restriction_disallowed_broadcasts'
     });
     throw new Error('Access restriction: Broadcasts are not allowed on this subscription tier.');
+  }
+
+  // 1.6 Credit gate — deduct credits before generating an AI response
+  const creditResult = await consumeCredits(job.business_id, 'ai_chat');
+  if (!creditResult.ok) {
+    console.error(`[ai-worker] Insufficient credits for business ${job.business_id}: ${creditResult.reason}`);
+    void logHttpEvent({
+      userId: job.user_id,
+      businessId: job.business_id,
+      direction: 'system',
+      service: 'ai-worker',
+      endpoint: 'execute',
+      payload: { error: 'Insufficient credits', detail: creditResult.reason },
+      statusCode: 402,
+      note: 'insufficient_credits'
+    });
+    return; // Silently skip — don't reply if no credits
   }
 
   // 2. Load Context (Cached)
