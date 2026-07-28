@@ -40,7 +40,7 @@ const MOCK_MESSAGES = [
 ];
 
 // Reusable IntersectionObserver-based FadeIn component for smooth, staggering scroll animations
-function FadeIn({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+function FadeIn({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   const [isIntersecting, setIsIntersecting] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -52,7 +52,7 @@ function FadeIn({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
           observer.unobserve(entry.target);
         }
       },
-      { threshold: 0.05 }
+      { threshold: 0.05, rootMargin: "0px 0px -50px 0px" }
     );
 
     if (ref.current) {
@@ -68,13 +68,24 @@ function FadeIn({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
     <div
       ref={ref}
       className={cn(
-        "transition-all duration-700 ease-out transform",
-        isIntersecting ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+        "transition-all duration-700 ease-out will-change-transform",
+        isIntersecting ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
+        className
       )}
       style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
     </div>
+  );
+}
+
+// Floating particle orb component for hero background
+function FloatingOrb({ className, delay = 0 }: { className?: string; delay?: number }) {
+  return (
+    <div 
+      className={cn("absolute rounded-full blur-[80px] pointer-events-none animate-float", className)}
+      style={{ animationDelay: `${delay}ms` }}
+    />
   );
 }
 
@@ -137,22 +148,22 @@ export default function LandingPage() {
     <div className="flex min-h-screen flex-col bg-white text-[oklch(0.2_0.04_170)] selection:bg-[oklch(0.5_0.15_170)]/30 antialiased font-sans">
       
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b border-[oklch(0.94_0.02_170)] bg-white/90 backdrop-blur-md transition-all duration-300">
+      <header className="sticky top-0 z-50 w-full border-b border-[oklch(0.94_0.02_170)] bg-white/95 backdrop-blur-lg transition-all duration-300 shadow-sm shadow-black/[0.02]">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[oklch(0.5_0.15_170)] shadow-md shadow-[oklch(0.5_0.15_170)]/20 transition-all duration-300 group-hover:scale-105">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[oklch(0.5_0.15_170)] shadow-md shadow-[oklch(0.5_0.15_170)]/20 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-[oklch(0.5_0.15_170)]/30">
                 <MessageSquare className="h-4.5 w-4.5 text-white" />
               </div>
               <span className="text-lg font-extrabold tracking-tight text-[oklch(0.2_0.04_170)] bg-clip-text">HopeChat</span>
             </Link>
             <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-muted-foreground">
-              <Link href="#features" className="hover:text-[oklch(0.2_0.04_170)] transition-colors duration-200">Features</Link>
-              <Link href="#pricing" className="hover:text-[oklch(0.2_0.04_170)] transition-colors duration-200">Pricing</Link>
-              <Link href="#solutions" className="hover:text-[oklch(0.2_0.04_170)] transition-colors duration-200">Solutions</Link>
-              <Link href="#roi" className="hover:text-[oklch(0.2_0.04_170)] transition-colors duration-200">ROI</Link>
-              <Link href="#security" className="hover:text-[oklch(0.2_0.04_170)] transition-colors duration-200">Security</Link>
-              <Link href="#faq" className="hover:text-[oklch(0.2_0.04_170)] transition-colors duration-200">FAQ</Link>
+              <Link href="#features" className="hover:text-[oklch(0.5_0.15_170)] transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[oklch(0.5_0.15_170)] after:transition-all after:duration-300 hover:after:w-full">Features</Link>
+              <Link href="#pricing" className="hover:text-[oklch(0.5_0.15_170)] transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[oklch(0.5_0.15_170)] after:transition-all after:duration-300 hover:after:w-full">Pricing</Link>
+              <Link href="#solutions" className="hover:text-[oklch(0.5_0.15_170)] transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[oklch(0.5_0.15_170)] after:transition-all after:duration-300 hover:after:w-full">Solutions</Link>
+              <Link href="#roi" className="hover:text-[oklch(0.5_0.15_170)] transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[oklch(0.5_0.15_170)] after:transition-all after:duration-300 hover:after:w-full">ROI</Link>
+              <Link href="#security" className="hover:text-[oklch(0.5_0.15_170)] transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[oklch(0.5_0.15_170)] after:transition-all after:duration-300 hover:after:w-full">Security</Link>
+              <Link href="#faq" className="hover:text-[oklch(0.5_0.15_170)] transition-colors duration-200 relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[oklch(0.5_0.15_170)] after:transition-all after:duration-300 hover:after:w-full">FAQ</Link>
             </nav>
           </div>
           
@@ -161,7 +172,7 @@ export default function LandingPage() {
               href="/login" 
               className={cn(
                 buttonVariants({ variant: "ghost" }),
-                "text-sm font-bold text-muted-foreground hover:text-[oklch(0.2_0.04_170)] h-9 px-4 hidden sm:inline-flex"
+                "text-sm font-bold text-muted-foreground hover:text-[oklch(0.2_0.04_170)] h-9 px-4 hidden sm:inline-flex transition-all duration-200"
               )}
             >
               Log In
@@ -170,7 +181,7 @@ export default function LandingPage() {
               href="/signup" 
               className={cn(
                 buttonVariants(),
-                "bg-[oklch(0.5_0.15_170)] hover:bg-[oklch(0.5_0.15_170)]/90 text-white font-bold px-5 h-9 text-xs sm:text-sm shadow-md shadow-[oklch(0.5_0.15_170)]/15 transition-transform hover:scale-[1.02] active:scale-[0.98] duration-200 rounded-lg border-0"
+                "bg-[oklch(0.5_0.15_170)] hover:bg-[oklch(0.5_0.15_170)]/90 text-white font-bold px-5 h-9 text-xs sm:text-sm shadow-md shadow-[oklch(0.5_0.15_170)]/20 hover:shadow-lg hover:shadow-[oklch(0.5_0.15_170)]/30 transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] rounded-lg border-0"
               )}
             >
               Start Free Trial
@@ -187,46 +198,46 @@ export default function LandingPage() {
 
         {/* Mobile Navigation Dropdown */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-b border-[oklch(0.94_0.02_170)] bg-white px-4 py-4 space-y-3 animate-in slide-in-from-top-4 duration-200">
+          <div className="md:hidden border-b border-[oklch(0.94_0.02_170)] bg-white/95 backdrop-blur-md px-4 py-4 space-y-3 mobile-menu-enter">
             <Link 
               href="#features" 
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 text-sm font-medium text-muted-foreground hover:text-[oklch(0.2_0.04_170)] rounded-lg hover:bg-[oklch(0.98_0.01_170)]"
+              className="block px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-[oklch(0.2_0.04_170)] rounded-lg hover:bg-[oklch(0.98_0.01_170)] transition-colors duration-200"
             >
               Features
             </Link>
             <Link 
               href="#pricing" 
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 text-sm font-medium text-muted-foreground hover:text-[oklch(0.2_0.04_170)] rounded-lg hover:bg-[oklch(0.98_0.01_170)]"
+              className="block px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-[oklch(0.2_0.04_170)] rounded-lg hover:bg-[oklch(0.98_0.01_170)] transition-colors duration-200"
             >
               Pricing
             </Link>
             <Link 
               href="#solutions" 
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 text-sm font-medium text-muted-foreground hover:text-[oklch(0.2_0.04_170)] rounded-lg hover:bg-[oklch(0.98_0.01_170)]"
+              className="block px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-[oklch(0.2_0.04_170)] rounded-lg hover:bg-[oklch(0.98_0.01_170)] transition-colors duration-200"
             >
               Solutions
             </Link>
             <Link 
               href="#roi" 
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 text-sm font-medium text-muted-foreground hover:text-[oklch(0.2_0.04_170)] rounded-lg hover:bg-[oklch(0.98_0.01_170)]"
+              className="block px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-[oklch(0.2_0.04_170)] rounded-lg hover:bg-[oklch(0.98_0.01_170)] transition-colors duration-200"
             >
               ROI
             </Link>
             <Link 
               href="#security" 
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 text-sm font-medium text-muted-foreground hover:text-[oklch(0.2_0.04_170)] rounded-lg hover:bg-[oklch(0.98_0.01_170)]"
+              className="block px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-[oklch(0.2_0.04_170)] rounded-lg hover:bg-[oklch(0.98_0.01_170)] transition-colors duration-200"
             >
               Security
             </Link>
             <Link 
               href="#faq" 
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 text-sm font-medium text-muted-foreground hover:text-[oklch(0.2_0.04_170)] rounded-lg hover:bg-[oklch(0.98_0.01_170)]"
+              className="block px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-[oklch(0.2_0.04_170)] rounded-lg hover:bg-[oklch(0.98_0.01_170)] transition-colors duration-200"
             >
               FAQ
             </Link>
@@ -250,9 +261,14 @@ export default function LandingPage() {
         
         {/* Enterprise Hero Section (Bright, Ambient Glow) */}
         <section className="relative pt-16 pb-20 md:pt-24 md:pb-32 lg:pt-32 lg:pb-40 overflow-hidden bg-white">
+          {/* Floating particle orbs for ambient background effect */}
+          <FloatingOrb className="top-20 left-[10%] w-[300px] h-[300px] bg-[oklch(0.88_0.1_165)]/25 animate-float" delay={0} />
+          <FloatingOrb className="top-40 right-[15%] w-[250px] h-[250px] bg-[oklch(0.5_0.15_170)]/15 animate-float-delayed" delay={1000} />
+          <FloatingOrb className="bottom-20 left-[20%] w-[200px] h-[200px] bg-[oklch(0.88_0.1_165)]/20 animate-float" delay={2000} />
+          <FloatingOrb className="top-1/2 right-[10%] w-[180px] h-[180px] bg-[oklch(0.5_0.15_170)]/10 animate-float-delayed" delay={1500} />
           {/* Fresh Mint Green & Emerald Teal ambient blur glow */}
-          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[oklch(0.88_0.1_165)]/30 rounded-full blur-[120px] -z-10 pointer-events-none" />
-          <div className="absolute top-10 right-1/4 w-[400px] h-[400px] bg-[oklch(0.5_0.15_170)]/10 rounded-full blur-[100px] -z-10 pointer-events-none" />
+          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[oklch(0.88_0.1_165)]/30 rounded-full blur-[120px] -z-10 pointer-events-none animate-pulse-glow" />
+          <div className="absolute top-10 right-1/4 w-[400px] h-[400px] bg-[oklch(0.5_0.15_170)]/10 rounded-full blur-[100px] -z-10 pointer-events-none animate-pulse-glow" style={{ animationDelay: "1500ms" }} />
           
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-12">
             
@@ -278,16 +294,17 @@ export default function LandingPage() {
                 href="/signup" 
                 className={cn(
                   buttonVariants({ size: "lg" }),
-                  "w-full sm:w-auto h-12 px-8 text-base bg-[oklch(0.5_0.15_170)] hover:bg-[oklch(0.5_0.15_170)]/90 text-white gap-2 font-bold shadow-lg shadow-[oklch(0.5_0.15_170)]/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 rounded-xl border-0 flex items-center justify-center"
+                  "w-full sm:w-auto h-12 px-8 text-base bg-[oklch(0.5_0.15_170)] hover:bg-[oklch(0.5_0.15_170)]/90 text-white gap-2 font-bold shadow-lg shadow-[oklch(0.5_0.15_170)]/25 hover:shadow-xl hover:shadow-[oklch(0.5_0.15_170)]/30 hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 rounded-xl border-0 flex items-center justify-center group"
                 )}
               >
-                Deploy Free Trial <ArrowRight className="ml-2 h-4.5 w-4.5" />
+                Deploy Free Trial 
+                <ArrowRight className="ml-2 h-4.5 w-4.5 transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
               <Link 
                 href="#features" 
                 className={cn(
                   buttonVariants({ variant: "outline", size: "lg" }),
-                  "w-full sm:w-auto h-12 px-8 text-base border-[oklch(0.94_0.02_170)] bg-white hover:bg-[oklch(0.98_0.01_170)] text-[oklch(0.2_0.04_170)] font-bold hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 rounded-xl flex items-center justify-center"
+                  "w-full sm:w-auto h-12 px-8 text-base border-[oklch(0.94_0.02_170)] bg-white hover:bg-[oklch(0.98_0.01_170)] text-[oklch(0.2_0.04_170)] font-bold hover:scale-[1.03] hover:shadow-md active:scale-[0.98] transition-all duration-300 rounded-xl flex items-center justify-center"
                 )}
               >
                 Explore Features
@@ -295,7 +312,7 @@ export default function LandingPage() {
             </div>
 
             {/* Elevated Crisp White Mock Chat Interface */}
-            <div className="relative mx-auto max-w-5xl rounded-2xl border border-[oklch(0.94_0.02_170)] bg-white shadow-xl shadow-black/[0.03] overflow-hidden aspect-[16/10] md:aspect-[16/9] flex text-left font-sans text-[11px] sm:text-xs md:text-sm animate-in fade-in zoom-in-95 duration-1000 delay-400">
+            <div className="relative mx-auto max-w-5xl rounded-2xl border border-[oklch(0.94_0.02_170)] bg-white shadow-xl shadow-black/[0.04] overflow-hidden aspect-[16/10] md:aspect-[16/9] flex text-left font-sans text-[11px] sm:text-xs md:text-sm animate-in fade-in zoom-in-95 duration-1000 delay-400 hover:shadow-2xl hover:shadow-black/[0.06] transition-shadow duration-500">
               {/* Left Column: Side Navigation Mock */}
               <div className="w-16 md:w-56 border-r border-[oklch(0.94_0.02_170)] flex flex-col bg-[oklch(0.98_0.01_170)]/50">
                 <div className="p-3 border-b border-[oklch(0.94_0.02_170)] flex items-center justify-between">
@@ -451,9 +468,9 @@ export default function LandingPage() {
             {/* Trusted By / Enterprise Brands */}
             <div className="pt-8 space-y-6 animate-in fade-in duration-750 delay-500">
               <p className="text-xs font-extrabold uppercase tracking-[0.25em] text-muted-foreground">Trusted by forward-thinking teams globally</p>
-              <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-50 hover:opacity-80 transition-opacity duration-300 grayscale select-none">
+              <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-40 hover:opacity-70 transition-opacity duration-500 grayscale hover:grayscale-0 select-none">
                 {["SAMSUNG", "OPPO", "MICHAEL KORS", "SHEIN", "J&T EXPRESS"].map((brand) => (
-                  <span key={brand} className="text-lg md:text-xl font-black tracking-widest text-[oklch(0.2_0.04_170)]">{brand}</span>
+                  <span key={brand} className="text-lg md:text-xl font-black tracking-widest text-[oklch(0.2_0.04_170)] hover:text-[oklch(0.5_0.15_170)] transition-colors duration-300 cursor-default">{brand}</span>
                 ))}
               </div>
             </div>
@@ -506,12 +523,12 @@ export default function LandingPage() {
                 }
               ].map((item, index) => (
                 <FadeIn key={index} delay={index * 100}>
-                  <div className="group p-6 rounded-2xl bg-white border border-black/[0.04] shadow-sm hover:shadow-md hover:border-[oklch(0.5_0.15_170)]/40 transition-all duration-300 hover:-translate-y-0.5 flex flex-col justify-between h-full">
+                  <div className="group p-6 rounded-2xl bg-white border border-black/[0.04] shadow-sm hover:shadow-xl hover:shadow-[oklch(0.5_0.15_170)]/10 hover:border-[oklch(0.5_0.15_170)]/40 transition-all duration-500 hover:-translate-y-2 flex flex-col justify-between h-full">
                     <div className="space-y-4">
-                      <div className="h-10 w-10 rounded-xl bg-[oklch(0.5_0.15_170)]/5 text-[oklch(0.5_0.15_170)] flex items-center justify-center group-hover:bg-[oklch(0.5_0.15_170)] group-hover:text-white transition-all duration-300">
-                        <item.icon className="h-5 w-5" />
+                      <div className="h-12 w-12 rounded-xl bg-[oklch(0.5_0.15_170)]/5 text-[oklch(0.5_0.15_170)] flex items-center justify-center group-hover:bg-[oklch(0.5_0.15_170)] group-hover:text-white group-hover:scale-110 transition-all duration-500 shadow-sm group-hover:shadow-md">
+                        <item.icon className="h-6 w-6" />
                       </div>
-                      <h3 className="text-lg font-bold text-[oklch(0.2_0.04_170)] tracking-tight">{item.title}</h3>
+                      <h3 className="text-lg font-bold text-[oklch(0.2_0.04_170)] tracking-tight group-hover:text-[oklch(0.5_0.15_170)] transition-colors duration-300">{item.title}</h3>
                       <p className="text-sm text-muted-foreground leading-relaxed font-medium">{item.desc}</p>
                     </div>
                   </div>
@@ -524,7 +541,7 @@ export default function LandingPage() {
         {/* Pricing Section (Bright, Staggered, 3-Tier UGX Grid) */}
         <section id="pricing" className="py-20 lg:py-28 bg-white relative">
           {/* Subtle Mint background glow */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[oklch(0.88_0.1_165)]/20 rounded-full blur-[130px] -z-10 pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[oklch(0.88_0.1_165)]/20 rounded-full blur-[130px] -z-10 pointer-events-none animate-pulse-glow" />
           
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
             <div className="text-center space-y-4 max-w-3xl mx-auto">
@@ -540,10 +557,10 @@ export default function LandingPage() {
               
               {/* Bronze Plan Card */}
               <FadeIn delay={0}>
-                <div className="bg-white border border-[oklch(0.94_0.02_170)] rounded-2xl p-8 flex flex-col justify-between h-full shadow-sm hover:shadow-md transition-all duration-300">
+                <div className="bg-white border border-[oklch(0.94_0.02_170)] rounded-2xl p-8 flex flex-col justify-between h-full shadow-sm hover:shadow-xl hover:shadow-[oklch(0.5_0.15_170)]/10 hover:border-[oklch(0.5_0.15_170)]/30 hover:-translate-y-2 transition-all duration-500 group">
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-lg font-bold text-[oklch(0.2_0.04_170)] tracking-tight">BRONZE</h3>
+                      <h3 className="text-lg font-bold text-[oklch(0.2_0.04_170)] tracking-tight group-hover:text-[oklch(0.5_0.15_170)] transition-colors duration-300">BRONZE</h3>
                       <p className="text-xs text-muted-foreground font-semibold mt-1">Perfect for solo founders and startup testing</p>
                     </div>
                     <div className="py-2 border-y border-[oklch(0.94_0.02_170)]">
@@ -589,8 +606,8 @@ export default function LandingPage() {
 
               {/* Silver Plan Card (Most Popular, highlighted in emerald teal border and mint badge) */}
               <FadeIn delay={100}>
-                <div className="bg-white border-2 border-[oklch(0.5_0.15_170)] rounded-2xl p-8 flex flex-col justify-between h-full shadow-md relative scale-102">
-                  <div className="absolute top-0 right-8 -translate-y-1/2 rounded-full bg-[oklch(0.88_0.1_165)] border border-[oklch(0.5_0.15_170)]/20 px-3 py-1 text-[10px] font-black tracking-wider text-[oklch(0.2_0.04_170)] uppercase shadow-sm">
+                <div className="bg-white border-2 border-[oklch(0.5_0.15_170)] rounded-2xl p-8 flex flex-col justify-between h-full shadow-lg shadow-[oklch(0.5_0.15_170)]/15 relative scale-[1.02] hover:shadow-2xl hover:shadow-[oklch(0.5_0.15_170)]/25 hover:scale-[1.04] transition-all duration-500 group">
+                  <div className="absolute top-0 right-8 -translate-y-1/2 rounded-full bg-[oklch(0.5_0.15_170)] border border-[oklch(0.5_0.15_170)]/30 px-3 py-1 text-[10px] font-black tracking-wider text-white uppercase shadow-lg shadow-[oklch(0.5_0.15_170)]/20 animate-pulse-glow">
                     MOST POPULAR
                   </div>
                   <div className="space-y-6">
@@ -641,10 +658,10 @@ export default function LandingPage() {
 
               {/* Gold Plan Card */}
               <FadeIn delay={200}>
-                <div className="bg-white border border-[oklch(0.94_0.02_170)] rounded-2xl p-8 flex flex-col justify-between h-full shadow-sm hover:shadow-md transition-all duration-300">
+                <div className="bg-white border border-[oklch(0.94_0.02_170)] rounded-2xl p-8 flex flex-col justify-between h-full shadow-sm hover:shadow-xl hover:shadow-[oklch(0.5_0.15_170)]/10 hover:border-[oklch(0.5_0.15_170)]/30 hover:-translate-y-2 transition-all duration-500 group">
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-lg font-bold text-[oklch(0.2_0.04_170)] tracking-tight">GOLD</h3>
+                      <h3 className="text-lg font-bold text-[oklch(0.2_0.04_170)] tracking-tight group-hover:text-[oklch(0.5_0.15_170)] transition-colors duration-300">GOLD</h3>
                       <p className="text-xs text-muted-foreground font-semibold mt-1">For power users running full automation at scale</p>
                     </div>
                     <div className="py-2 border-y border-[oklch(0.94_0.02_170)]">
@@ -717,11 +734,11 @@ export default function LandingPage() {
                     ))}
                   </ul>
                 </div>
-                <div className="flex-1 w-full max-w-xl aspect-square md:aspect-[4/3] rounded-2xl bg-white border border-[oklch(0.94_0.02_170)] shadow-md flex items-center justify-center p-6 relative">
+                <div className="flex-1 w-full max-w-xl aspect-square md:aspect-[4/3] rounded-2xl bg-white border border-[oklch(0.94_0.02_170)] shadow-md flex items-center justify-center p-6 relative hover:shadow-xl hover:shadow-[oklch(0.5_0.15_170)]/10 hover:border-[oklch(0.5_0.15_170)]/30 transition-all duration-500">
                   <div className="w-full bg-[oklch(0.98_0.01_170)]/45 border border-[oklch(0.94_0.02_170)] rounded-xl p-4 space-y-4">
                     <div className="flex justify-between items-center border-b border-[oklch(0.94_0.02_170)] pb-2">
                       <span className="font-bold text-[oklch(0.2_0.04_170)] flex items-center gap-1.5"><Cpu className="h-4 w-4 text-[oklch(0.5_0.15_170)]" /> Training Database</span>
-                      <span className="text-[10px] text-emerald-600 font-bold bg-[oklch(0.88_0.1_165)] border border-[oklch(0.5_0.15_170)]/15 px-2 py-0.5 rounded-full">Synchronized</span>
+                      <span className="text-[10px] text-emerald-600 font-bold bg-[oklch(0.88_0.1_165)] border border-[oklch(0.5_0.15_170)]/15 px-2 py-0.5 rounded-full animate-pulse-glow">Synchronized</span>
                     </div>
                     <div className="space-y-2.5">
                       {[
@@ -767,7 +784,7 @@ export default function LandingPage() {
                     ))}
                   </ul>
                 </div>
-                <div className="flex-1 w-full max-w-xl aspect-square md:aspect-[4/3] rounded-2xl bg-white border border-[oklch(0.94_0.02_170)] shadow-md flex items-center justify-center p-6 relative">
+                <div className="flex-1 w-full max-w-xl aspect-square md:aspect-[4/3] rounded-2xl bg-white border border-[oklch(0.94_0.02_170)] shadow-md flex items-center justify-center p-6 relative hover:shadow-xl hover:shadow-[oklch(0.5_0.15_170)]/10 hover:border-[oklch(0.5_0.15_170)]/30 transition-all duration-500">
                   <div className="w-full bg-[oklch(0.98_0.01_170)]/45 border border-[oklch(0.94_0.02_170)] rounded-xl p-4 space-y-4">
                     <div className="flex justify-between items-center border-b border-[oklch(0.94_0.02_170)] pb-2">
                       <span className="font-bold text-[oklch(0.2_0.04_170)] flex items-center gap-1.5"><Users className="h-4 w-4 text-[oklch(0.5_0.15_170)]" /> Active Agents</span>
@@ -819,7 +836,7 @@ export default function LandingPage() {
                     ))}
                   </ul>
                 </div>
-                <div className="flex-1 w-full max-w-xl aspect-square md:aspect-[4/3] rounded-2xl bg-white border border-[oklch(0.94_0.02_170)] shadow-md flex items-center justify-center p-4 relative">
+                <div className="flex-1 w-full max-w-xl aspect-square md:aspect-[4/3] rounded-2xl bg-white border border-[oklch(0.94_0.02_170)] shadow-md flex items-center justify-center p-4 relative hover:shadow-xl hover:shadow-[oklch(0.5_0.15_170)]/10 hover:border-[oklch(0.5_0.15_170)]/30 transition-all duration-500">
                   <div className="w-full h-full flex gap-3 overflow-x-auto text-[11px] sm:text-xs">
                     {[
                       { title: "Incoming", count: 2, cards: [{ title: "Sarah Jenkins", company: "TechCorp", value: "$12,400" }] },
@@ -867,9 +884,9 @@ export default function LandingPage() {
                 { label: "Conversion Lift", value: "24%", desc: "Increase in lead-to-deal conversion rates using active pipeline chat routing." }
               ].map((metric, index) => (
                 <FadeIn key={index} delay={index * 150}>
-                  <div className="p-8 rounded-2xl bg-white border border-[oklch(0.94_0.02_170)] shadow-sm flex flex-col justify-between text-left space-y-4 hover:border-[oklch(0.5_0.15_170)]/30 transition-colors h-full">
-                    <span className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">{metric.label}</span>
-                    <div className="text-5xl font-extrabold text-[oklch(0.5_0.15_170)] tracking-tight">{metric.value}</div>
+                  <div className="p-8 rounded-2xl bg-white border border-[oklch(0.94_0.02_170)] shadow-sm flex flex-col justify-between text-left space-y-4 hover:border-[oklch(0.5_0.15_170)]/40 hover:shadow-xl hover:shadow-[oklch(0.5_0.15_170)]/10 hover:-translate-y-2 transition-all duration-500 h-full group">
+                    <span className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground group-hover:text-[oklch(0.5_0.15_170)] transition-colors duration-300">{metric.label}</span>
+                    <div className="text-5xl font-extrabold text-[oklch(0.5_0.15_170)] tracking-tight group-hover:scale-105 transition-transform duration-300 origin-left">{metric.value}</div>
                     <p className="text-sm text-muted-foreground font-medium leading-relaxed">{metric.desc}</p>
                   </div>
                 </FadeIn>
@@ -901,10 +918,10 @@ export default function LandingPage() {
                   key={ind.id}
                   onClick={() => setActiveIndustry(ind.id)}
                   className={cn(
-                    "px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold border transition-all duration-300",
+                    "px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold border transition-all duration-300 hover:scale-[1.03] active:scale-[0.98]",
                     activeIndustry === ind.id 
-                      ? "bg-[oklch(0.5_0.15_170)] text-white border-[oklch(0.5_0.15_170)] shadow-md shadow-[oklch(0.5_0.15_170)]/10" 
-                      : "bg-white text-muted-foreground border-[oklch(0.94_0.02_170)] hover:bg-[oklch(0.98_0.01_170)]"
+                      ? "bg-[oklch(0.5_0.15_170)] text-white border-[oklch(0.5_0.15_170)] shadow-lg shadow-[oklch(0.5_0.15_170)]/20" 
+                      : "bg-white text-muted-foreground border-[oklch(0.94_0.02_170)] hover:bg-[oklch(0.98_0.01_170)] hover:border-[oklch(0.5_0.15_170)]/30 hover:shadow-md"
                   )}
                 >
                   {ind.label}
@@ -914,7 +931,7 @@ export default function LandingPage() {
 
             {/* Detailed industry response preview wrapped in elevated white card */}
             <FadeIn>
-              <div className="max-w-4xl mx-auto p-6 md:p-8 rounded-2xl bg-white border border-[oklch(0.94_0.02_170)] shadow-sm animate-in fade-in duration-300">
+              <div className="max-w-4xl mx-auto p-6 md:p-8 rounded-2xl bg-white border border-[oklch(0.94_0.02_170)] shadow-sm hover:shadow-lg transition-shadow duration-500 animate-fade-in-scale" key={activeIndustry}>
                 <div className="grid md:grid-cols-2 gap-8 items-center">
                   <div className="space-y-6 text-left">
                     <h3 className="text-xl md:text-2xl font-bold capitalize text-[oklch(0.2_0.04_170)]">{activeIndustry.replace('-', ' ')} Implementation</h3>
@@ -976,8 +993,8 @@ export default function LandingPage() {
 
                   </div>
 
-                  <div className="h-48 md:h-64 rounded-xl bg-gradient-to-br from-[oklch(0.5_0.15_170)]/10 to-[oklch(0.88_0.1_165)]/20 border border-[oklch(0.5_0.15_170)]/20 flex flex-col items-center justify-center p-6 text-center space-y-2">
-                    <div className="text-4xl md:text-5xl font-black text-[oklch(0.5_0.15_170)] tracking-tight">
+                  <div className="h-48 md:h-64 rounded-xl bg-gradient-to-br from-[oklch(0.5_0.15_170)]/10 to-[oklch(0.88_0.1_165)]/20 border border-[oklch(0.5_0.15_170)]/20 flex flex-col items-center justify-center p-6 text-center space-y-2 hover:from-[oklch(0.5_0.15_170)]/15 hover:to-[oklch(0.88_0.1_165)]/25 transition-all duration-500">
+                    <div className="text-4xl md:text-5xl font-black text-[oklch(0.5_0.15_170)] tracking-tight animate-fade-in-scale">
                       {activeIndustry === "retail" && "45%"}
                       {activeIndustry === "finance" && "0"}
                       {activeIndustry === "gaming" && "70%"}
@@ -1021,11 +1038,11 @@ export default function LandingPage() {
                 }
               ].map((item, i) => (
                 <FadeIn key={i} delay={i * 100}>
-                  <div className="p-6 rounded-2xl bg-white border border-black/[0.04] space-y-4 hover:border-[oklch(0.5_0.15_170)]/30 transition-all duration-300 h-full shadow-sm">
-                    <div className="h-10 w-10 rounded-xl bg-[oklch(0.5_0.15_170)]/5 text-[oklch(0.5_0.15_170)] flex items-center justify-center">
-                      <item.icon className="h-5 w-5" />
+                  <div className="p-6 rounded-2xl bg-white border border-black/[0.04] space-y-4 hover:border-[oklch(0.5_0.15_170)]/40 hover:shadow-xl hover:shadow-[oklch(0.5_0.15_170)]/10 hover:-translate-y-2 transition-all duration-500 h-full shadow-sm group">
+                    <div className="h-12 w-12 rounded-xl bg-[oklch(0.5_0.15_170)]/5 text-[oklch(0.5_0.15_170)] flex items-center justify-center group-hover:bg-[oklch(0.5_0.15_170)] group-hover:text-white group-hover:scale-110 transition-all duration-500">
+                      <item.icon className="h-6 w-6" />
                     </div>
-                    <h3 className="text-lg font-bold text-[oklch(0.2_0.04_170)] tracking-tight">{item.title}</h3>
+                    <h3 className="text-lg font-bold text-[oklch(0.2_0.04_170)] tracking-tight group-hover:text-[oklch(0.5_0.15_170)] transition-colors duration-300">{item.title}</h3>
                     <p className="text-xs md:text-sm text-muted-foreground leading-relaxed font-medium">{item.desc}</p>
                   </div>
                 </FadeIn>
@@ -1062,19 +1079,24 @@ export default function LandingPage() {
                 }
               ].map((faq, i) => (
                 <FadeIn key={i} delay={i * 100}>
-                  <div className="rounded-xl border border-[oklch(0.94_0.02_170)] bg-white overflow-hidden shadow-sm">
+                  <div className="rounded-xl border border-[oklch(0.94_0.02_170)] bg-white overflow-hidden shadow-sm hover:shadow-md hover:border-[oklch(0.5_0.15_170)]/30 transition-all duration-300">
                     <button 
                       onClick={() => setActiveFaq(activeFaq === i ? null : i)}
-                      className="w-full px-6 py-4 flex justify-between items-center text-left font-bold text-[oklch(0.2_0.04_170)] text-sm sm:text-base hover:bg-[oklch(0.98_0.01_170)] transition-colors"
+                      className="w-full px-6 py-4 flex justify-between items-center text-left font-bold text-[oklch(0.2_0.04_170)] text-sm sm:text-base hover:bg-[oklch(0.98_0.01_170)] transition-colors duration-200"
                     >
-                      <span>{faq.q}</span>
-                      <ChevronRight className={cn("h-4 w-4 shrink-0 transition-transform duration-200 text-muted-foreground", activeFaq === i && "rotate-90 text-[oklch(0.5_0.15_170)]")} />
+                      <span className="pr-4">{faq.q}</span>
+                      <ChevronRight className={cn("h-5 w-5 shrink-0 transition-transform duration-300 text-muted-foreground group-hover:text-[oklch(0.5_0.15_170)]", activeFaq === i && "rotate-90 text-[oklch(0.5_0.15_170)]")} />
                     </button>
-                    {activeFaq === i && (
-                      <div className="px-6 pb-4 pt-1 text-xs sm:text-sm text-muted-foreground leading-relaxed border-t border-[oklch(0.94_0.02_170)] font-medium bg-white">
-                        {faq.a}
+                    <div 
+                      className="faq-content" 
+                      data-open={activeFaq === i}
+                    >
+                      <div>
+                        <div className="px-6 pb-4 pt-1 text-xs sm:text-sm text-muted-foreground leading-relaxed border-t border-[oklch(0.94_0.02_170)] font-medium bg-white">
+                          {faq.a}
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </FadeIn>
               ))}
@@ -1086,10 +1108,10 @@ export default function LandingPage() {
         <section className="py-16 md:py-24 bg-white">
           <div className="container mx-auto px-4">
             <FadeIn>
-              <div className="rounded-3xl bg-gradient-to-br from-[oklch(0.5_0.15_170)]/10 via-[oklch(0.88_0.1_165)]/10 to-transparent border border-[oklch(0.5_0.15_170)]/20 p-8 md:p-16 lg:p-20 text-center text-[oklch(0.2_0.04_170)] overflow-hidden relative shadow-md">
+              <div className="rounded-3xl bg-gradient-to-br from-[oklch(0.5_0.15_170)]/10 via-[oklch(0.88_0.1_165)]/10 to-transparent border border-[oklch(0.5_0.15_170)]/20 p-8 md:p-16 lg:p-20 text-center text-[oklch(0.2_0.04_170)] overflow-hidden relative shadow-md hover:shadow-xl hover:shadow-[oklch(0.5_0.15_170)]/10 transition-shadow duration-500 animate-gradient">
                 {/* Blur backdrop bubbles */}
-                <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-80 h-80 bg-[oklch(0.88_0.1_165)]/20 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-80 h-80 bg-[oklch(0.5_0.15_170)]/15 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-80 h-80 bg-[oklch(0.88_0.1_165)]/20 rounded-full blur-3xl pointer-events-none animate-float" />
+                <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-80 h-80 bg-[oklch(0.5_0.15_170)]/15 rounded-full blur-3xl pointer-events-none animate-float-delayed" />
                 
                 <div className="relative z-10 space-y-6 max-w-2xl mx-auto">
                   <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-none text-[oklch(0.2_0.04_170)]">Ready to Own Your Chat Infrastructure?</h2>
@@ -1101,16 +1123,17 @@ export default function LandingPage() {
                       href="/signup" 
                       className={cn(
                         buttonVariants({ size: "lg" }),
-                        "w-full sm:w-auto bg-[oklch(0.5_0.15_170)] hover:bg-[oklch(0.5_0.15_170)]/90 text-white h-12 px-8 text-base font-bold rounded-xl active:scale-[0.98] transition-transform shadow-md border-0 flex items-center justify-center"
+                        "w-full sm:w-auto bg-[oklch(0.5_0.15_170)] hover:bg-[oklch(0.5_0.15_170)]/90 text-white h-12 px-8 text-base font-bold rounded-xl active:scale-[0.98] transition-all duration-300 shadow-lg shadow-[oklch(0.5_0.15_170)]/20 hover:shadow-xl hover:shadow-[oklch(0.5_0.15_170)]/30 hover:scale-[1.03] border-0 flex items-center justify-center group"
                       )}
                     >
                       Get Started Free
+                      <ArrowRight className="ml-2 h-4.5 w-4.5 transition-transform duration-300 group-hover:translate-x-1" />
                     </Link>
                     <Link 
                       href="/login" 
                       className={cn(
                         buttonVariants({ variant: "ghost" }),
-                        "text-sm font-bold text-muted-foreground hover:text-[oklch(0.2_0.04_170)] transition-colors py-2 px-4"
+                        "text-sm font-bold text-muted-foreground hover:text-[oklch(0.2_0.04_170)] transition-colors duration-300 py-2 px-4 hover:bg-[oklch(0.98_0.01_170)]"
                       )}
                     >
                       Contact Support Team
