@@ -28,15 +28,15 @@ import { cn } from "@/lib/utils";
 
 // Mock messages database for the dynamic landing page preview
 const MOCK_MESSAGES = [
-  { sender: "customer", text: "Hey! We want to migrate our sales team from Intercom. Does HopeChat support self-hosting on AWS?" },
+  { sender: "customer", text: "Hi! We run a Kampala-based retail chain. Can HopeChat handle our WhatsApp Business queries?" },
   { sender: "typing", text: "" },
-  { sender: "bot", text: "Absolutely! HopeChat is fully open-source and optimized for self-hosting. You can deploy it with one-click on AWS, Hostinger, or your private servers, ensuring complete data ownership and zero per-seat licensing fees." },
-  { sender: "customer", text: "That sounds amazing. What LLM models are supported for the automated AI agents?" },
+  { sender: "bot", text: "Absolutely! HopeChat is built for East African businesses. You can self-host it on your own server with zero per-seat fees, and it connects directly to WhatsApp Business API for your Kampala stores." },
+  { sender: "customer", text: "Nice. Can the AI agent respond to customers in Luganda or English?" },
   { sender: "typing", text: "" },
-  { sender: "bot", text: "We natively integrate with OpenAI GPT-4o, Anthropic Claude 3.5 Sonnet, and Amazon Bedrock. You can easily train agents on your own support files or sync with your existing internal documentation." },
-  { sender: "customer", text: "Perfect. We have a visual sales pipeline setup. Can we link deals to WhatsApp chats?" },
+  { sender: "bot", text: "Yes! HopeChat uses Google Gemini AI, which supports multilingual responses. You can train it on your own FAQ documents, product catalogues, and brand guidelines in any language." },
+  { sender: "customer", text: "We also need to track deals. Can we link WhatsApp chats to a sales pipeline?" },
   { sender: "typing", text: "" },
-  { sender: "bot", text: "Yes! HopeChat features a built-in Kanban pipeline where deal cards are linked directly to live chat histories, making it seamless to track conversions and hand over to human reps." }
+  { sender: "bot", text: "Of course! HopeChat has a built-in Kanban pipeline where deal cards are linked directly to live WhatsApp conversations. Track conversions from first message to close, all in UGX." }
 ];
 
 // Reusable IntersectionObserver-based FadeIn component for smooth, staggering scroll animations
@@ -96,7 +96,7 @@ export default function LandingPage() {
 
   // Chat simulator states
   const [visibleMessages, setVisibleMessages] = useState<Array<{ sender: string; text: string }>>([MOCK_MESSAGES[0]]);
-  const [currentStep, setCurrentStep] = useState(0);
+  const currentStepRef = useRef(0);
   
   // Refs
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -108,41 +108,39 @@ export default function LandingPage() {
     }
   }, [visibleMessages]);
 
-  // Chat simulation effect loop
+  // Chat simulation effect loop - runs once on mount, no re-trigger
   useEffect(() => {
+    let cancelled = false;
     const runChatSimulation = async () => {
-      let step = currentStep;
-      while (true) {
-        // Step 1: Wait for 3 seconds, then show typing indicator
+      while (!cancelled) {
         await new Promise((resolve) => setTimeout(resolve, 3000));
-        const nextTypingIndex = (step + 1) % MOCK_MESSAGES.length;
+        if (cancelled) break;
         
+        const nextTypingIndex = (currentStepRef.current + 1) % MOCK_MESSAGES.length;
         setVisibleMessages((prev) => [...prev, MOCK_MESSAGES[nextTypingIndex]]);
         
-        // Step 2: Wait 1.5 seconds for typing, then replace typing with bot text
         await new Promise((resolve) => setTimeout(resolve, 1500));
-        const nextMessageIndex = (nextTypingIndex + 1) % MOCK_MESSAGES.length;
+        if (cancelled) break;
         
+        const nextMessageIndex = (nextTypingIndex + 1) % MOCK_MESSAGES.length;
         setVisibleMessages((prev) => {
           const list = [...prev];
           list[list.length - 1] = MOCK_MESSAGES[nextMessageIndex];
           return list;
         });
 
-        step = (nextMessageIndex) % MOCK_MESSAGES.length;
-        setCurrentStep(step);
+        currentStepRef.current = nextMessageIndex;
 
-        // Reset if we reached the end of MOCK_MESSAGES to prevent memory growth
         if (visibleMessages.length > 8) {
           setVisibleMessages([MOCK_MESSAGES[0]]);
-          setCurrentStep(0);
-          step = 0;
+          currentStepRef.current = 0;
         }
       }
     };
 
     runChatSimulation();
-  }, [currentStep, visibleMessages.length]);
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-[oklch(0.2_0.04_170)] selection:bg-[oklch(0.5_0.15_170)]/30 antialiased font-sans">
@@ -285,7 +283,7 @@ export default function LandingPage() {
             
             {/* Description */}
             <p className="mx-auto max-w-2xl text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed font-medium animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200">
-              Take back control of your customer relationships. HopeChat connects your team and automated AI agents to WhatsApp, Web Chat, and Custom APIs with complete data sovereignty and zero per-seat licensing fees.
+              Built for African businesses. HopeChat connects your team and AI agents to WhatsApp with complete data sovereignty, UGX billing via Pesapal, and zero per-seat licensing fees.
             </p>
             
             {/* CTAs */}
@@ -323,30 +321,30 @@ export default function LandingPage() {
                 </div>
                 <div className="flex-1 p-2 space-y-2 overflow-y-auto">
                   <div className="p-2.5 rounded-lg bg-[oklch(0.5_0.15_170)]/10 border border-[oklch(0.5_0.15_170)]/20 flex gap-2 items-center cursor-pointer">
-                    <div className="h-8 w-8 shrink-0 rounded-full bg-[oklch(0.5_0.15_170)]/20 text-[oklch(0.5_0.15_170)] flex items-center justify-center font-bold">SJ</div>
+                    <div className="h-8 w-8 shrink-0 rounded-full bg-[oklch(0.5_0.15_170)]/20 text-[oklch(0.5_0.15_170)] flex items-center justify-center font-bold">NK</div>
                     <div className="hidden md:block overflow-hidden flex-1">
                       <div className="flex justify-between items-center">
-                        <span className="font-bold text-[oklch(0.2_0.04_170)] truncate">Sarah Jenkins</span>
+                        <span className="font-bold text-[oklch(0.2_0.04_170)] truncate">Nalukenge Kate</span>
                         <span className="text-[10px] text-[oklch(0.5_0.15_170)] font-black">ACTIVE</span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground truncate">Connected via WhatsApp</p>
+                      <p className="text-[11px] text-muted-foreground truncate">WhatsApp Business</p>
                     </div>
                   </div>
                   <div className="p-2.5 rounded-lg hover:bg-[oklch(0.98_0.01_170)] flex gap-2 items-center cursor-pointer transition-colors">
-                    <div className="h-8 w-8 shrink-0 rounded-full bg-muted text-muted-foreground flex items-center justify-center font-bold">AR</div>
+                    <div className="h-8 w-8 shrink-0 rounded-full bg-muted text-muted-foreground flex items-center justify-center font-bold">OK</div>
                     <div className="hidden md:block overflow-hidden flex-1">
                       <div className="flex justify-between items-center">
-                        <span className="font-semibold truncate">Alex Rivera</span>
+                        <span className="font-semibold truncate">Ochieng Kevin</span>
                         <span className="text-[10px] text-emerald-600 bg-emerald-500/10 px-1 rounded font-bold">BOT</span>
                       </div>
                       <p className="text-[11px] text-muted-foreground truncate">Auto-replied 2m ago</p>
                     </div>
                   </div>
                   <div className="p-2.5 rounded-lg hover:bg-[oklch(0.98_0.01_170)] flex gap-2 items-center cursor-pointer transition-colors">
-                    <div className="h-8 w-8 shrink-0 rounded-full bg-muted text-muted-foreground flex items-center justify-center font-bold">JL</div>
+                    <div className="h-8 w-8 shrink-0 rounded-full bg-muted text-muted-foreground flex items-center justify-center font-bold">JM</div>
                     <div className="hidden md:block overflow-hidden flex-1">
                       <div className="flex justify-between items-center">
-                        <span className="font-semibold truncate">James Lee</span>
+                        <span className="font-semibold truncate">Jean Mugisha</span>
                       </div>
                       <p className="text-[11px] text-muted-foreground truncate">Closed yesterday</p>
                     </div>
@@ -359,13 +357,13 @@ export default function LandingPage() {
                 {/* Active chat header */}
                 <div className="p-3 border-b border-[oklch(0.94_0.02_170)] bg-[oklch(0.98_0.01_170)]/30 flex justify-between items-center">
                   <div>
-                    <span className="font-bold text-[oklch(0.2_0.04_170)] block">Sarah Jenkins</span>
+                    <span className="font-bold text-[oklch(0.2_0.04_170)] block">Nalukenge Kate</span>
                     <span className="text-[10px] text-muted-foreground flex items-center gap-1.5 font-medium">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" /> WhatsApp Session • Assigned to AI Agent
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    <span className="px-2 py-0.5 rounded-full bg-[oklch(0.5_0.15_170)]/10 border border-[oklch(0.5_0.15_170)]/20 text-[oklch(0.5_0.15_170)] font-bold text-[10px] uppercase">Enterprise</span>
+                    <span className="px-2 py-0.5 rounded-full bg-[oklch(0.5_0.15_170)]/10 border border-[oklch(0.5_0.15_170)]/20 text-[oklch(0.5_0.15_170)] font-bold text-[10px] uppercase">Retail</span>
                   </div>
                 </div>
 
@@ -431,9 +429,9 @@ export default function LandingPage() {
                 <div>
                   <h4 className="font-bold uppercase tracking-wider text-[10px] text-muted-foreground mb-2">Customer Profile</h4>
                   <div className="p-3 rounded-xl bg-white border border-[oklch(0.94_0.02_170)] space-y-1.5 shadow-sm shadow-black/[0.01]">
-                    <span className="font-bold text-[oklch(0.2_0.04_170)] block">Sarah Jenkins</span>
-                    <span className="text-xs text-muted-foreground block font-medium">VP of Sales, TechCorp</span>
-                    <span className="text-[11px] text-[oklch(0.5_0.15_170)] font-semibold block">s.jenkins@techcorp.io</span>
+                    <span className="font-bold text-[oklch(0.2_0.04_170)] block">Nalukenge Kate</span>
+                    <span className="text-xs text-muted-foreground block font-medium">Operations Manager, Kampala Retail</span>
+                    <span className="text-[11px] text-[oklch(0.5_0.15_170)] font-semibold block">+256 700 123456</span>
                   </div>
                 </div>
 
@@ -442,11 +440,11 @@ export default function LandingPage() {
                   <div className="p-3 rounded-xl bg-white border border-[oklch(0.94_0.02_170)] space-y-2 shadow-sm shadow-black/[0.01]">
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-semibold text-muted-foreground">Stage:</span>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-[10px]">Triage</span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-[10px]">Qualified</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-semibold text-muted-foreground">Value:</span>
-                      <span className="font-bold text-[oklch(0.2_0.04_170)]">$12,400.00</span>
+                      <span className="font-bold text-[oklch(0.2_0.04_170)]">UGX 4,500,000</span>
                     </div>
                     <div className="h-1.5 w-full bg-[oklch(0.98_0.01_170)] rounded-full overflow-hidden">
                       <div className="h-full bg-[oklch(0.5_0.15_170)] rounded-full w-1/3" />
@@ -457,9 +455,9 @@ export default function LandingPage() {
                 <div>
                   <h4 className="font-bold uppercase tracking-wider text-[10px] text-muted-foreground mb-2">Tags</h4>
                   <div className="flex flex-wrap gap-1.5">
-                    <span className="px-2 py-0.5 rounded-md bg-white text-[oklch(0.2_0.04_170)] border border-[oklch(0.94_0.02_170)] text-[10px] font-bold shadow-sm shadow-black/[0.01]">AWS Deploy</span>
+                    <span className="px-2 py-0.5 rounded-md bg-white text-[oklch(0.2_0.04_170)] border border-[oklch(0.94_0.02_170)] text-[10px] font-bold shadow-sm shadow-black/[0.01]">Retail</span>
                     <span className="px-2 py-0.5 rounded-md bg-white text-[oklch(0.2_0.04_170)] border border-[oklch(0.94_0.02_170)] text-[10px] font-bold shadow-sm shadow-black/[0.01]">Lead</span>
-                    <span className="px-2 py-0.5 rounded-md bg-[oklch(0.5_0.15_170)]/10 text-[oklch(0.5_0.15_170)] border border-[oklch(0.5_0.15_170)]/20 text-[10px] font-bold">Enterprise</span>
+                    <span className="px-2 py-0.5 rounded-md bg-[oklch(0.5_0.15_170)]/10 text-[oklch(0.5_0.15_170)] border border-[oklch(0.5_0.15_170)]/20 text-[10px] font-bold">Kampala</span>
                   </div>
                 </div>
               </div>
@@ -467,9 +465,9 @@ export default function LandingPage() {
 
             {/* Trusted By / Enterprise Brands */}
             <div className="pt-8 space-y-6 animate-in fade-in duration-750 delay-500">
-              <p className="text-xs font-extrabold uppercase tracking-[0.25em] text-muted-foreground">Trusted by forward-thinking teams globally</p>
+              <p className="text-xs font-extrabold uppercase tracking-[0.25em] text-muted-foreground">Trusted by forward-thinking teams across East Africa</p>
               <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-40 hover:opacity-70 transition-opacity duration-500 grayscale hover:grayscale-0 select-none">
-                {["SAMSUNG", "OPPO", "MICHAEL KORS", "SHEIN", "J&T EXPRESS"].map((brand) => (
+                {["MTN", "AIRTEL", "SAFARICOM", "JUMIA", "NOKIA"].map((brand) => (
                   <span key={brand} className="text-lg md:text-xl font-black tracking-widest text-[oklch(0.2_0.04_170)] hover:text-[oklch(0.5_0.15_170)] transition-colors duration-300 cursor-default">{brand}</span>
                 ))}
               </div>
@@ -493,33 +491,33 @@ export default function LandingPage() {
               {[
                 {
                   icon: Globe,
-                  title: "Omnichannel Team Inbox",
-                  desc: "Bring WhatsApp Business, Web Chat widgets, and custom developer APIs into a single collaborative panel. Route tickets, add internal notes, and tag conversations instantly."
+                  title: "WhatsApp Shared Inbox",
+                  desc: "All WhatsApp conversations in one real-time panel. Route tickets to team members, add internal notes, manage contact tags, and track conversation status from open to resolved."
                 },
                 {
                   icon: Cpu,
-                  title: "Self-Learning AI Agents",
-                  desc: "Connect LLM models (OpenAI GPT, Claude, or AWS Bedrock) with your help documents. Automate up to 60% of common customer questions with smart handovers to human agents."
+                  title: "AI-Powered Auto-Replies",
+                  desc: "Google Gemini AI responds to customers 24/7 using your trained documents. Supports multilingual replies in English, Luganda, and Swahili with automatic escalation to human agents."
                 },
                 {
                   icon: KanbanSquare,
-                  title: "Integrated Sales Pipeline",
-                  desc: "Map chats to real-time sales opportunities. Drag-and-drop deals through custom Kanban boards linked directly back to conversation context and history details."
+                  title: "Visual Sales Pipeline",
+                  desc: "Drag-and-drop Kanban boards linked to WhatsApp chats. Track deals from first enquiry to close in UGX, with pipeline analytics and conversion metrics."
                 },
                 {
                   icon: Zap,
-                  title: "Visual No-Code Builder",
-                  desc: "Create auto-replies, conditional trigger sequences, webhook integrations, and schedules visually. Support interactive customer routing paths effortlessly."
+                  title: "No-Code Automation Builder",
+                  desc: "Build visual workflows with 16 step types: auto-replies, keyword triggers, time delays, webhooks, Google Sheets lookups, and interactive WhatsApp Flow forms."
                 },
                 {
                   icon: Server,
-                  title: "Sovereign Self-Hosting",
-                  desc: "Deploy securely on Hostinger, AWS, or local physical servers. Run your own Supabase database instance with absolute code, token, and data control."
+                  title: "Self-Hosted on Your Cloud",
+                  desc: "Deploy on Hostinger, AWS, or any VPS. Run your own Supabase database with full data sovereignty. Zero per-seat licensing fees."
                 },
                 {
                   icon: Lock,
-                  title: "GDPR & RLS Security",
-                  desc: "Protect sensitive data with AES-256-GCM token encryption and strict Postgres Row-Level Security. Avoid vendor database compliance traps."
+                  title: "Bank-Grade Security",
+                  desc: "AES-256-GCM encryption for all tokens and messages. Postgres Row-Level Security on every table. Pesapal-powered payments with Mobile Money support."
                 }
               ].map((item, index) => (
                 <FadeIn key={index} delay={index * 100}>
@@ -721,12 +719,12 @@ export default function LandingPage() {
               <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
                 <div className="flex-1 space-y-6 max-w-xl text-left">
                   <span className="px-2.5 py-1 rounded-md bg-[oklch(0.88_0.1_165)] border border-[oklch(0.5_0.15_170)]/10 text-[oklch(0.2_0.04_170)] font-bold text-xs uppercase tracking-wider">AI AUTOMATION</span>
-                  <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight text-[oklch(0.2_0.04_170)]">Train Conversational AI Agents on Your Documentation</h2>
+                  <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight text-[oklch(0.2_0.04_170)]">Train Your AI Agent on Your Business Documents</h2>
                   <p className="text-base sm:text-lg text-muted-foreground leading-relaxed font-medium">
-                    Provide instantaneous, context-aware support. By feeding HopeChat your technical manuals, FAQs, or brand files, your AI agents learn in seconds.
+                    Upload your product catalogues, FAQs, and brand guidelines. Google Gemini AI learns your business and responds to customers 24/7 in English, Luganda, or Swahili.
                   </p>
                   <ul className="space-y-3 text-sm sm:text-base font-semibold text-foreground">
-                    {["Fully automated answers with 0ms delay", "Custom instructions to match your brand voice", "Graceful transfer to human reps when custom queries occur"].map((li, i) => (
+                    {["Multilingual AI responses in any East African language", "Automatic escalation when customers need a human agent", "Knowledge base with expiry dates and active/inactive toggles"].map((li, i) => (
                       <li key={i} className="flex items-center gap-3">
                         <CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" />
                         <span>{li}</span>
@@ -737,14 +735,14 @@ export default function LandingPage() {
                 <div className="flex-1 w-full max-w-xl aspect-square md:aspect-[4/3] rounded-2xl bg-white border border-[oklch(0.94_0.02_170)] shadow-md flex items-center justify-center p-6 relative hover:shadow-xl hover:shadow-[oklch(0.5_0.15_170)]/10 hover:border-[oklch(0.5_0.15_170)]/30 transition-all duration-500">
                   <div className="w-full bg-[oklch(0.98_0.01_170)]/45 border border-[oklch(0.94_0.02_170)] rounded-xl p-4 space-y-4">
                     <div className="flex justify-between items-center border-b border-[oklch(0.94_0.02_170)] pb-2">
-                      <span className="font-bold text-[oklch(0.2_0.04_170)] flex items-center gap-1.5"><Cpu className="h-4 w-4 text-[oklch(0.5_0.15_170)]" /> Training Database</span>
+                      <span className="font-bold text-[oklch(0.2_0.04_170)] flex items-center gap-1.5"><Cpu className="h-4 w-4 text-[oklch(0.5_0.15_170)]" /> Knowledge Base</span>
                       <span className="text-[10px] text-emerald-600 font-bold bg-[oklch(0.88_0.1_165)] border border-[oklch(0.5_0.15_170)]/15 px-2 py-0.5 rounded-full animate-pulse-glow">Synchronized</span>
                     </div>
                     <div className="space-y-2.5">
                       {[
-                        { name: "support-faq.md", size: "24.8 KB", status: "Active" },
-                        { name: "product-specifications.pdf", size: "1.2 MB", status: "Active" },
-                        { name: "pricing-tier-lookup.json", size: "4.1 KB", status: "Active" }
+                        { name: "product-catalogue.pdf", size: "2.4 MB", status: "Active" },
+                        { name: "faq-english-luganda.md", size: "18.2 KB", status: "Active" },
+                        { name: "pricing-ugx.json", size: "3.8 KB", status: "Active" }
                       ].map((file, i) => (
                         <div key={i} className="flex justify-between items-center p-2.5 rounded-lg border border-[oklch(0.94_0.02_170)] bg-white">
                           <span className="font-semibold text-xs md:text-sm text-[oklch(0.2_0.04_170)] truncate max-w-[60%]">{file.name}</span>
@@ -773,10 +771,10 @@ export default function LandingPage() {
                   <span className="px-2.5 py-1 rounded-md bg-[oklch(0.88_0.1_165)] border border-[oklch(0.5_0.15_170)]/10 text-[oklch(0.2_0.04_170)] font-bold text-xs uppercase tracking-wider">TEAM WORKSPACE</span>
                   <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight text-[oklch(0.2_0.04_170)]">Unified Collaboration with Multi-Agent Assignment</h2>
                   <p className="text-base sm:text-lg text-muted-foreground leading-relaxed font-medium">
-                    Say goodbye to sharing a single browser window. Enable multiple team members to manage a single customer touchpoint with dedicated assignments, labels, and collaboration metrics.
+                    Assign conversations to team members, track workload, and manage handoffs between AI and human agents. Perfect for growing support teams in Kampala and beyond.
                   </p>
                   <ul className="space-y-3 text-sm sm:text-base font-semibold text-foreground">
-                    {["Auto-routing based on tags and keywords", "Internal notes for collaboration hidden from clients", "Daily workload, reply speed, and resolution statistics"].map((li, i) => (
+                    {["Auto-routing based on tags and keywords", "Internal notes hidden from customers", "Real-time workload and response time tracking"].map((li, i) => (
                       <li key={i} className="flex items-center gap-3">
                         <CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" />
                         <span>{li}</span>
@@ -792,9 +790,9 @@ export default function LandingPage() {
                     </div>
                     <div className="space-y-3">
                       {[
-                        { name: "Jessica Chen", role: "Sales Rep", chats: 8, status: "Active" },
-                        { name: "David Miller", role: "Support Lead", chats: 12, status: "Active" },
-                        { name: "AI Auto-Bot", role: "Virtual Agent", chats: 45, status: "Active" }
+                        { name: "Akello Sarah", role: "Sales Rep", chats: 8, status: "Active" },
+                        { name: "Mugisha David", role: "Support Lead", chats: 12, status: "Active" },
+                        { name: "HopeChat AI", role: "Virtual Agent", chats: 45, status: "Active" }
                       ].map((agent, i) => (
                         <div key={i} className="flex justify-between items-center p-2.5 rounded-lg border border-[oklch(0.94_0.02_170)] bg-white">
                           <div className="flex items-center gap-2">
@@ -823,12 +821,12 @@ export default function LandingPage() {
               <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
                 <div className="flex-1 space-y-6 max-w-xl text-left">
                   <span className="px-2.5 py-1 rounded-md bg-[oklch(0.88_0.1_165)] border border-[oklch(0.5_0.15_170)]/10 text-[oklch(0.2_0.04_170)] font-bold text-xs uppercase tracking-wider">SALES CONVERSIONS</span>
-                  <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight text-[oklch(0.2_0.04_170)]">Visual Pipeline Management Directly in the CRM</h2>
+                  <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight text-[oklch(0.2_0.04_170)]">Visual Pipeline Management in UGX</h2>
                   <p className="text-base sm:text-lg text-muted-foreground leading-relaxed font-medium">
-                    Track client value without leaving the chat view. Connect deals to active conversations, categorize prospects, and track metrics visually using modern Kanban boards.
+                    Track deal values in Ugandan Shillings. Connect WhatsApp chats to pipeline cards, drag-and-drop between stages, and monitor conversion metrics.
                   </p>
                   <ul className="space-y-3 text-sm sm:text-base font-semibold text-foreground">
-                    {["Link customer contacts to pipeline cards", "One-click updates to deal values and stages", "Full transition history logged within chat archives"].map((li, i) => (
+                    {["Link WhatsApp contacts to pipeline deals", "Drag-and-drop deal stages with UGX values", "Full deal history logged within conversation archives"].map((li, i) => (
                       <li key={i} className="flex items-center gap-3">
                         <CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" />
                         <span>{li}</span>
@@ -839,9 +837,9 @@ export default function LandingPage() {
                 <div className="flex-1 w-full max-w-xl aspect-square md:aspect-[4/3] rounded-2xl bg-white border border-[oklch(0.94_0.02_170)] shadow-md flex items-center justify-center p-4 relative hover:shadow-xl hover:shadow-[oklch(0.5_0.15_170)]/10 hover:border-[oklch(0.5_0.15_170)]/30 transition-all duration-500">
                   <div className="w-full h-full flex gap-3 overflow-x-auto text-[11px] sm:text-xs">
                     {[
-                      { title: "Incoming", count: 2, cards: [{ title: "Sarah Jenkins", company: "TechCorp", value: "$12,400" }] },
-                      { title: "Meeting Set", count: 1, cards: [{ title: "Marcus Aurelius", company: "Empire Inc", value: "$4,500" }] },
-                      { title: "Proposal Sent", count: 1, cards: [{ title: "Elena Rostova", company: "Novus Group", value: "$9,200" }] }
+                      { title: "New Lead", count: 2, cards: [{ title: "Nalukenge Kate", company: "Kampala Retail", value: "UGX 4.5M" }] },
+                      { title: "Qualified", count: 1, cards: [{ title: "Ochieng Kevin", company: "Entebbe Logistics", value: "UGX 2.8M" }] },
+                      { title: "Proposal Sent", count: 1, cards: [{ title: "Jean Mugisha", company: "Kigali Exports", value: "UGX 7.2M" }] }
                     ].map((column, i) => (
                       <div key={i} className="flex-1 min-w-[130px] bg-[oklch(0.98_0.01_170)]/40 border border-[oklch(0.94_0.02_170)] rounded-xl p-2.5 flex flex-col justify-between">
                         <div>
@@ -899,9 +897,9 @@ export default function LandingPage() {
         <section id="solutions" className="py-20 lg:py-28 bg-[oklch(0.98_0.01_170)] border-y border-[oklch(0.94_0.02_170)]">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
             <div className="text-center space-y-3 max-w-2xl mx-auto">
-              <h2 className="text-3xl font-extrabold tracking-tight text-[oklch(0.2_0.04_170)]">Customized for Your Industry</h2>
+              <h2 className="text-3xl font-extrabold tracking-tight text-[oklch(0.2_0.04_170)]">Built for East African Businesses</h2>
               <p className="text-base text-muted-foreground leading-relaxed">
-                Whether you manage high-volume online shopping or high-trust enterprise integrations, HopeChat has tailored logic workflows.
+                Whether you run a Kampala retail shop or a Nairobi fintech, HopeChat has tailored WhatsApp workflows for your industry.
               </p>
             </div>
 
@@ -910,9 +908,9 @@ export default function LandingPage() {
               {[
                 { id: "retail", label: "Retail & E-commerce" },
                 { id: "finance", label: "Financial Services" },
-                { id: "gaming", label: "Gaming & Entertainment" },
+                { id: "gaming", label: "Gaming & Betting" },
                 { id: "edu", label: "Education" },
-                { id: "enterprise", label: "Enterprise Solutions" }
+                { id: "enterprise", label: "Enterprise" }
               ].map((ind) => (
                 <button
                   key={ind.id}
@@ -934,59 +932,59 @@ export default function LandingPage() {
               <div className="max-w-4xl mx-auto p-6 md:p-8 rounded-2xl bg-white border border-[oklch(0.94_0.02_170)] shadow-sm hover:shadow-lg transition-shadow duration-500 animate-fade-in-scale" key={activeIndustry}>
                 <div className="grid md:grid-cols-2 gap-8 items-center">
                   <div className="space-y-6 text-left">
-                    <h3 className="text-xl md:text-2xl font-bold capitalize text-[oklch(0.2_0.04_170)]">{activeIndustry.replace('-', ' ')} Implementation</h3>
+                    <h3 className="text-xl md:text-2xl font-bold capitalize text-[oklch(0.2_0.04_170)]">{activeIndustry.replace('-', ' ')} in East Africa</h3>
                     
                     {activeIndustry === "retail" && (
                       <div className="space-y-4">
-                        <p className="text-sm md:text-base text-muted-foreground leading-relaxed">Recover shopping momentum and drive conversions automatically on the most-used channels:</p>
+                        <p className="text-sm md:text-base text-muted-foreground leading-relaxed">Recover sales and drive conversions via WhatsApp, the most-used channel in Uganda:</p>
                         <div className="space-y-3 text-xs md:text-sm font-medium">
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Automate abandoned cart notifications via WhatsApp.</span></div>
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Send instant shipping updates and delivery codes.</span></div>
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Integrate with Shopify, WooCommerce, or custom platforms.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Automate order confirmations and delivery updates via WhatsApp.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Send abandoned cart reminders with Mobile Money payment links.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Integrate with Google Sheets for inventory and order tracking.</span></div>
                         </div>
                       </div>
                     )}
 
                     {activeIndustry === "finance" && (
                       <div className="space-y-4">
-                        <p className="text-sm md:text-base text-muted-foreground leading-relaxed">Provide secure, isolated advice and ticket management for sensitive operations:</p>
+                        <p className="text-sm md:text-base text-muted-foreground leading-relaxed">Secure WhatsApp support for fintechs, SACCOs, and mobile money operators:</p>
                         <div className="space-y-3 text-xs md:text-sm font-medium">
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Bank-grade self-hosted infrastructure ensuring absolute isolation.</span></div>
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Secure storage with AES-256-GCM message token encryption.</span></div>
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Strict adherence to KYC documentation constraints.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Self-hosted infrastructure for BOU/CKU compliance requirements.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>AES-256-GCM encryption for all transaction messages.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Automated KYC document collection via WhatsApp flows.</span></div>
                         </div>
                       </div>
                     )}
 
                     {activeIndustry === "gaming" && (
                       <div className="space-y-4">
-                        <p className="text-sm md:text-base text-muted-foreground leading-relaxed">Support online players 24/7 with zero waiting cues and instant checkups:</p>
+                        <p className="text-sm md:text-base text-muted-foreground leading-relaxed">Support sports betting and gaming platforms 24/7 via WhatsApp:</p>
                         <div className="space-y-3 text-xs md:text-sm font-medium">
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>AI automation handles 70%+ of account recovery inquiries.</span></div>
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Automate match status, rank queries, and system patch updates.</span></div>
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Link game server webhooks directly to custom chat channels.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>AI handles 70%+ of account and balance inquiries automatically.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Send match results, odds updates, and promotional broadcasts.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Link game webhooks to WhatsApp for real-time notifications.</span></div>
                         </div>
                       </div>
                     )}
 
                     {activeIndustry === "edu" && (
                       <div className="space-y-4">
-                        <p className="text-sm md:text-base text-muted-foreground leading-relaxed">Coordinate schedules, deadlines, and parent updates automatically:</p>
+                        <p className="text-sm md:text-base text-muted-foreground leading-relaxed">Automate school communications and parent updates via WhatsApp:</p>
                         <div className="space-y-3 text-xs md:text-sm font-medium">
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Automate class registrations and program FAQs.</span></div>
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Send broadcast reminders for payment deadlines or events.</span></div>
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Provide safe parent channels with automated routing.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Auto-reply to fee payment enquiries and registration FAQs.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Broadcast exam schedules, report cards, and event reminders.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Safe parent communication channels with AI-powered routing.</span></div>
                         </div>
                       </div>
                     )}
 
                     {activeIndustry === "enterprise" && (
                       <div className="space-y-4">
-                        <p className="text-sm md:text-base text-muted-foreground leading-relaxed">Deploy customized multi-agent setups with absolute sovereign scale:</p>
+                        <p className="text-sm md:text-base text-muted-foreground leading-relaxed">Multi-branch enterprise deployments across East Africa:</p>
                         <div className="space-y-3 text-xs md:text-sm font-medium">
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>SSO authentication, custom workflows, and detailed audit trails.</span></div>
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Dedicated workspace partitions for multiple brands or branches.</span></div>
-                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>High throughput API routing utilizing cloud load balancers.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Multi-agent workspaces with role-based access control.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>Separate conversation partitions for Kampala, Nairobi, Dar branches.</span></div>
+                          <div className="flex gap-3"><CheckCircle2 className="h-4.5 w-4.5 text-[oklch(0.5_0.15_170)] shrink-0" /><span>High-throughput WhatsApp API with Pesapal payment integration.</span></div>
                         </div>
                       </div>
                     )}
@@ -1002,10 +1000,10 @@ export default function LandingPage() {
                       {activeIndustry === "enterprise" && "100%"}
                     </div>
                     <div className="text-[10px] md:text-xs font-extrabold text-muted-foreground uppercase tracking-widest leading-relaxed">
-                      {activeIndustry === "retail" && "Average Cart Recovery Rate"}
+                      {activeIndustry === "retail" && "Order Recovery via WhatsApp"}
                       {activeIndustry === "finance" && "Compliance Breach Incidents"}
-                      {activeIndustry === "gaming" && "Autonomous Support Resolution"}
-                      {activeIndustry === "edu" && "Speed to Triage Optimization"}
+                      {activeIndustry === "gaming" && "AI Resolution Rate"}
+                      {activeIndustry === "edu" && "Parent Response Speed"}
                       {activeIndustry === "enterprise" && "Data Sovereignty Compliance"}
                     </div>
                   </div>
@@ -1056,26 +1054,26 @@ export default function LandingPage() {
           <div className="container mx-auto px-4 max-w-3xl text-center space-y-16">
             <div className="space-y-3">
               <h2 className="text-3xl font-extrabold tracking-tight text-[oklch(0.2_0.04_170)]">Frequently Asked Questions</h2>
-              <p className="text-base text-muted-foreground font-medium">Find answers to common technical and licensing questions.</p>
+              <p className="text-base text-muted-foreground font-medium">Common questions about HopeChat for East African businesses.</p>
             </div>
 
             <div className="text-left space-y-4">
               {[
                 { 
-                  q: "How does HopeChat differ from traditional SaaS chat platforms?", 
-                  a: "Traditional SaaS platforms store your customer conversations on their servers and charge you per team member per month. HopeChat is a self-hosted template: you host it on your own server, meaning you pay zero per-seat licensing fees and retain full compliance ownership over your database logs." 
+                  q: "How does HopeChat differ from Intercom or Zendesk?", 
+                  a: "Traditional SaaS platforms charge per team member per month and store your data on their servers. HopeChat is self-hosted: you own your data, pay zero per-seat fees, and get WhatsApp-native CRM features built for East African businesses with UGX billing via Pesapal." 
                 },
                 { 
-                  q: "What do I need to prepare before self-hosting HopeChat?", 
-                  a: "You will need a basic cloud hosting server (e.g., Hostinger Managed Node.js, AWS EC2, or Vercel), a free Supabase account for auth and database logic, and a Meta Developer account if you wish to connect the official WhatsApp Business Cloud API." 
+                  q: "What do I need to self-host HopeChat?", 
+                  a: "You need a VPS (Hostinger, AWS EC2, or any Node.js host), a free Supabase account for the database, and a Meta Developer account for WhatsApp Business API. We handle the rest with one-click deployment." 
                 },
                 { 
-                  q: "Can I connect other LLMs besides the pre-configured ones?", 
-                  a: "Yes. The AI Agent architecture is built modularly. You can easily extend the models in the settings, connect local running models like Ollama, or input custom endpoints for other API integrations." 
+                  q: "Which AI models does HopeChat support?", 
+                  a: "HopeChat uses Google Gemini AI (gemini-2.5-flash) as the primary model. You can train it on your own documents, product catalogues, and FAQs. The AI responds in English, Luganda, Swahili, or any language your business needs." 
                 },
                 { 
-                  q: "How are automatic backups and database migrations handled?", 
-                  a: "Database migration structures are maintained locally within the repository under Supabase config files. When updating your deployment, you run simple CLI commands to push database schemas without interrupting current chat streams." 
+                  q: "How do payments work? Can I use Mobile Money?", 
+                  a: "Yes! HopeChat integrates with Pesapal for UGX payments. Customers can pay via MTN Mobile Money, Airtel Money, or credit card. Credits start at UGX 1,000 with 250 credits per UGX 10,000." 
                 }
               ].map((faq, i) => (
                 <FadeIn key={i} delay={i * 100}>
@@ -1114,9 +1112,9 @@ export default function LandingPage() {
                 <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-80 h-80 bg-[oklch(0.5_0.15_170)]/15 rounded-full blur-3xl pointer-events-none animate-float-delayed" />
                 
                 <div className="relative z-10 space-y-6 max-w-2xl mx-auto">
-                  <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-none text-[oklch(0.2_0.04_170)]">Ready to Own Your Chat Infrastructure?</h2>
+                  <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-none text-[oklch(0.2_0.04_170)]">Ready to Own Your WhatsApp CRM?</h2>
                   <p className="text-sm sm:text-base text-muted-foreground leading-relaxed font-medium">
-                    Deploy HopeChat in minutes. Start managing customer deals, conversations, and automated AI agents directly on your cloud.
+                    Deploy HopeChat in minutes. Start managing customer conversations, deals, and AI agents on your own cloud with UGX billing via Pesapal.
                   </p>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                     <Link 
@@ -1160,17 +1158,17 @@ export default function LandingPage() {
                 <span className="font-bold tracking-tight text-[oklch(0.2_0.04_170)]">HopeChat</span>
               </Link>
               <p className="text-xs text-muted-foreground leading-relaxed font-medium">
-                The open-source, self-hosted web chat CRM and multi-agent AI assistant platform. Built for privacy, ownership, and scale.
+                The self-hosted WhatsApp CRM and AI agent platform built for East African businesses. UGX billing via Pesapal. MIT Licensed.
               </p>
             </div>
 
             <div>
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-[oklch(0.2_0.04_170)] mb-4">Product</h4>
               <ul className="space-y-2.5 text-xs text-muted-foreground font-semibold">
-                <li><Link href="#features" className="hover:text-primary transition-colors">Shared Inbox</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">AI Agents</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">Kanban Pipelines</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">No-Code Builder</Link></li>
+                <li><Link href="#features" className="hover:text-primary transition-colors">WhatsApp Inbox</Link></li>
+                <li><Link href="#features" className="hover:text-primary transition-colors">AI Auto-Replies</Link></li>
+                <li><Link href="#features" className="hover:text-primary transition-colors">Sales Pipeline</Link></li>
+                <li><Link href="#features" className="hover:text-primary transition-colors">No-Code Automations</Link></li>
               </ul>
             </div>
 
@@ -1178,29 +1176,29 @@ export default function LandingPage() {
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-[oklch(0.2_0.04_170)] mb-4">Solutions</h4>
               <ul className="space-y-2.5 text-xs text-muted-foreground font-semibold">
                 <li><button onClick={() => setActiveIndustry("retail")} className="hover:text-primary transition-colors text-left">E-commerce</button></li>
-                <li><button onClick={() => setActiveIndustry("finance")} className="hover:text-primary transition-colors text-left">Finance</button></li>
-                <li><button onClick={() => setActiveIndustry("gaming")} className="hover:text-primary transition-colors text-left">Gaming</button></li>
+                <li><button onClick={() => setActiveIndustry("finance")} className="hover:text-primary transition-colors text-left">Fintech & SACCOs</button></li>
+                <li><button onClick={() => setActiveIndustry("gaming")} className="hover:text-primary transition-colors text-left">Gaming & Betting</button></li>
                 <li><button onClick={() => setActiveIndustry("enterprise")} className="hover:text-primary transition-colors text-left">Enterprise</button></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-xs font-extrabold uppercase tracking-wider text-[oklch(0.2_0.04_170)] mb-4">Sovereign Cloud</h4>
+              <h4 className="text-xs font-extrabold uppercase tracking-wider text-[oklch(0.2_0.04_170)] mb-4">Resources</h4>
               <ul className="space-y-2.5 text-xs text-muted-foreground font-semibold">
                 <li><Link href="#" className="hover:text-primary transition-colors">Documentation</Link></li>
                 <li><Link href="#" className="hover:text-primary transition-colors">GitHub Repository</Link></li>
                 <li><Link href="#" className="hover:text-primary transition-colors">Supabase Setup</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Hostinger Deploy</Link></li>
+                <li><Link href="#" className="hover:text-primary transition-colors">Pesapal Integration</Link></li>
               </ul>
             </div>
           </div>
 
           <div className="pt-6 border-t border-[oklch(0.94_0.02_170)] flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-            <p>© {new Date().getFullYear()} HopeChat AI. GDPR Compliant. MIT Licensed.</p>
+            <p>© {new Date().getFullYear()} HopeChat by HopeTech Solutions Ltd. Uganda. MIT Licensed.</p>
             <div className="flex gap-6">
-              <span>GDPR Sovereign</span>
+              <span>UGX Billing</span>
               <span>256-bit AES</span>
-              <span>Postgres RLS</span>
+              <span>Self-Hosted</span>
             </div>
           </div>
 
