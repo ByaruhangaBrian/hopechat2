@@ -69,61 +69,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchProfile = useCallback(async (userId: string) => {
     const supabase = createClient();
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select(
-          `
-          id,
-          full_name,
-          email,
-          avatar_url,
-          role,
-          business_id,
-          is_superadmin,
-          business:businesses (
-            name,
-            features,
-            credits_remaining,
-            balance_ugx
-          )
-        `,
-        )
-        .eq("user_id", userId)
-        .maybeSingle();
+    const imp = getImpersonationCookie();
 
-      if (error) {
+    try {
+      let result;
+
+      if (imp) {
+        // Impersonating: show the TENANT's profile (oldest = likely owner)
+        // RLS allows this because get_user_business_id() returns imp.id
+        result = await supabase
+          .from("profiles")
+          .select(
+            `
+            id,
+            full_name,
+            email,
+            avatar_url,
+            role,
+            business_id,
+            is_superadmin,
+            business:businesses (
+              name,
+              features,
+              credits_remaining,
+              balance_ugx
+            )
+          `,
+          )
+          .eq("business_id", imp.id)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+      } else {
+        // Normal: show the authenticated user's own profile
+        result = await supabase
+          .from("profiles")
+          .select(
+            `
+            id,
+            full_name,
+            email,
+            avatar_url,
+            role,
+            business_id,
+            is_superadmin,
+            business:businesses (
+              name,
+              features,
+              credits_remaining,
+              balance_ugx
+            )
+          `,
+          )
+          .eq("user_id", userId)
+          .maybeSingle();
+      }
+
+      if (result.error) {
         console.error("[AuthProvider] fetchProfile error:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
+          message: result.error.message,
+          details: result.error.details,
+          hint: result.error.hint,
+          code: result.error.code,
         });
         return;
       }
 
-      if (!data) return;
-
-      let finalProfile = data as unknown as Profile;
-
-      // If superadmin is impersonating, overlay the tenant's business data
-      const imp = getImpersonationCookie();
-      if (imp && finalProfile.is_superadmin) {
-        const { data: tenantBiz } = await supabase
-          .from("businesses")
-          .select("name, features, credits_remaining, balance_ugx")
-          .eq("id", imp.id)
-          .maybeSingle();
-
-        if (tenantBiz) {
-          finalProfile = {
-            ...finalProfile,
-            business: tenantBiz as Profile["business"],
-          };
-        }
-      }
-
-      setProfile(finalProfile);
+      if (result.data) setProfile(result.data as unknown as Profile);
     } catch (err) {
       console.error("[AuthProvider] fetchProfile threw:", err);
     }
