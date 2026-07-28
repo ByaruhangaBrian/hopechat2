@@ -22,6 +22,7 @@ import type {
 import { supabaseAdmin } from './admin-client'
 import { engineSendText, engineSendTemplate, engineSendInteractive, engineSendFlow } from './meta-send'
 import { generateGeminiResponse } from './gemini-client'
+import { getOrSetCache } from '@/lib/whatsapp/gemini-cache'
 import { logHttpEvent } from '@/lib/logs/http-logs'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import { lookupRow } from '@/lib/integrations/google-sheets'
@@ -743,13 +744,25 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       const userMessage = String(args.context.message_text ?? (conversationHistory.slice(-1)[0]?.role === 'user' ? conversationHistory.slice(-1)[0]?.parts[0].text : '')).trim()
       if (!userMessage) throw new Error('assign_to_ai has no user message to generate from')
 
+      // Gemini Context Caching (free-tier safe — skips when toggle OFF)
+      let cachedContent: string | undefined
+      try {
+        cachedContent = (await getOrSetCache(args.businessId ?? args.automation.user_id, {
+          systemInstruction,
+          apiKey,
+        })) ?? undefined
+      } catch (err) {
+        console.error('[engine] Cache lookup failed, falling back to uncached:', err)
+      }
+
       try {
         const replyText = await generateGeminiResponse(
           userMessage,
-          systemInstruction,
+          cachedContent ? '' : systemInstruction,
           conversationHistory.slice(0, -1),
           apiKey,
-          args.businessId
+          args.businessId,
+          cachedContent,
         )
         
         const { whatsapp_message_id } = await engineSendText({

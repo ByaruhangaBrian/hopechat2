@@ -15,6 +15,7 @@ import {
   CreditCard,
   Info,
   Coins,
+  Zap,
 } from "lucide-react";
 import {
   Card,
@@ -40,6 +41,7 @@ export default function AdminSettingsPage() {
     maintenance_mode: false,
     announcement: "",
   });
+  const [geminiContextCaching, setGeminiContextCaching] = useState(false);
   const [integrationsGlobal, setIntegrationsGlobal] = useState({
     google_sheets: {
       enabled: true,
@@ -81,6 +83,7 @@ export default function AdminSettingsPage() {
         { data: creds },
         { data: pp },
         { data: cc },
+        { data: gcc },
       ] = await Promise.all([
         supabase.from("system_settings").select("*").eq("id", "whatsapp_global").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "system_config").maybeSingle(),
@@ -88,6 +91,7 @@ export default function AdminSettingsPage() {
         supabase.from("system_settings").select("*").eq("id", "platform_credentials").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "pesapal_global").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "credit_costs").maybeSingle(),
+        supabase.from("system_settings").select("*").eq("id", "gemini_context_caching").maybeSingle(),
       ]);
 
       if (wa) setWhatsappSettings(wa.value);
@@ -109,6 +113,11 @@ export default function AdminSettingsPage() {
           bulk_broadcast: cc.value.bulk_broadcast ?? { credits: 15, label: "Bulk Broadcast" },
           credit_ugx_rate: cc.value.credit_ugx_rate ?? 40,
         });
+      }
+
+      if (gcc?.value !== undefined) {
+        const v = gcc.value;
+        setGeminiContextCaching(v === true || v?.enabled === true);
       }
       
       setLoading(false);
@@ -235,6 +244,23 @@ export default function AdminSettingsPage() {
       toast.error("Failed to save credit configuration");
     } else {
       toast.success("Credit system configuration updated");
+    }
+    setSaving(false);
+  }
+
+  async function handleSaveGeminiCaching() {
+    setSaving(true);
+    const { error } = await supabase
+      .from("system_settings")
+      .upsert({
+        id: "gemini_context_caching",
+        value: geminiContextCaching,
+        updated_at: new Date().toISOString(),
+      });
+    if (error) {
+      toast.error("Failed to save Gemini caching setting");
+    } else {
+      toast.success(geminiContextCaching ? "Context caching enabled — requires paid Gemini API tier" : "Context caching disabled");
     }
     setSaving(false);
   }
@@ -384,6 +410,52 @@ export default function AdminSettingsPage() {
                 <p className="text-[11px] text-muted-foreground/60">
                   This will be displayed as a banner on every business dashboard.
                 </p>
+              </div>
+
+              <div className="space-y-4 border-t border-border pt-6">
+                <h3 className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Cpu className="h-4 w-4 text-muted-foreground" />
+                  Gemini AI Context Caching
+                </h3>
+
+                <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border">
+                  <div className="space-y-0.5 flex-1 min-w-0">
+                    <Label className="text-base text-foreground">Enable Context Caching</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Cache repeated system prompts (training docs, knowledge base, rules) across AI responses.
+                      This reduces input token costs by ~90% for cached content when billing is enabled.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={geminiContextCaching}
+                    onCheckedChange={(val) => setGeminiContextCaching(val)}
+                    className="ml-4 shrink-0"
+                  />
+                </div>
+
+                <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3 text-xs text-muted-foreground leading-relaxed">
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                      <Info className="h-3 w-3" />
+                      Requires paid Gemini API tier
+                    </span>
+                  </div>
+
+                  <p><strong className="text-foreground">How it works:</strong> When enabled, the first AI response for each business creates a cache containing their system prompt, training documents, knowledge base, and rules. All subsequent responses reference this cache instead of resending the full text — Gemini automatically prepends the cached content to each request.</p>
+
+                  <p><strong className="text-foreground">Cache lifecycle:</strong> Each cache lives for 1 hour and is auto-extended if still in use. Caches are stored in our database so they survive server restarts. Old caches expire naturally — there is nothing to clean up manually.</p>
+
+                  <p><strong className="text-foreground">When a business updates their AI config</strong> (system prompt, training docs, or knowledge base), the old cache is automatically deleted and a fresh one is created on the next AI response. No action needed from you.</p>
+
+                  <p><strong className="text-foreground">Model:</strong> gemini-2.5-flash (minimum 2048 tokens required for caching). Prompts smaller than this skip caching automatically — implicit caching still applies.</p>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button onClick={handleSaveGeminiCaching} disabled={saving || loading} size="sm" variant="outline" className="border-border">
+                    <Save className="mr-2 h-4 w-4" />
+                    {saving ? "Saving..." : "Save"}
+                  </Button>
+                </div>
               </div>
 
               <div className="flex justify-end border-t border-border pt-6">

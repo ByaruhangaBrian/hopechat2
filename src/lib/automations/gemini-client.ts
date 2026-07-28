@@ -19,7 +19,9 @@ export async function generateGeminiResponse(
   systemInstruction: string,
   history: MessageContent[] = [],
   apiKey?: string,
-  businessId?: string
+  businessId?: string,
+  /** Gemini explicit cache reference. When set, systemInstruction is already in the cache. */
+  cachedContent?: string,
 ): Promise<string> {
   const finalApiKey = apiKey || process.env.GEMINI_API_KEY || '';
   if (!finalApiKey) {
@@ -87,9 +89,10 @@ export async function generateGeminiResponse(
         model: MODEL_NAME,
         contents,
         config: {
-          systemInstruction: systemInstruction,
-          temperature: 0.3,
-          tools: tools,
+          ...(cachedContent
+            ? { cachedContent, temperature: 0.3, tools: tools }
+            : { systemInstruction, temperature: 0.3, tools: tools }
+          ),
         }
       });
 
@@ -125,9 +128,10 @@ export async function generateGeminiResponse(
           model: MODEL_NAME,
           contents,
           config: {
-            systemInstruction: systemInstruction,
-            temperature: 0.3,
-            tools: tools,
+            ...(cachedContent
+              ? { cachedContent, temperature: 0.3, tools: tools }
+              : { systemInstruction, temperature: 0.3, tools: tools }
+            ),
           }
         });
       }

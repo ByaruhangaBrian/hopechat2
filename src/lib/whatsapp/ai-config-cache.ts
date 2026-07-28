@@ -7,6 +7,8 @@ interface AiConfig {
   knowledge_items: { title: string; content: string }[];
   is_enabled: boolean;
   api_key: string;
+  cache_name: string | null;
+  cache_fingerprint: string | null;
   expires_at: number;
 }
 
@@ -26,7 +28,7 @@ export async function getBusinessAiConfig(userId: string): Promise<Omit<AiConfig
   // 1. Fetch AI settings
   const { data: settings, error: settingsError } = await db
     .from('ai_settings')
-    .select('system_prompt, training_documents, is_enabled, groq_api_key, business_id')
+    .select('system_prompt, training_documents, is_enabled, groq_api_key, business_id, cache_name, cache_fingerprint')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -52,6 +54,8 @@ export async function getBusinessAiConfig(userId: string): Promise<Omit<AiConfig
     knowledge_items: knowledge || [],
     is_enabled: settings.is_enabled,
     api_key: settings.groq_api_key ? decrypt(settings.groq_api_key) : '',
+    cache_name: settings.cache_name ?? null,
+    cache_fingerprint: settings.cache_fingerprint ?? null,
   };
 
   aiConfigCache.set(userId, {

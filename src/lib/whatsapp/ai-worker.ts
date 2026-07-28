@@ -4,10 +4,11 @@ import { sendTextMessage } from '@/lib/whatsapp/meta-api';
 import { logHttpEvent } from '@/lib/logs/http-logs';
 import { generateGeminiResponse } from '@/lib/automations/gemini-client';
 import { getBusinessAiConfig } from './ai-config-cache';
+import { getOrSetCache, deleteCache } from './gemini-cache';
 import { runAutomationsForTrigger, resumeAutomationWithInteraction } from '@/lib/automations/engine';
 import { decrypt } from './encryption';
 import { consumeCredits } from '@/lib/credits';
-import { GoogleGenAI } from '@google/genai'; // Strict requirement: import from the new SDK package
+// @google/genai used via gemini-client.ts
 
 const DEBOUNCE_DELAY_MS = 5000; // 5 seconds
 const MAX_HISTORY_MESSAGES = 15;
@@ -375,7 +376,18 @@ async function executeAiJob(job: any): Promise<void> {
 
   systemInstruction += `RULES:\n1. Be concise.\n2. If user is angry or asks for a refund, say "I am escalating this to a human manager" and end your message with [ESCALATE].\n3. Never repeat yourself.`;
 
-  // 4. AI Generation
+  // 4a. Gemini Context Caching (free-tier safe — skips when toggle OFF)
+  let cacheName: string | undefined
+  try {
+    cacheName = (await getOrSetCache(job.business_id, {
+      systemInstruction,
+      apiKey: aiConfig.api_key,
+    })) ?? undefined
+  } catch (err) {
+    console.error('[ai-worker] Cache lookup failed, falling back to uncached:', err)
+  }
+
+  // 4b. AI Generation
   void logHttpEvent({ 
     userId: job.user_id, 
     businessId: job.business_id,
@@ -388,10 +400,11 @@ async function executeAiJob(job: any): Promise<void> {
   
   const aiText = await generateGeminiResponse(
     promptText, 
-    systemInstruction, 
+    cacheName ? '' : systemInstruction, 
     history.slice(0, -1), 
     aiConfig.api_key,
-    job.business_id
+    job.business_id,
+    cacheName
   );
 
   // 5. Escalation Check
