@@ -365,6 +365,12 @@ export async function searchSheets(businessId: string, query: string) {
       allResults.push(result);
     }
 
+    const noMatchPrefix = `No matches found for "${query}"`;
+    const allNoMatch = allResults.every(r => r.includes(noMatchPrefix));
+    if (allNoMatch) {
+      return `No records found matching "${query}".`;
+    }
+
     return allResults.join('\n\n=====\n\n');
   } catch (err: any) {
     console.error(`${TAG} searchSheets FAILED:`, {
