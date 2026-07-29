@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TableProperties, Calendar, ShoppingCart, ArrowRight } from 'lucide-react';
@@ -8,6 +8,14 @@ import { GoogleSheetsForm } from './google-sheets-form';
 
 export function IntegrationsHub() {
   const [activeIntegration, setActiveIntegration] = useState<string | null>(null);
+  const [spreadsheetCount, setSpreadsheetCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch('/api/integrations/google-sheets/spreadsheets')
+      .then(res => res.json())
+      .then(data => setSpreadsheetCount(data.spreadsheets?.length ?? null))
+      .catch(() => {});
+  }, []);
 
   if (activeIntegration === 'google_sheets') {
     return (
@@ -28,10 +36,11 @@ export function IntegrationsHub() {
     {
       id: 'google_sheets',
       name: 'Google Sheets',
-      description: 'Use spreadsheets as a database for inventory, pricing, and order status.',
+      description: 'Use spreadsheets as a searchable database for orders, inventory, pricing, and more.',
       icon: TableProperties,
       iconColor: 'text-emerald-500',
       status: 'Available',
+      badge: spreadsheetCount !== null ? `${spreadsheetCount} sheet${spreadsheetCount !== 1 ? 's' : ''}` : undefined,
     },
     {
       id: 'calendly',
@@ -64,11 +73,18 @@ export function IntegrationsHub() {
                 <div className={`p-2 rounded-lg bg-muted ${int.iconColor}`}>
                   <Icon className="size-6" />
                 </div>
-                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                  isComingSoon ? 'bg-muted text-muted-foreground/60' : 'bg-emerald-500/10 text-emerald-500'
-                }`}>
-                  {int.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  {int.badge && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                      {int.badge}
+                    </span>
+                  )}
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                    isComingSoon ? 'bg-muted text-muted-foreground/60' : 'bg-emerald-500/10 text-emerald-500'
+                  }`}>
+                    {int.status}
+                  </span>
+                </div>
               </div>
               <CardTitle className="text-foreground text-lg">{int.name}</CardTitle>
               <CardDescription className="text-muted-foreground text-sm leading-relaxed">

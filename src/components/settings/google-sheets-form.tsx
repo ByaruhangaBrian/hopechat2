@@ -8,27 +8,20 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Info, Save, TableProperties } from 'lucide-react';
+import { Info, Save, TableProperties, Database } from 'lucide-react';
+import { SpreadsheetManager } from './spreadsheet-manager';
 
 export function GoogleSheetsForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isEnabled, setIsEnabled] = useState(false);
-  const [showGuide, setShowGuide] = useState(false);
   const [config, setConfig] = useState({
-    spreadsheet_id: '',
     client_email: '',
     private_key: '',
-    reference_column: '',
-    return_columns: '',
   });
   const [hasLocalKeys, setHasLocalKeys] = useState(false);
   const [globalBotEmail, setGlobalBotEmail] = useState('');
-
-  const extractSpreadsheetId = (val: string): string => {
-    const match = val.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-    return match ? match[1] : val.trim();
-  };
+  const [view, setView] = useState<'auth' | 'spreadsheets'>('auth');
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -38,11 +31,8 @@ export function GoogleSheetsForm() {
       if (data.integration) {
         setIsEnabled(data.integration.is_enabled);
         setConfig({
-          spreadsheet_id: data.integration.config.spreadsheet_id || '',
           client_email: data.integration.config.client_email || '',
           private_key: '', // Never fetch back the private key
-          reference_column: data.integration.config.reference_column || '',
-          return_columns: data.integration.config.return_columns || '',
         });
         setHasLocalKeys(!!data.integration.config.private_key);
       }
@@ -63,12 +53,6 @@ export function GoogleSheetsForm() {
   }, [fetchSettings]);
 
   const handleSave = async () => {
-    const sheetId = extractSpreadsheetId(config.spreadsheet_id);
-    if (!sheetId) {
-      toast.error('Spreadsheet ID or Google Sheets URL is required');
-      return;
-    }
-
     try {
       setSaving(true);
       const res = await fetch('/api/integrations', {
@@ -78,11 +62,8 @@ export function GoogleSheetsForm() {
           type: 'google_sheets',
           is_enabled: isEnabled,
           config: {
-            spreadsheet_id: sheetId,
             client_email: config.client_email,
-            private_key: config.private_key, // Only sends if provided
-            reference_column: config.reference_column,
-            return_columns: config.return_columns,
+            private_key: config.private_key,
           }
         }),
       });
@@ -104,6 +85,17 @@ export function GoogleSheetsForm() {
 
   if (loading) return <div className="text-muted-foreground">Loading Google Sheets configuration...</div>;
 
+  if (view === 'spreadsheets') {
+    return (
+      <div className="space-y-6">
+        <Button variant="ghost" onClick={() => setView('auth')} className="text-muted-foreground hover:text-foreground">
+          ← Back to Auth Configuration
+        </Button>
+        <SpreadsheetManager globalBotEmail={globalBotEmail} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Card className="bg-card border-border">
@@ -111,7 +103,7 @@ export function GoogleSheetsForm() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <TableProperties className="size-5 text-emerald-500" />
-              <CardTitle className="text-foreground">Google Sheets Configuration</CardTitle>
+              <CardTitle className="text-foreground">Google Sheets Integration</CardTitle>
             </div>
             <Switch checked={isEnabled} onCheckedChange={setIsEnabled} />
           </div>
@@ -123,51 +115,12 @@ export function GoogleSheetsForm() {
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 flex gap-3">
             <Info className="size-5 text-blue-400 shrink-0 mt-0.5" />
             <div className="text-sm text-blue-600 dark:text-blue-100 leading-relaxed w-full">
-              <div className="flex justify-between items-center mb-1">
-                <p className="font-semibold text-blue-600 dark:text-blue-100">Setup Instructions & Examples</p>
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 h-auto p-0 font-medium text-xs"
-                  onClick={() => setShowGuide(!showGuide)}
-                >
-                  {showGuide ? 'Hide Guide' : 'Show Guide'}
-                </Button>
-              </div>
+              <p className="font-semibold text-blue-600 dark:text-blue-100 mb-1">How it works</p>
               <ol className="list-decimal ml-4 space-y-1">
-                <li>Share your Google Sheet with the bot email below as a <strong>Viewer</strong>.</li>
-                <li>Paste your full Google Sheet Link (from the browser address bar) into the field below.</li>
-                <li>Set the Reference Column and Return Columns to define what keys the AI searches.</li>
+                <li>Configure the service account below (or use the system default).</li>
+                <li>Add one or more spreadsheets that HopeChat AI can search.</li>
+                <li>Customers ask questions on WhatsApp — the AI finds answers in your sheets.</li>
               </ol>
-              
-              {showGuide && (
-                <div className="mt-4 pt-4 border-t border-blue-500/20 text-xs space-y-3 text-foreground/80">
-                  <div>
-                    <p className="font-semibold text-blue-700 dark:text-blue-200">How the AI lookup works:</p>
-                    <p className="text-muted-foreground mt-0.5 leading-relaxed">
-                      When customers message you on WhatsApp (e.g. "What is my order status?"), the AI checks if a Reference Column is configured. It will prompt the customer to provide their identifier (e.g. "Please provide your Order ID"). Once provided, it searches for a matching row and replies with ONLY the permitted Return Columns.
-                    </p>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="p-3 bg-muted/50 rounded border border-border">
-                      <p className="font-semibold text-foreground mb-1">Example A: E-Commerce Store</p>
-                      <ul className="space-y-1 text-muted-foreground list-disc ml-3">
-                        <li><strong>Reference Column:</strong> <code className="bg-muted px-1 py-0.5 rounded font-mono">Order ID</code></li>
-                        <li><strong>Return Columns:</strong> <code className="bg-muted px-1 py-0.5 rounded font-mono">Status, Delivery Date, Tracking ID</code></li>
-                        <li><strong>AI flow:</strong> Customer asks for order details. AI requests Order ID, queries sheet, and reports the status and tracking details (while hiding profit margin, address, or cost columns).</li>
-                      </ul>
-                    </div>
-                    <div className="p-3 bg-muted/50 rounded border border-border">
-                      <p className="font-semibold text-foreground mb-1">Example B: School Results Portal</p>
-                      <ul className="space-y-1 text-muted-foreground list-disc ml-3">
-                        <li><strong>Reference Column:</strong> <code className="bg-muted px-1 py-0.5 rounded font-mono">Student ID</code></li>
-                        <li><strong>Return Columns:</strong> <code className="bg-muted px-1 py-0.5 rounded font-mono">Math Grade, Science Grade, GPA</code></li>
-                        <li><strong>AI flow:</strong> Student asks for grades. AI requests Student ID, queries sheet, and reports grades.</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -193,49 +146,9 @@ export function GoogleSheetsForm() {
             </div>
           </div>
 
-          <div className="space-y-2 pt-4 border-t border-border">
-            <Label className="text-muted-foreground">Google Sheet Link or Spreadsheet ID</Label>
-            <Input
-              value={config.spreadsheet_id}
-              onChange={(e) => setConfig({ ...config, spreadsheet_id: e.target.value })}
-              placeholder="Paste Google Sheet URL or Spreadsheet ID here"
-              className="bg-muted border-border text-foreground"
-            />
-            <p className="text-[10px] text-muted-foreground/60 italic">
-              You can paste the entire browser URL (e.g. https://docs.google.com/spreadsheets/d/.../edit) or just the ID.
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 pt-4 border-t border-border">
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">Reference Column (Search Key)</Label>
-              <Input
-                value={config.reference_column}
-                onChange={(e) => setConfig({ ...config, reference_column: e.target.value })}
-                placeholder="e.g. Order ID, Student ID"
-                className="bg-muted border-border text-foreground"
-              />
-              <p className="text-[10px] text-muted-foreground/60 italic">
-                The column name containing the unique ID (e.g. order number) to search for.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">Return Columns (Allowed Fields)</Label>
-              <Input
-                value={config.return_columns}
-                onChange={(e) => setConfig({ ...config, return_columns: e.target.value })}
-                placeholder="e.g. Status, Delivery Date, Score"
-                className="bg-muted border-border text-foreground"
-              />
-              <p className="text-[10px] text-muted-foreground/60 italic">
-                Comma-separated list of column headers the AI is allowed to read and return to the client. Leave blank to return all.
-              </p>
-            </div>
-          </div>
-
           <div className="space-y-4 pt-4 border-t border-border">
             <div className="flex items-center justify-between">
-              <Label className="text-muted-foreground">Custom Service Account (Advanced)</Label>
+              <Label className="text-muted-foreground">Service Account (Advanced)</Label>
             </div>
             
             <div className="grid gap-4 sm:grid-cols-2">
@@ -253,25 +166,33 @@ export function GoogleSheetsForm() {
                 <Textarea
                   value={config.private_key}
                   onChange={(e) => setConfig({ ...config, private_key: e.target.value })}
-                  placeholder={hasLocalKeys ? '••••••••••••••••' : 'Paste private key here (PEM format starting with -----BEGIN)'}
+                  placeholder={hasLocalKeys ? '••••••••••••••••' : 'Paste private key here (PEM format)'}
                   className="bg-muted border-border text-foreground font-mono text-xs min-h-[80px]"
                   rows={4}
                 />
               </div>
             </div>
             <p className="text-[10px] text-muted-foreground/60">
-              Leave these blank to use the system default bot. If provided, they will override the default.
+              Leave these blank to use the system default bot. If provided, they override the default.
             </p>
           </div>
 
-          <div className="flex justify-end pt-4">
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setView('spreadsheets')}
+              className="gap-1.5"
+            >
+              <Database className="size-4" />
+              Manage Spreadsheets
+            </Button>
             <Button 
               onClick={handleSave} 
               disabled={saving}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               <Save className="mr-2 size-4" />
-              {saving ? 'Saving...' : 'Save Configuration'}
+              {saving ? 'Saving...' : 'Save Auth Settings'}
             </Button>
           </div>
         </CardContent>

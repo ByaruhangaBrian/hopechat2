@@ -723,6 +723,33 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         systemInstruction += `\n\nDynamic Business Knowledge:\n${knowledge.map((item: any) => `[${item.title}]: ${item.content}`).join('\n')}`
       }
 
+      // Inject spreadsheet info if Google Sheets is enabled
+      const { data: sheetsInteg } = await db
+        .from('business_integrations')
+        .select('config, is_enabled')
+        .eq('business_id', args.businessId)
+        .eq('type', 'google_sheets')
+        .maybeSingle();
+
+      if (sheetsInteg?.is_enabled) {
+        const { data: spreadsheets } = await db
+          .from('business_spreadsheets')
+          .select('name, description, reference_column, return_columns')
+          .eq('business_id', args.businessId)
+          .eq('is_enabled', true)
+          .order('name');
+
+        if (spreadsheets && spreadsheets.length > 0) {
+          systemInstruction += `\n\nAVAILABLE SPREADSHEETS:\n`;
+          spreadsheets.forEach((s: any, i: number) => {
+            systemInstruction += `${i + 1}. "${s.name}"`;
+            if (s.description) systemInstruction += ` — ${s.description}`;
+            systemInstruction += `\n`;
+          });
+          systemInstruction += `\nWhen a customer asks for business data, determine which spreadsheet is most relevant and ask for the reference value. Then use search_business_data to look it up.\n`;
+        }
+      }
+
       const { data: messages } = await db
         .from('messages')
         .select('sender_type, content_text')
@@ -804,7 +831,7 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         throw new Error('lookup_spreadsheet needs sheet_name, search_column, and search_value')
       }
       const searchValue = interpolate(cfg.search_value, args)
-      const row = await lookupRow(args.businessId, cfg.sheet_name, cfg.search_column, searchValue)
+      const row = await lookupRow(args.businessId, cfg.sheet_name, cfg.search_column, searchValue, cfg.spreadsheet_id)
       if (!row) return `no row found for ${searchValue}`
       if (!args.context.vars) args.context.vars = {}
       for (const [colName, varName] of Object.entries(cfg.mapping || {})) {

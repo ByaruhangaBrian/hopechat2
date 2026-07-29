@@ -46,9 +46,23 @@ export async function generateGeminiResponse(
         .eq('type', 'google_sheets')
         .maybeSingle();
 
-      if (integration?.is_enabled && (integration.config as any)?.reference_column) {
-        const refCol = (integration.config as any).reference_column.trim();
-        toolDescription = `The search query (specifically looking up values matching the '${refCol}' column in the spreadsheet).`;
+      if (integration?.is_enabled) {
+        const { data: spreadsheets } = await db
+          .from('business_spreadsheets')
+          .select('name, description, reference_column')
+          .eq('business_id', businessId)
+          .eq('is_enabled', true)
+          .order('name');
+
+        if (spreadsheets && spreadsheets.length > 0) {
+          const sheetList = spreadsheets.map(s =>
+            `"${s.name}"${s.description ? ` (${s.description})` : ''}`
+          ).join(', ');
+          toolDescription = `Search business data. Available spreadsheets: ${sheetList}. The query should include the reference value the customer provided.`;
+        } else if ((integration.config as any)?.reference_column) {
+          const refCol = (integration.config as any).reference_column.trim();
+          toolDescription = `The search query (specifically looking up values matching the '${refCol}' column in the spreadsheet).`;
+        }
       }
     } catch (e) {
       console.error('[gemini-client] failed to read dynamic tool config:', e);

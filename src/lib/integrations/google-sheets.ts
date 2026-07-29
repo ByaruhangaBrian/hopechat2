@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { decrypt } from '@/lib/whatsapp/encryption';
 import { supabaseAdmin } from '@/lib/automations/admin-client';
 import { logHttpEvent } from '@/lib/logs/http-logs';
+import { BusinessSpreadsheet } from '@/types';
 
 export interface GoogleSheetsConfig {
   spreadsheet_id: string;
@@ -151,7 +152,7 @@ function validatePrivateKey(raw: string, source: string): string {
   return normalized;
 }
 
-async function getClient(businessId: string) {
+async function getClient(businessId: string): Promise<{ sheets: any; config: GoogleSheetsConfig }> {
   const db = supabaseAdmin();
   console.log(`${TAG} getClient called for businessId: ${businessId}`);
 
@@ -167,7 +168,6 @@ async function getClient(businessId: string) {
 
   let config = (integration?.config as unknown as GoogleSheetsConfig) || {};
   let keySource = 'business_integration';
-  console.log(`${TAG} business integration: has_client_email=${!!config.client_email} has_private_key=${!!config.private_key} has_spreadsheet_id=${!!config.spreadsheet_id}`);
 
   if (!config.client_email || !config.private_key) {
     const { data: globalSettings, error: gsErr } = await db
@@ -181,7 +181,6 @@ async function getClient(businessId: string) {
     const globalConfig = (globalSettings?.value as any)?.google_sheets || {};
     const hasGlobalSA = !!globalConfig.default_service_account?.private_key;
     const hasEnvVar = !!process.env.GOOGLE_SHEETS_PRIVATE_KEY;
-    console.log(`${TAG} fallback check: global_settings_exists=${!!globalSettings} has_global_sa=${hasGlobalSA} has_env_var=${hasEnvVar}`);
 
     if (config.private_key) {
       keySource = 'business_integration';
@@ -198,30 +197,22 @@ async function getClient(businessId: string) {
     };
   }
 
-  console.log(`${TAG} resolved key source: ${keySource}`);
-  console.log(`${TAG} config: client_email=${config.client_email} spreadsheet_id=${config.spreadsheet_id} private_key_length=${config.private_key?.length}`);
-
-  if (!config.client_email || !config.private_key || !config.spreadsheet_id) {
+  if (!config.client_email || !config.private_key) {
     const missing = [];
     if (!config.client_email) missing.push('client_email');
     if (!config.private_key) missing.push('private_key');
-    if (!config.spreadsheet_id) missing.push('spreadsheet_id');
-    console.error(`${TAG} incomplete config, missing: ${missing.join(', ')}`);
     throw new Error(`Google Sheets integration is not fully configured. Missing: ${missing.join(', ')}`);
   }
 
   const isEncrypted = /^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/i.test(config.private_key);
-  console.log(`${TAG} key encrypted: ${isEncrypted}`);
 
   let privateKeyRaw: string;
   try {
     privateKeyRaw = isEncrypted ? decrypt(config.private_key) : config.private_key;
     if (isEncrypted) {
       keySource += ' (decrypted)';
-      console.log(`${TAG} decryption OK, decrypted length: ${privateKeyRaw.length}`);
     }
   } catch (decryptErr: any) {
-    console.error(`${TAG} decryption FAILED: ${decryptErr.message}`);
     throw new Error(`Failed to decrypt private key: ${decryptErr.message}`);
   }
 
@@ -229,16 +220,11 @@ async function getClient(businessId: string) {
   try {
     privateKey = validatePrivateKey(privateKeyRaw, keySource);
   } catch (validationErr: any) {
-    console.warn(`${TAG} primary key failed: ${validationErr.message}`);
     const envKey = process.env.GOOGLE_SHEETS_PRIVATE_KEY;
-    const envClientEmail = process.env.GOOGLE_SHEETS_CLIENT_EMAIL;
     if (envKey && envKey !== config.private_key) {
-      console.warn(`${TAG} falling back to env var key (length: ${envKey.length})`);
       try {
         privateKey = validatePrivateKey(envKey, 'env_var_fallback');
-        config.client_email = config.client_email || envClientEmail || '';
       } catch (fallbackErr: any) {
-        console.error(`${TAG} env var fallback also FAILED: ${fallbackErr.message}`);
         throw validationErr;
       }
     } else {
@@ -246,42 +232,70 @@ async function getClient(businessId: string) {
     }
   }
 
-  console.log(`${TAG} creating JWT auth client...`);
   const auth = new google.auth.JWT({
     email: config.client_email,
     key: privateKey,
     scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
   });
 
-  console.log(`${TAG} JWT auth client created, attempting to get a token to verify...`);
-  try {
-    const token = await auth.getAccessToken();
-    console.log(`${TAG} PASS: JWT token obtained successfully`);
-  } catch (tokenErr: any) {
-    console.error(`${TAG} FAIL: JWT getAccessToken error: ${tokenErr.message}`);
-    if (tokenErr.response?.data) {
-      console.error(`${TAG} token error response:`, JSON.stringify(tokenErr.response.data));
-    }
-    throw tokenErr;
-  }
+  await auth.getAccessToken();
 
   return {
     sheets: google.sheets({ version: 'v4', auth }),
-    spreadsheetId: config.spreadsheet_id,
     config
   };
 }
 
 /**
- * Find a row by searching a column for a specific value.
+ * Fetch all enabled spreadsheets for a business from the new table.
  */
-export async function lookupRow(businessId: string, sheetName: string, searchColumn: string, searchValue: string) {
-  const { sheets, spreadsheetId } = await getClient(businessId);
+export async function getBusinessSpreadsheets(businessId: string): Promise<BusinessSpreadsheet[]> {
+  const db = supabaseAdmin();
+  const { data, error } = await db
+    .from('business_spreadsheets')
+    .select('*')
+    .eq('business_id', businessId)
+    .eq('is_enabled', true)
+    .order('name');
 
-  // Fetch the first 1000 rows
+  if (error) {
+    console.error(`${TAG} getBusinessSpreadsheets error:`, error.message);
+    return [];
+  }
+  return data || [];
+}
+
+/**
+ * Find a row by searching a column for a specific value.
+ * @param spreadsheetId - Optional. If not provided, uses the first enabled spreadsheet from the new table.
+ */
+export async function lookupRow(businessId: string, sheetName: string, searchColumn: string, searchValue: string, spreadsheetId?: string) {
+  const { sheets } = await getClient(businessId);
+
+  let targetSpreadsheetId = spreadsheetId;
+
+  if (!targetSpreadsheetId) {
+    const spreadsheets = await getBusinessSpreadsheets(businessId);
+    if (spreadsheets.length > 0) {
+      targetSpreadsheetId = spreadsheets[0].spreadsheet_id;
+    } else {
+      const db = supabaseAdmin();
+      const { data: integration } = await db
+        .from('business_integrations')
+        .select('config')
+        .eq('business_id', businessId)
+        .eq('type', 'google_sheets')
+        .eq('is_enabled', true)
+        .maybeSingle();
+      const cfg = (integration?.config as any) || {};
+      if (!cfg.spreadsheet_id) throw new Error('No spreadsheets configured for this business');
+      targetSpreadsheetId = cfg.spreadsheet_id;
+    }
+  }
+
   const response = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: `${sheetName}!A1:Z1000`, 
+    spreadsheetId: targetSpreadsheetId,
+    range: `${sheetName}!A1:Z1000`,
   });
 
   const rows = response.data.values;
@@ -291,12 +305,11 @@ export async function lookupRow(businessId: string, sheetName: string, searchCol
   const colIndex = header.indexOf(searchColumn);
   if (colIndex === -1) throw new Error(`Column "${searchColumn}" not found in sheet "${sheetName}"`);
 
-  const foundRow = rows.find(r => String(r[colIndex]).toLowerCase() === String(searchValue).toLowerCase());
+  const foundRow = rows.find((r: any) => String(r[colIndex]).toLowerCase() === String(searchValue).toLowerCase());
   if (!foundRow) return null;
 
-  // Map row to object using headers
   const result: Record<string, string> = {};
-  header.forEach((h, i) => {
+  header.forEach((h: any, i: any) => {
     result[h] = foundRow[i] ?? '';
   });
 
@@ -304,61 +317,99 @@ export async function lookupRow(businessId: string, sheetName: string, searchCol
 }
 
 /**
- * General search for AI tool calling.
+ * Search all enabled spreadsheets for AI tool calling.
+ * Returns results tagged with the spreadsheet name so the AI knows which data came from where.
  */
 export async function searchSheets(businessId: string, query: string) {
   try {
-    const { sheets, spreadsheetId, config } = await getClient(businessId);
+    const { sheets } = await getClient(businessId);
+    const spreadsheets = await getBusinessSpreadsheets(businessId);
 
+    // Fallback: if no spreadsheets in the new table, try the old integration config
+    if (spreadsheets.length === 0) {
+      const db = supabaseAdmin();
+      const { data: integration } = await db
+        .from('business_integrations')
+        .select('config')
+        .eq('business_id', businessId)
+        .eq('type', 'google_sheets')
+        .eq('is_enabled', true)
+        .maybeSingle();
+      const cfg = (integration?.config as any) || {};
+      if (cfg.spreadsheet_id) {
+        return await searchSingleSheet(sheets, cfg.spreadsheet_id, cfg.reference_column, cfg.return_columns, query, cfg.sheet_name || 'Sheet1');
+      }
+      return "No spreadsheets are configured. Ask the business owner to add spreadsheets in Settings > Integrations.";
+    }
+
+    // Search all spreadsheets, collect results
+    const allResults: string[] = [];
+    for (const sheet of spreadsheets) {
+      const result = await searchSingleSheet(
+        sheets,
+        sheet.spreadsheet_id,
+        sheet.reference_column,
+        sheet.return_columns || undefined,
+        query,
+        sheet.sheet_name || 'Sheet1',
+        sheet.name
+      );
+      allResults.push(result);
+    }
+
+    return allResults.join('\n\n=====\n\n');
+  } catch (err: any) {
+    console.error(`${TAG} searchSheets FAILED:`, {
+      message: err.message,
+      code: err.code,
+      name: err.name,
+    });
+    return `Error searching spreadsheets: ${err.message}`;
+  }
+}
+
+async function searchSingleSheet(
+  sheets: any,
+  spreadsheetId: string,
+  referenceColumn: string | undefined,
+  returnColumns: string | undefined,
+  query: string,
+  sheetName: string,
+  spreadsheetName?: string
+): Promise<string> {
+  try {
     const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
     const firstSheetName = spreadsheet.data.sheets?.[0]?.properties?.title;
-    if (!firstSheetName) return "No sheets found.";
+    if (!firstSheetName) return `[${spreadsheetName || spreadsheetId}] No sheets found.`;
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `${firstSheetName}!A1:Z100`, // Small range for AI context
+      range: `${firstSheetName}!A1:Z100`,
     });
 
     const rows = response.data.values;
-    if (!rows || rows.length < 2) return "Spreadsheet is empty.";
+    if (!rows || rows.length < 2) return `[${spreadsheetName || spreadsheetId}] Spreadsheet is empty.`;
 
     const header = rows[0];
-    const refCol = config.reference_column?.trim();
-    const retColsRaw = config.return_columns?.trim();
+    const refCol = referenceColumn?.trim();
+    const retColsRaw = returnColumns?.trim();
 
     let refColIndex = -1;
     if (refCol) {
-      refColIndex = header.findIndex(h => String(h).toLowerCase() === refCol.toLowerCase());
+      refColIndex = header.findIndex((h: any) => String(h).toLowerCase() === refCol.toLowerCase());
     }
 
-    await logHttpEvent({
-      businessId,
-      direction: 'system',
-      service: 'google_sheets',
-      endpoint: 'searchSheets',
-      payload: { headers: header, refCol, refColIndex, query, totalRows: rows.length - 1 },
-      note: `Searching for "${query}" in "${refCol}" column`,
-    });
-
-    const results = rows.slice(1).filter(row => {
+    const results = rows.slice(1).filter((row: any) => {
       if (refColIndex !== -1) {
         const cellValue = row[refColIndex];
         return cellValue !== undefined && String(cellValue).toLowerCase().includes(query.toLowerCase());
       } else {
-        return row.some(cell => String(cell).toLowerCase().includes(query.toLowerCase()));
+        return row.some((cell: any) => String(cell).toLowerCase().includes(query.toLowerCase()));
       }
     });
 
     if (results.length === 0) {
-      await logHttpEvent({
-        businessId,
-        direction: 'system',
-        service: 'google_sheets',
-        endpoint: 'searchSheets',
-        payload: { query, sheetName: firstSheetName },
-        note: `No results found for "${query}"`,
-      });
-      return `No matches found for "${query}" in sheet "${firstSheetName}".`;
+      return `[${spreadsheetName || firstSheetName}] No matches found for "${query}".`;
     }
 
     let columnsToReturn: string[] = [];
@@ -366,41 +417,20 @@ export async function searchSheets(businessId: string, query: string) {
       columnsToReturn = retColsRaw.split(',').map(c => c.trim().toLowerCase());
     }
 
-    const formatted = results.slice(0, 5).map(row => {
+    const formatted = results.slice(0, 5).map((row: any) => {
       return header
-        .map((h, i) => {
+        .map((h: any, i: any) => {
           const isAllowed = columnsToReturn.length === 0 || columnsToReturn.includes(String(h).trim().toLowerCase());
           if (!isAllowed) return null;
           return `${h}: ${row[i] ?? ''}`;
         })
-        .filter(val => val !== null)
+        .filter((val: any) => val !== null)
         .join(', ');
     }).join('\n---\n');
 
-    await logHttpEvent({
-      businessId,
-      direction: 'system',
-      service: 'google_sheets',
-      endpoint: 'searchSheets',
-      payload: { query, matchCount: results.length, columnsToReturn, formatted },
-      note: `Returned ${results.length} result(s) for "${query}"`,
-    });
-    return formatted;
+    const label = spreadsheetName || firstSheetName;
+    return `Spreadsheet "${label}":\n${formatted}`;
   } catch (err: any) {
-    console.error(`${TAG} searchSheets FAILED:`, {
-      message: err.message,
-      code: err.code,
-      name: err.name,
-      stack: err.stack?.split('\n').slice(0, 5).join('\n'),
-    });
-    await logHttpEvent({
-      businessId,
-      direction: 'system',
-      service: 'google_sheets',
-      endpoint: 'searchSheets',
-      payload: { error: err.message, code: err.code, name: err.name, stack: err.stack },
-      note: `Error: ${err.message}`,
-    });
-    return `Error searching spreadsheet: ${err.message}`;
+    return `[${spreadsheetName || spreadsheetId}] Error: ${err.message}`;
   }
 }

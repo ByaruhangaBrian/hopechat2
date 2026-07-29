@@ -352,7 +352,7 @@ async function executeAiJob(job: any): Promise<void> {
     systemInstruction += `Dynamic Business Knowledge:\n${aiConfig.knowledge_items.map(item => `[${item.title}]: ${item.content}`).join('\n')}\n\n`;
   }
 
-  // Load Google Sheets integration config if enabled to instruct AI on reference key lookup
+  // Load Google Sheets integration config if enabled to instruct AI on spreadsheets
   const { data: sheetsIntegration } = await db
     .from('business_integrations')
     .select('config, is_enabled')
@@ -361,16 +361,33 @@ async function executeAiJob(job: any): Promise<void> {
     .maybeSingle();
 
   if (sheetsIntegration && sheetsIntegration.is_enabled) {
-    const sheetsConfig = sheetsIntegration.config as any;
-    const refCol = sheetsConfig?.reference_column?.trim();
-    const retCols = sheetsConfig?.return_columns?.trim();
-    if (refCol) {
-      systemInstruction += `SPREADSHEET LOOKUP ROLE:\n`;
-      systemInstruction += `- Customers can query information. You MUST ask the customer for the specific reference: '${refCol}'. Do not guess it. Once they provide it, use the 'search_business_data' tool to search for it.\n`;
-      if (retCols) {
-        systemInstruction += `- The spreadsheet will only return columns: '${retCols}'. Only explain or show these fields to the customer.\n`;
+    const { data: spreadsheets } = await db
+      .from('business_spreadsheets')
+      .select('name, description, reference_column, return_columns')
+      .eq('business_id', job.business_id)
+      .eq('is_enabled', true)
+      .order('name');
+
+    if (spreadsheets && spreadsheets.length > 0) {
+      systemInstruction += `AVAILABLE SPREADSHEETS (searchable via search_business_data tool):\n`;
+      spreadsheets.forEach((s, i) => {
+        systemInstruction += `${i + 1}. "${s.name}"`;
+        if (s.description) systemInstruction += ` — ${s.description}`;
+        systemInstruction += `\n`;
+      });
+      systemInstruction += `\nWhen a customer asks for business data, determine which spreadsheet is most relevant and ask for the reference value. Then use search_business_data to look it up.\n\n`;
+    } else {
+      const sheetsConfig = sheetsIntegration.config as any;
+      const refCol = sheetsConfig?.reference_column?.trim();
+      if (refCol) {
+        systemInstruction += `SPREADSHEET LOOKUP ROLE:\n`;
+        systemInstruction += `- Customers can query information. You MUST ask the customer for the specific reference: '${refCol}'. Do not guess it. Once they provide it, use the 'search_business_data' tool to search for it.\n`;
+        const retCols = sheetsConfig?.return_columns?.trim();
+        if (retCols) {
+          systemInstruction += `- The spreadsheet will only return columns: '${retCols}'. Only explain or show these fields to the customer.\n`;
+        }
+        systemInstruction += `\n`;
       }
-      systemInstruction += `\n`;
     }
   }
 

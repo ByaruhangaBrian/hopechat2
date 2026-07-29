@@ -363,7 +363,23 @@ export interface AssignToAiStepConfig {
   enable_fallback_to_human?: boolean;
 }
 
+export interface BusinessSpreadsheet {
+  id: string;
+  business_id: string;
+  name: string;
+  description?: string | null;
+  spreadsheet_id: string;
+  sheet_name: string;
+  reference_column: string;
+  return_columns?: string | null;
+  is_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface LookupSpreadsheetStepConfig {
+  /** Optional target spreadsheet id. If empty, uses the first enabled sheet. */
+  spreadsheet_id?: string;
   sheet_name: string;
   search_column: string;
   search_value: string;
