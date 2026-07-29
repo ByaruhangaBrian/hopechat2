@@ -342,7 +342,15 @@ export async function searchSheets(businessId: string, query: string) {
       return "No spreadsheets are configured. Ask the business owner to add spreadsheets in Settings > Integrations.";
     }
 
-    // Search all spreadsheets, collect results
+    void logHttpEvent({
+      businessId,
+      direction: 'system',
+      service: 'google-sheets',
+      endpoint: 'searchSheets',
+      payload: { query, spreadsheets: spreadsheets.map(s => ({ name: s.name, id: s.spreadsheet_id, sheet: s.sheet_name || 'Sheet1', ref_col: s.reference_column })) },
+      note: `searching ${spreadsheets.length} spreadsheet(s)`,
+    });
+
     const allResults: string[] = [];
     for (const sheet of spreadsheets) {
       const result = await searchSingleSheet(
@@ -378,13 +386,18 @@ async function searchSingleSheet(
   spreadsheetName?: string
 ): Promise<string> {
   try {
-    const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
-    const firstSheetName = spreadsheet.data.sheets?.[0]?.properties?.title;
-    if (!firstSheetName) return `[${spreadsheetName || spreadsheetId}] No sheets found.`;
+    const range = `${sheetName}!A:Z`;
+    void logHttpEvent({
+      direction: 'system',
+      service: 'google-sheets',
+      endpoint: 'searchSingleSheet',
+      payload: { spreadsheetId, spreadsheetName, sheetName, range, query },
+      note: `querying "${spreadsheetName || spreadsheetId}"`,
+    });
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `${firstSheetName}!A1:Z100`,
+      range,
     });
 
     const rows = response.data.values;
@@ -408,8 +421,16 @@ async function searchSingleSheet(
       }
     });
 
+    void logHttpEvent({
+      direction: 'system',
+      service: 'google-sheets',
+      endpoint: 'searchSingleSheet',
+      payload: { spreadsheetName, rowsReturned: rows?.length, refColIndex, matchedRows: results.length, query, refCol },
+      note: `matched ${results.length} of ${rows?.length ?? 0} rows in "${spreadsheetName || spreadsheetId}"`,
+    });
+
     if (results.length === 0) {
-      return `[${spreadsheetName || firstSheetName}] No matches found for "${query}".`;
+      return `[${spreadsheetName || sheetName}] No matches found for "${query}".`;
     }
 
     let columnsToReturn: string[] = [];
@@ -428,7 +449,7 @@ async function searchSingleSheet(
         .join(', ');
     }).join('\n---\n');
 
-    const label = spreadsheetName || firstSheetName;
+    const label = spreadsheetName || sheetName;
     return `Spreadsheet "${label}":\n${formatted}`;
   } catch (err: any) {
     return `[${spreadsheetName || spreadsheetId}] Error: ${err.message}`;
