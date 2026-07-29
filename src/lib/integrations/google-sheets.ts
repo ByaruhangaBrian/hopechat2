@@ -320,7 +320,7 @@ export async function lookupRow(businessId: string, sheetName: string, searchCol
  * Search all enabled spreadsheets for AI tool calling.
  * Returns results tagged with the spreadsheet name so the AI knows which data came from where.
  */
-export async function searchSheets(businessId: string, query: string) {
+export async function searchSheets(businessId: string, query: string, spreadsheetName?: string) {
   try {
     const { sheets } = await getClient(businessId);
     const spreadsheets = await getBusinessSpreadsheets(businessId);
@@ -350,6 +350,20 @@ export async function searchSheets(businessId: string, query: string) {
       payload: { query, spreadsheets: spreadsheets.map(s => ({ name: s.name, id: s.spreadsheet_id, sheet: s.sheet_name || 'Sheet1', ref_col: s.reference_column })) },
       note: `searching ${spreadsheets.length} spreadsheet(s)`,
     });
+
+    if (spreadsheetName) {
+      const sheet = spreadsheets.find(s => s.name.toLowerCase() === spreadsheetName.toLowerCase());
+      if (!sheet) return `Spreadsheet "${spreadsheetName}" not found. Available: ${spreadsheets.map(s => s.name).join(', ')}`;
+      return await searchSingleSheet(
+        sheets,
+        sheet.spreadsheet_id,
+        sheet.reference_column,
+        sheet.return_columns || undefined,
+        query,
+        sheet.sheet_name || 'Sheet1',
+        sheet.name
+      );
+    }
 
     const allResults: string[] = [];
     for (const sheet of spreadsheets) {

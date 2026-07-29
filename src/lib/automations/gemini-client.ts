@@ -58,7 +58,7 @@ export async function generateGeminiResponse(
           const sheetList = spreadsheets.map(s =>
             `"${s.name}"${s.description ? ` (${s.description})` : ''}`
           ).join(', ');
-          toolDescription = `Search business data. Available spreadsheets: ${sheetList}. The query should include the reference value the customer provided.`;
+          toolDescription = `The exact reference value the customer provided (e.g., "1002" or "DEF-1155"). Do NOT include the spreadsheet name, column name, or any extra words — just the value.`;
         } else if ((integration.config as any)?.reference_column) {
           const refCol = (integration.config as any).reference_column.trim();
           toolDescription = `The search query (specifically looking up values matching the '${refCol}' column in the spreadsheet).`;
@@ -81,6 +81,10 @@ export async function generateGeminiResponse(
               query: {
                 type: Type.STRING,
                 description: toolDescription
+              },
+              spreadsheet: {
+                type: Type.STRING,
+                description: 'The name of the spreadsheet to search (e.g., "Products", "Orders"). Optional — if omitted, all spreadsheets are searched.'
               }
             },
             required: ['query']
@@ -120,8 +124,9 @@ export async function generateGeminiResponse(
         let result = 'No data found.';
         if (functionCall.name === 'search_business_data') {
           const query = (functionCall.args as any)?.query;
+          const spreadsheetName = (functionCall.args as any)?.spreadsheet;
           if (query) {
-            result = await searchSheets(businessId, query);
+            result = await searchSheets(businessId, query, spreadsheetName);
           }
         }
 

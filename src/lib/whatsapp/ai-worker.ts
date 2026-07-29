@@ -375,7 +375,7 @@ async function executeAiJob(job: any): Promise<void> {
         if (s.description) systemInstruction += ` — ${s.description}`;
         systemInstruction += `\n`;
       });
-      systemInstruction += `\nWhen a customer asks for business data, determine which spreadsheet is most relevant and ask for the reference value. Then use search_business_data to look it up.\n\n`;
+      systemInstruction += `\nWhen a customer asks for business data, determine which spreadsheet is most relevant and ask them for the reference value (e.g., Order ID, Student ID, Defect ID). Once they provide it, call search_business_data with:\n- "query": ONLY the value the customer gave (e.g., "1002", "DEF-1155") — no extra words or labels\n- "spreadsheet": the name of the spreadsheet to search (e.g., "Products")\n\n`;
     } else {
       const sheetsConfig = sheetsIntegration.config as any;
       const refCol = sheetsConfig?.reference_column?.trim();
