@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { supabaseAdmin } from '@/lib/automations/admin-client'
 import { decrypt, encrypt } from '@/lib/whatsapp/encryption'
 
-async function internalGetAiSettings(userId: string) {
-  const db = supabaseAdmin()
-  const { data, error } = await db
+async function internalGetAiSettings(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const { data, error } = await supabase
     .from('ai_settings')
     .select('*')
     .eq('user_id', userId)
@@ -24,6 +22,7 @@ async function internalGetAiSettings(userId: string) {
 }
 
 async function internalSaveAiSettings(
+  supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   settings: {
     groq_api_key: string
@@ -32,11 +31,10 @@ async function internalSaveAiSettings(
     is_enabled: boolean
   },
 ) {
-  const db = supabaseAdmin()
   const encryptedKey = settings.groq_api_key ? encrypt(settings.groq_api_key) : ''
 
   // Fetch business_id for scoping
-  const { data: profile } = await db
+  const { data: profile } = await supabase
     .from('profiles')
     .select('business_id')
     .eq('user_id', userId)
@@ -46,7 +44,7 @@ async function internalSaveAiSettings(
     throw new Error('Business not found for user')
   }
 
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('ai_settings')
     .upsert(
       {
@@ -125,7 +123,7 @@ export async function POST(req: Request) {
 
     const { gemini_api_key, system_prompt, training_documents, is_enabled } = body
 
-    const existingSettings = await internalGetAiSettings(user.id)
+    const existingSettings = await internalGetAiSettings(supabase, user.id)
     const rawKey = String(gemini_api_key ?? '').trim()
     const keyToSave = rawKey.length > 0 ? rawKey : existingSettings?.groq_api_key ?? ''
 
@@ -137,7 +135,7 @@ export async function POST(req: Request) {
     }
 
     try {
-      await internalSaveAiSettings(user.id, {
+      await internalSaveAiSettings(supabase, user.id, {
         groq_api_key: keyToSave,
         system_prompt:
           system_prompt ??
@@ -150,7 +148,7 @@ export async function POST(req: Request) {
     } catch (saveError: any) {
       console.error('[ai-settings] save failed:', saveError)
       return NextResponse.json(
-        { error: saveError?.message || 'Failed to save AI settings' },
+        { error: 'Failed to save AI settings' },
         { status: 500 },
       )
     }

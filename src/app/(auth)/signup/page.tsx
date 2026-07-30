@@ -66,11 +66,6 @@ export default function SignupPage() {
         data: {
           full_name: fullName,
           business_name: businessName,
-          onboarding_whatsapp: phoneNumberId ? {
-            phone_number_id: phoneNumberId,
-            waba_id: wabaId,
-            access_token: accessToken,
-          } : null,
         },
       },
     });
@@ -99,6 +94,19 @@ export default function SignupPage() {
       statusCode: 201,
       note: 'signup_success'
     });
+
+    // Store WhatsApp config in sessionStorage so dashboard-shell can pick it up
+    if (phoneNumberId && accessToken) {
+      try {
+        sessionStorage.setItem('onboarding_whatsapp', JSON.stringify({
+          phone_number_id: phoneNumberId,
+          waba_id: wabaId,
+          access_token: accessToken,
+        }));
+      } catch {
+        // sessionStorage may not be available (SSR), ignore
+      }
+    }
 
     setSuccess(true);
     setLoading(false);

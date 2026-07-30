@@ -107,7 +107,7 @@ export async function POST() {
       return NextResponse.json({ error: 'Business not found' }, { status: 400 })
     }
 
-    // whatsapp_config holds waba_id + encrypted access_token.
+    // whatsapp_config holds waba_id + encrypted access_token (RLS scopes to business, handles impersonation)
     const { data: config, error: configError } = await supabase
       .from('whatsapp_config')
       .select('*')

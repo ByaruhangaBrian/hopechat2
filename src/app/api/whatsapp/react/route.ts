@@ -92,7 +92,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // WhatsApp config + access token
+    // WhatsApp config + access token (RLS scopes to business, handles impersonation)
     const { data: config, error: configError } = await supabase
       .from('whatsapp_config')
       .select('phone_number_id, access_token')

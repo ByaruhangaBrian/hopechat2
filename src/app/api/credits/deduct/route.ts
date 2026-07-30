@@ -39,9 +39,9 @@ export async function POST(request: Request) {
 
     // Verify the user belongs to this business
     const { data: profile } = await supabase
-      .from('users')
+      .from('profiles')
       .select('business_id')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (!profile || profile.business_id !== businessId) {
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, newBalance: result.newBalance })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
 
@@ -73,6 +73,6 @@ export async function GET() {
     const costs = await getCreditCosts()
     return NextResponse.json(costs)
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

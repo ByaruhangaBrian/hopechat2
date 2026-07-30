@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Fetch conversation and contact
+    // Fetch conversation and contact (RLS scopes to business, handles impersonation)
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
       .select('*, contact:contacts(*)')
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Fetch and decrypt WhatsApp config
+    // Fetch and decrypt WhatsApp config (RLS scopes to business, handles impersonation)
     const { data: config, error: configError } = await supabase
       .from('whatsapp_config')
       .select('*')

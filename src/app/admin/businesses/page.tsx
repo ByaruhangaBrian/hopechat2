@@ -365,10 +365,10 @@ export default function BusinessesPage() {
     } catch (err) {
       console.error("Failed to log impersonation:", err);
     }
-    document.cookie = `impersonated_business_id=${businessId}; path=/; max-age=3600; SameSite=Lax`;
-    document.cookie = `impersonated_business_name=${encodeURIComponent(businessName)}; path=/; max-age=3600; SameSite=Lax`;
+    document.cookie = `impersonated_business_id=${businessId}; path=/; max-age=3600; SameSite=Lax; Secure`;
+    document.cookie = `impersonated_business_name=${encodeURIComponent(businessName)}; path=/; max-age=3600; SameSite=Lax; Secure`;
     if (logId) {
-      document.cookie = `impersonation_log_id=${logId}; path=/; max-age=3600; SameSite=Lax`;
+      document.cookie = `impersonation_log_id=${logId}; path=/; max-age=3600; SameSite=Lax; Secure`;
     }
     toast.success(`Impersonating ${businessName}`);
     setTimeout(() => { window.location.href = "/dashboard"; }, 500);

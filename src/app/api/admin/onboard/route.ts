@@ -1,8 +1,31 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { encrypt } from "@/lib/whatsapp/encryption";
 
 export async function POST(req: Request) {
   try {
+    const supabase = await createClient();
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_superadmin')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!profile?.is_superadmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const adminSupabase = createAdminClient();
     const { 
       business_name, 
@@ -61,7 +84,7 @@ export async function POST(req: Request) {
     if (bizError) throw bizError;
 
     // 3. Create Owner Account
-    const { data: authUser, error: authError } = await adminSupabase.auth.admin.createUser({
+    const { data: authUser, error: createUserError } = await adminSupabase.auth.admin.createUser({
       email: owner_email,
       password: owner_password,
       email_confirm: true,
@@ -72,10 +95,15 @@ export async function POST(req: Request) {
       }
     });
 
-    if (authError) {
+    if (createUserError) {
       // Rollback business creation? In a real app yes, here we'll just throw
       await adminSupabase.from("businesses").delete().eq("id", business.id);
-      throw authError;
+      throw createUserError;
+    }
+
+    if (!authUser?.user) {
+      await adminSupabase.from("businesses").delete().eq("id", business.id);
+      throw new Error('Failed to create user account');
     }
 
     // 4. WhatsApp Config (Optional)
@@ -86,7 +114,7 @@ export async function POST(req: Request) {
           business_id: business.id,
           phone_number_id: whatsapp.phone_number_id,
           waba_id: whatsapp.waba_id || null,
-          access_token: whatsapp.access_token,
+          access_token: encrypt(whatsapp.access_token),
           verify_token: whatsapp.verify_token || 'hopechat_' + Math.random().toString(36).substring(7),
           status: 'disconnected'
         });
@@ -105,6 +133,6 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Onboarding error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

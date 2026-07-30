@@ -37,30 +37,33 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   // Handle post-signup onboarding automation
   useEffect(() => {
     async function processOnboarding() {
-      if (!user || !user.user_metadata?.onboarding_whatsapp) return;
+      // Read WhatsApp config from sessionStorage (set during signup)
+      let onboardingConfig: Record<string, string> | null = null;
+      try {
+        const stored = sessionStorage.getItem('onboarding_whatsapp');
+        if (stored) {
+          onboardingConfig = JSON.parse(stored);
+        }
+      } catch {
+        return;
+      }
 
-      const config = user.user_metadata.onboarding_whatsapp;
-      
+      if (!onboardingConfig) return;
+
       try {
         console.log("[Onboarding] Automating WhatsApp setup...");
         const res = await fetch('/api/whatsapp/config', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(config),
+          body: JSON.stringify(onboardingConfig),
         });
 
         if (res.ok) {
-          console.log("[Onboarding] WhatsApp setup successful. Clearing metadata...");
-          // Success! Clear the onboarding data from metadata so we don't repeat this
-          await supabase.auth.updateUser({
-            data: { onboarding_whatsapp: null }
-          });
+          console.log("[Onboarding] WhatsApp setup successful. Clearing sessionStorage...");
+          sessionStorage.removeItem('onboarding_whatsapp');
         } else {
           const errData = await res.json();
           console.error('[Onboarding] WhatsApp setup failed:', errData.error);
-          // Don't clear metadata on failure so user can try again or we can show an error
-          // Actually, maybe we SHOULD clear it to avoid infinite failure loops, 
-          // but for now let's keep it for troubleshooting.
         }
       } catch (err) {
         console.error('[Onboarding] WhatsApp setup exception:', err);
@@ -70,7 +73,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     if (!loading && user) {
       processOnboarding();
     }
-  }, [user, loading, supabase]);
+  }, [user, loading]);
 
   if (loading) {
     return (
