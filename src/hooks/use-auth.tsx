@@ -24,6 +24,8 @@ interface Profile {
     features: Record<string, boolean>;
     credits_remaining: number;
     balance_ugx: number;
+    tier_id: string;
+    plan_tier: string;
   };
 }
 
@@ -92,7 +94,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               name,
               features,
               credits_remaining,
-              balance_ugx
+              balance_ugx,
+              tier_id,
+              plan_tier
             )
           `,
           )
@@ -117,7 +121,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               name,
               features,
               credits_remaining,
-              balance_ugx
+              balance_ugx,
+              tier_id,
+              plan_tier
             )
           `,
           )

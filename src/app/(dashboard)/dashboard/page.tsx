@@ -118,6 +118,12 @@ export default function DashboardPage() {
     [series],
   )
 
+  const disabledFeatures = profile?.business?.features
+    ? Object.entries(profile.business.features)
+        .filter(([, v]) => v === false)
+        .map(([k]) => k.replace('_enabled', '').replace('_', ' '))
+    : [];
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -135,6 +141,15 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {disabledFeatures.length > 0 && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 dark:text-amber-400">
+          <span className="font-semibold">Limited Access — </span>
+          Some features are currently disabled for your business:
+          <span className="font-medium"> {disabledFeatures.join(', ')}</span>.
+          Contact your admin for more information.
+        </div>
+      )}
 
       {/* Metric cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

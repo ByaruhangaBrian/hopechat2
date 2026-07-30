@@ -60,6 +60,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 
 interface SubscriptionTier {
   id: string;
@@ -141,6 +142,25 @@ export default function BusinessDetailsPage() {
   const [creditsToAdd, setCreditsToAdd] = useState("");
   const [refillReason, setRefillReason] = useState("Cash Deposit Received");
   const [isRefilling, setIsRefilling] = useState(false);
+
+  // Feature toggle confirmation
+  const [isFeatureModalOpen, setIsFeatureModalOpen] = useState(false);
+  const [featureToggle, setFeatureToggle] = useState<{ key: string; enabled: boolean } | null>(null);
+  const [isFeatureToggling, setIsFeatureToggling] = useState(false);
+
+  async function executeFeatureToggle(key: string, enabled: boolean) {
+    setIsFeatureToggling(true);
+    const newFeatures = { ...business!.features, [key]: !enabled };
+    const { error } = await supabase.from("businesses").update({ features: newFeatures }).eq("id", business!.id);
+    if (error) {
+      toast.error("Failed to update feature");
+    } else {
+      setBusiness({ ...business!, features: newFeatures });
+      toast.success(`${key.replace('_enabled', '').replace('_', ' ')} ${enabled ? 'disabled' : 'enabled'}`);
+    }
+    setIsFeatureToggling(false);
+    setIsFeatureModalOpen(false);
+  }
 
   useEffect(() => {
     async function fetchDetails() {
@@ -524,13 +544,9 @@ export default function BusinessDetailsPage() {
                   {Object.entries(business.features || {}).map(([feature, enabled]) => (
                     <button 
                       key={feature} 
-                      onClick={async () => {
-                        const newFeatures = { ...business.features, [feature]: !enabled };
-                        const { error } = await supabase.from("businesses").update({ features: newFeatures }).eq("id", business.id);
-                        if (!error) {
-                          setBusiness({ ...business, features: newFeatures });
-                          toast.success(`${feature.replace('_enabled', '')} toggled`);
-                        }
+                      onClick={() => {
+                        setFeatureToggle({ key: feature, enabled });
+                        setIsFeatureModalOpen(true);
                       }}
                       className="flex items-center justify-between p-2 rounded bg-muted hover:bg-muted/80 transition-colors text-left"
                     >
@@ -1005,6 +1021,18 @@ export default function BusinessDetailsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Feature toggle confirmation */}
+      <ConfirmationModal
+        open={isFeatureModalOpen}
+        onOpenChange={setIsFeatureModalOpen}
+        title={featureToggle?.enabled ? "Disable Feature" : "Enable Feature"}
+        description={`Are you sure you want to ${featureToggle?.enabled ? 'disable' : 'enable'} ${featureToggle?.key?.replace('_enabled', '').replace('_', ' ')} for this business?`}
+        confirmText={featureToggle?.enabled ? "Disable" : "Enable"}
+        onConfirm={() => featureToggle && executeFeatureToggle(featureToggle.key, featureToggle.enabled)}
+        loading={isFeatureToggling}
+        variant={featureToggle?.enabled ? 'destructive' : 'default'}
+      />
     </div>
   );
 }

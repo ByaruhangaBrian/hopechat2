@@ -136,7 +136,16 @@ export function BillingPlan() {
     }
   };
 
-  const currentPlan = 'Starter Plan';
+  const tierNames: Record<string, string> = {
+    bronze: 'Bronze Plan',
+    silver: 'Silver Plan',
+    gold: 'Gold Plan',
+    basic: 'Basic Plan',
+    pro: 'Pro Plan',
+    enterprise: 'Enterprise Plan',
+  };
+  const tierId = profile?.business?.tier_id || profile?.business?.plan_tier || '';
+  const currentPlan = tierNames[tierId] || tierId || 'Starter Plan';
   const remainingCredits = profile?.business?.credits_remaining ?? 0;
   const balanceUgx = profile?.business?.balance_ugx ?? 0;
 
