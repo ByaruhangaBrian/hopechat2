@@ -3,6 +3,19 @@ import { searchSheets } from '@/lib/integrations/google-sheets';
 import { supabaseAdmin } from '@/lib/automations/admin-client';
 
 const MAX_RETRIES = 3;
+
+async function getGlobalGeminiKey(): Promise<string> {
+  try {
+    const { data } = await supabaseAdmin()
+      .from('system_settings')
+      .select('value')
+      .eq('id', 'platform_credentials')
+      .maybeSingle();
+    return data?.value?.gemini_global_key || '';
+  } catch {
+    return '';
+  }
+}
 const INITIAL_BACKOFF_MS = 1000;
 
 interface MessageContent {
@@ -23,7 +36,8 @@ export async function generateGeminiResponse(
   /** Gemini explicit cache reference. When set, systemInstruction is already in the cache. */
   cachedContent?: string,
 ): Promise<string> {
-  const finalApiKey = apiKey || process.env.GEMINI_API_KEY || '';
+  const globalKey = apiKey ? '' : await getGlobalGeminiKey();
+  const finalApiKey = apiKey || globalKey || process.env.GEMINI_API_KEY || '';
   if (!finalApiKey) {
     throw new Error('Gemini API key is missing');
   }

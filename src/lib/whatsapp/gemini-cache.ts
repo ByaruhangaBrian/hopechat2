@@ -62,11 +62,27 @@ export async function isCachingEnabled(): Promise<boolean> {
  * - Miss → creates new cache via `ai.caches.create()`, persists to DB
  * - 403/400 errors → returns null (billing not enabled)
  */
+async function resolveKey(apiKey: string): Promise<string> {
+  if (apiKey) return apiKey;
+  try {
+    const { data } = await supabaseAdmin()
+      .from('system_settings')
+      .select('value')
+      .eq('id', 'platform_credentials')
+      .maybeSingle();
+    return data?.value?.gemini_global_key || process.env.GEMINI_API_KEY || '';
+  } catch {
+    return process.env.GEMINI_API_KEY || '';
+  }
+}
+
 export async function getOrSetCache(
   businessId: string,
   params: CacheParams,
 ): Promise<string | null> {
   if (!(await isCachingEnabled())) return null
+
+  params.apiKey = await resolveKey(params.apiKey);
 
   const fp = fingerprint(params.systemInstruction + (params.toolsConfig ?? ''))
   const local = cacheRegistry.get(businessId)
@@ -120,7 +136,7 @@ export async function deleteCache(businessId: string): Promise<void> {
 
   if (!local?.name) return
   try {
-    const apiKey = process.env.GEMINI_API_KEY || ''
+    const apiKey = await resolveKey('')
     if (apiKey) {
       const ai = new GoogleGenAI({ apiKey })
       await ai.caches.delete({ name: local.name })
