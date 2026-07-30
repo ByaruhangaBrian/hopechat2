@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   MessageSquare,
@@ -9,6 +10,8 @@ import {
   Send,
   Coins,
   Clock,
+  AlertTriangle,
+  XCircle,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { WelcomeGuide } from '@/components/dashboard/welcome-guide'
@@ -40,6 +43,7 @@ type RangeDays = 7 | 30 | 90
 
 export default function DashboardPage() {
   const { profile } = useAuth()
+  const router = useRouter()
   const [metrics, setMetrics] = useState<MetricsBundle | null>(null)
   const [metricsLoading, setMetricsLoading] = useState(true)
 
@@ -120,12 +124,6 @@ export default function DashboardPage() {
     [series],
   )
 
-  const disabledFeatures = profile?.business?.features
-    ? Object.entries(profile.business.features)
-        .filter(([, v]) => v === false)
-        .map(([k]) => k.replace('_enabled', '').replace('_', ' '))
-    : [];
-
   return (
     <div className="space-y-5">
       {profile?.business?.status === 'trialing' && <WelcomeGuide />}
@@ -147,21 +145,56 @@ export default function DashboardPage() {
       </div>
 
       {profile?.business?.status === 'trialing' && (
-        <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-600 dark:text-blue-400">
-          <span className="font-semibold flex items-center gap-1.5">
-            <Clock className="h-4 w-4" />
-            Trial Period —
+        <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-600 dark:text-blue-400 flex items-center justify-between gap-4">
+          <span>
+            <span className="font-semibold flex items-center gap-1.5">
+              <Clock className="h-4 w-4" />
+              Trial Period —
+            </span>
+            Your business is on a free trial. Upgrade to unlock all features.
           </span>
-          Your business is on a free trial. Explore all enabled features and upgrade when you&apos;re ready.
+          <button
+            onClick={() => router.push('/settings/billing')}
+            className="shrink-0 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
+          >
+            View Plans
+          </button>
         </div>
       )}
 
-      {disabledFeatures.length > 0 && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 dark:text-amber-400">
-          <span className="font-semibold">Limited Access — </span>
-          Some features are currently disabled for your business:
-          <span className="font-medium"> {disabledFeatures.join(', ')}</span>.
-          Contact your admin for more information.
+      {profile?.business?.status === 'canceled' && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400 flex items-center justify-between gap-4">
+          <span>
+            <span className="font-semibold flex items-center gap-1.5">
+              <XCircle className="h-4 w-4" />
+              Subscription Canceled —
+            </span>
+            Your subscription has been canceled. Some features may be unavailable.
+          </span>
+          <button
+            onClick={() => router.push('/settings/billing')}
+            className="shrink-0 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 transition-colors"
+          >
+            Reactivate
+          </button>
+        </div>
+      )}
+
+      {profile?.business?.status === 'past_due' && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 dark:text-amber-400 flex items-center justify-between gap-4">
+          <span>
+            <span className="font-semibold flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4" />
+              Payment Past Due —
+            </span>
+            Your payment is overdue. Please update your billing information to avoid service interruption.
+          </span>
+          <button
+            onClick={() => router.push('/settings/billing')}
+            className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 transition-colors"
+          >
+            Update Billing
+          </button>
         </div>
       )}
 
