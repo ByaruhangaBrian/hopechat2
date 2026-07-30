@@ -50,6 +50,7 @@ export async function POST(req: Request) {
           flows_enabled: tier.allow_flows ?? false,
           multimodal_enabled: tier.allow_multimodal ?? false,
           automations_enabled: true,
+          pipelines_enabled: true,
         }
       })
       .select()

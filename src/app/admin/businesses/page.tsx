@@ -257,6 +257,7 @@ export default function BusinessesPage() {
           flows_enabled: newTier?.allow_flows ?? false,
           multimodal_enabled: newTier?.allow_multimodal ?? false,
           automations_enabled: true,
+          pipelines_enabled: true,
         }
       })
       .eq("id", businessId);

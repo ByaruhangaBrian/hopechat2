@@ -105,6 +105,7 @@ export function BusinessForm({
               flows_enabled: selectedTier?.allow_flows ?? false,
               multimodal_enabled: selectedTier?.allow_multimodal ?? false,
               automations_enabled: true,
+              pipelines_enabled: true,
             }
           }
         : {
