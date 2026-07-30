@@ -128,11 +128,18 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
   const features = profile?.business?.features || {};
 
+  const featureGates: Record<string, string> = {
+    "/inbox": "inbox_enabled",
+    "/contacts": "contacts_enabled",
+    "/pipelines": "pipelines_enabled",
+    "/broadcasts": "broadcasts_enabled",
+    "/automations": "automations_enabled",
+    "/ai": "ai_enabled",
+  };
+
   const filteredNavItems = navItems.filter((item) => {
-    if (item.href === "/broadcasts") return features.broadcasts_enabled !== false;
-    if (item.href === "/automations") return features.automations_enabled !== false;
-    if (item.href === "/pipelines") return features.pipelines_enabled !== false;
-    return true;
+    const flag = featureGates[item.href];
+    return !flag || features[flag] !== false;
   });
 
   useEffect(() => {

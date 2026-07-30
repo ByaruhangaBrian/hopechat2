@@ -101,6 +101,8 @@ export function BusinessForm({
             plan_tier: tierId,
             features: {
               ai_enabled: true,
+              inbox_enabled: true,
+              contacts_enabled: true,
               broadcasts_enabled: selectedTier?.allow_broadcasts ?? false,
               flows_enabled: selectedTier?.allow_flows ?? false,
               multimodal_enabled: selectedTier?.allow_multimodal ?? false,

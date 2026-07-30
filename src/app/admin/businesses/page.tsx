@@ -253,6 +253,8 @@ export default function BusinessesPage() {
         },
         features: {
           ai_enabled: true,
+          inbox_enabled: true,
+          contacts_enabled: true,
           broadcasts_enabled: newTier?.allow_broadcasts ?? false,
           flows_enabled: newTier?.allow_flows ?? false,
           multimodal_enabled: newTier?.allow_multimodal ?? false,

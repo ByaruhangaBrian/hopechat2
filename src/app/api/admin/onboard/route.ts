@@ -46,6 +46,8 @@ export async function POST(req: Request) {
         },
         features: {
           ai_enabled: true,
+          inbox_enabled: true,
+          contacts_enabled: true,
           broadcasts_enabled: tier.allow_broadcasts ?? false,
           flows_enabled: tier.allow_flows ?? false,
           multimodal_enabled: tier.allow_multimodal ?? false,
