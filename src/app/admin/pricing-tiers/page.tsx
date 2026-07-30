@@ -36,6 +36,9 @@ interface SubscriptionTier {
   allow_broadcasts: boolean;
   allow_flows: boolean;
   allow_multimodal: boolean;
+  trial_days: number;
+  trial_credits: number;
+  trial_features: Record<string, boolean>;
 }
 
 export default function PricingTiersPage() {
@@ -291,6 +294,67 @@ export default function PricingTiersPage() {
                       checked={tier.allow_multimodal}
                       onCheckedChange={(val) => handleUpdateField(tier.id, "allow_multimodal", val)}
                     />
+                  </div>
+                </div>
+
+                {/* Trial Settings */}
+                <div className="space-y-4 border-t border-border/50 pt-4">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Trial Settings
+                  </h4>
+                  <div className="space-y-2">
+                    <Label htmlFor={`${tier.id}-trial-days`} className="text-xs font-semibold text-muted-foreground">
+                      Trial Days (0 = no trial)
+                    </Label>
+                    <Input
+                      id={`${tier.id}-trial-days`}
+                      type="number"
+                      min={0}
+                      value={tier.trial_days}
+                      onChange={(e) =>
+                        handleUpdateField(tier.id, "trial_days", parseInt(e.target.value, 10) || 0)
+                      }
+                      className="bg-background border-border text-foreground font-mono"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`${tier.id}-trial-credits`} className="text-xs font-semibold text-muted-foreground">
+                      Trial Credits
+                    </Label>
+                    <div className="relative">
+                      <Coins className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id={`${tier.id}-trial-credits`}
+                        type="number"
+                        min={0}
+                        value={tier.trial_credits}
+                        onChange={(e) =>
+                          handleUpdateField(tier.id, "trial_credits", parseInt(e.target.value, 10) || 0)
+                        }
+                        className="pl-10 bg-background border-border text-foreground font-mono"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground">Trial Features</p>
+                    <p className="text-[10px] text-muted-foreground mb-2">Features enabled during trial period</p>
+                    {["inbox_enabled", "contacts_enabled", "ai_enabled", "automations_enabled", "pipelines_enabled", "broadcasts_enabled", "flows_enabled", "multimodal_enabled"].map((feat) => (
+                      <div key={feat} className="flex items-center justify-between py-1.5">
+                        <Label className="text-xs text-foreground capitalize">{feat.replace('_enabled', '').replace('_', ' ')}</Label>
+                        <Switch
+                          checked={tier.trial_features?.[feat] ?? false}
+                          onCheckedChange={(val) => {
+                            setTiers((prev) =>
+                              prev.map((t) =>
+                                t.id === tier.id
+                                  ? { ...t, trial_features: { ...t.trial_features, [feat]: val } }
+                                  : t
+                              )
+                            );
+                          }}
+                        />
+                      </div>
+                    ))}
                   </div>
                 </div>
 

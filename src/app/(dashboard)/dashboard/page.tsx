@@ -8,8 +8,10 @@ import {
   DollarSign,
   Send,
   Coins,
+  Clock,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
+import { WelcomeGuide } from '@/components/dashboard/welcome-guide'
 
 import {
   loadActivity,
@@ -126,6 +128,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5">
+      {profile?.business?.status === 'trialing' && <WelcomeGuide />}
+
       {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -141,6 +145,16 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {profile?.business?.status === 'trialing' && (
+        <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-600 dark:text-blue-400">
+          <span className="font-semibold flex items-center gap-1.5">
+            <Clock className="h-4 w-4" />
+            Trial Period —
+          </span>
+          Your business is on a free trial. Explore all enabled features and upgrade when you&apos;re ready.
+        </div>
+      )}
 
       {disabledFeatures.length > 0 && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 dark:text-amber-400">

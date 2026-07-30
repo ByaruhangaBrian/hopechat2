@@ -79,6 +79,9 @@ interface SubscriptionTier {
   allow_broadcasts: boolean;
   allow_flows: boolean;
   allow_multimodal: boolean;
+  trial_days: number;
+  trial_credits: number;
+  trial_features: Record<string, boolean>;
 }
 
 interface Business {

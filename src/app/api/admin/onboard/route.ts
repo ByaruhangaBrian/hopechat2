@@ -51,23 +51,30 @@ export async function POST(req: Request) {
       allow_flows: false, 
       allow_multimodal: false,
       base_credits_monthly: 1500,
-      max_team_seats: 1
+      max_team_seats: 1,
+      trial_days: 0,
+      trial_credits: 0,
+      trial_features: {}
     };
 
-    // 2. Create Business
-    const { data: business, error: bizError } = await adminSupabase
-      .from("businesses")
-      .insert({
-        name: business_name,
-        plan_tier: resolvedTierId,
-        tier_id: resolvedTierId,
-        status: 'active',
-        credits_remaining: tier.base_credits_monthly || 1500,
-        usage_quotas: {
-          max_contacts: resolvedTierId === "gold" ? 10000 : resolvedTierId === "silver" ? 5000 : 100,
-          max_messages: resolvedTierId === "gold" ? 100000 : resolvedTierId === "silver" ? 50000 : 1000,
-        },
-        features: {
+    const isTrial = (tier.trial_days || 0) > 0;
+    const status = isTrial ? 'trialing' : 'active';
+    const credits_remaining = isTrial ? (tier.trial_credits || 0) : (tier.base_credits_monthly || 1500);
+    const features = isTrial
+      ? {
+          ...{
+            ai_enabled: true,
+            inbox_enabled: true,
+            contacts_enabled: true,
+            broadcasts_enabled: false,
+            flows_enabled: false,
+            multimodal_enabled: false,
+            automations_enabled: true,
+            pipelines_enabled: true,
+          },
+          ...(tier.trial_features || {}),
+        }
+      : {
           ai_enabled: true,
           inbox_enabled: true,
           contacts_enabled: true,
@@ -76,7 +83,22 @@ export async function POST(req: Request) {
           multimodal_enabled: tier.allow_multimodal ?? false,
           automations_enabled: true,
           pipelines_enabled: true,
-        }
+        };
+
+    // 2. Create Business
+    const { data: business, error: bizError } = await adminSupabase
+      .from("businesses")
+      .insert({
+        name: business_name,
+        plan_tier: resolvedTierId,
+        tier_id: resolvedTierId,
+        status,
+        credits_remaining,
+        usage_quotas: {
+          max_contacts: resolvedTierId === "gold" ? 10000 : resolvedTierId === "silver" ? 5000 : 100,
+          max_messages: resolvedTierId === "gold" ? 100000 : resolvedTierId === "silver" ? 50000 : 1000,
+        },
+        features
       })
       .select()
       .single();

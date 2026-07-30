@@ -26,6 +26,7 @@ interface Profile {
     balance_ugx: number;
     tier_id: string;
     plan_tier: string;
+    status: string;
   };
 }
 
@@ -96,7 +97,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               credits_remaining,
               balance_ugx,
               tier_id,
-              plan_tier
+              plan_tier,
+              status
             )
           `,
           )
@@ -123,7 +125,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               credits_remaining,
               balance_ugx,
               tier_id,
-              plan_tier
+              plan_tier,
+              status
             )
           `,
           )
