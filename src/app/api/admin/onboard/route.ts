@@ -52,27 +52,31 @@ export async function POST(req: Request) {
       allow_multimodal: false,
       base_credits_monthly: 1500,
       max_team_seats: 1,
-      trial_days: 0,
-      trial_credits: 0,
-      trial_features: {}
     };
 
-    const isTrial = (tier.trial_days || 0) > 0;
+    // Read global trial settings
+    const { data: trialSettings } = await adminSupabase
+      .from("system_settings")
+      .select("value")
+      .eq("id", "trial_settings")
+      .single();
+
+    const trialConfig = trialSettings?.value || {};
+    const trialDays = trialConfig.trial_days ?? 14;
+    const isTrial = trialDays > 0;
     const status = isTrial ? 'trialing' : 'active';
-    const credits_remaining = isTrial ? (tier.trial_credits || 0) : (tier.base_credits_monthly || 1500);
+    const credits_remaining = isTrial ? (trialConfig.trial_credits || 500) : (tier.base_credits_monthly || 1500);
     const features = isTrial
       ? {
-          ...{
-            ai_enabled: true,
-            inbox_enabled: true,
-            contacts_enabled: true,
-            broadcasts_enabled: false,
-            flows_enabled: false,
-            multimodal_enabled: false,
-            automations_enabled: true,
-            pipelines_enabled: true,
-          },
-          ...(tier.trial_features || {}),
+          inbox_enabled: true,
+          contacts_enabled: true,
+          ai_enabled: true,
+          automations_enabled: true,
+          pipelines_enabled: true,
+          broadcasts_enabled: false,
+          flows_enabled: false,
+          multimodal_enabled: false,
+          ...(trialConfig.trial_features || {}),
         }
       : {
           ai_enabled: true,

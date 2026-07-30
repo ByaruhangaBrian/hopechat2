@@ -26,10 +26,7 @@ export async function PUT(req: Request) {
       max_team_seats, 
       allow_broadcasts, 
       allow_flows, 
-      allow_multimodal,
-      trial_days,
-      trial_credits,
-      trial_features
+      allow_multimodal
     } = body;
 
     if (!id) {
@@ -48,9 +45,6 @@ export async function PUT(req: Request) {
         allow_broadcasts: !!allow_broadcasts,
         allow_flows: !!allow_flows,
         allow_multimodal: !!allow_multimodal,
-        trial_days: typeof trial_days === 'number' ? trial_days : 0,
-        trial_credits: typeof trial_credits === 'number' ? trial_credits : 0,
-        trial_features: trial_features || {},
         updated_at: new Date().toISOString()
       })
       .eq("id", id)
