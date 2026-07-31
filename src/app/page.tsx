@@ -37,7 +37,7 @@ const fadeUp = {
   visible: (delay = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.6, ease: "easeOut", delay },
+    transition: { duration: 0.6, ease: "easeOut" as const, delay },
   }),
 };
 
@@ -488,7 +488,7 @@ export default function LandingPage() {
             </motion.div>
 
             <motion.div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
-              {[
+              {([
                 ["Shopify", ShoppingCart],
                 ["WooCommerce", ShoppingCart],
                 ["Stripe", Zap],
@@ -498,7 +498,7 @@ export default function LandingPage() {
                 ["Zapier", Zap],
                 ["Make", Workflow],
                 ["n8n", Workflow],
-              ].map(([name, Icon], i) => (
+              ] as [string, any][]).map(([name, Icon], i) => (
                 <motion.div key={i} variants={fadeUp} custom={i * 0.03} className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-white border border-border shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300">
                   <Icon className="h-5 w-5 text-primary" />
                   <span className="text-sm font-bold text-foreground">{name}</span>
