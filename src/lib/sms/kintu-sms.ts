@@ -67,8 +67,8 @@ export interface KintuSmsResult {
 /**
  * Send a message to a list of (already normalized) recipients via the
  * configured KintuSMS gateway. Recipients are comma-separated in a
- * single call. Success is signalled by the gateway's `1701` code in the
- * text response.
+ * single call under the gateway's `reciever` parameter (sic). Success is
+ * signalled by the gateway's `1701` code in the text response.
  */
 export async function sendKintuSms(
   settings: SmsSettings,
@@ -79,7 +79,7 @@ export async function sendKintuSms(
     user: settings.username,
     password: settings.password,
     sender: settings.sender,
-    recipient: recipients.join(','),
+    reciever: recipients.join(','),
     message,
   })
 
