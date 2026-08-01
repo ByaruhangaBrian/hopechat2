@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type CreditAction = "ai_chat" | "interactive_form" | "bulk_broadcast";
+type CreditAction = "ai_chat" | "interactive_form" | "bulk_broadcast" | "sms";
 
 interface CreditUsageLog {
   id: string;
@@ -61,6 +61,7 @@ interface UsageByBusiness {
   ai_chat: number;
   interactive_form: number;
   bulk_broadcast: number;
+  sms: number;
   total_credits: number;
   last_used: string | null;
 }
@@ -69,6 +70,7 @@ const ACTION_LABELS: Record<string, string> = {
   ai_chat: "AI Chat Response",
   interactive_form: "Interactive Form / Flow",
   bulk_broadcast: "Bulk Broadcast",
+  sms: "SMS Broadcast",
 };
 
 export default function AdminCreditsPage() {
@@ -136,6 +138,7 @@ export default function AdminCreditsPage() {
         ai_chat: 0,
         interactive_form: 0,
         bulk_broadcast: 0,
+        sms: 0,
         total_credits: 0,
         last_used: null,
       };
@@ -252,22 +255,24 @@ export default function AdminCreditsPage() {
         </div>
       </div>
 
-      {/* Usage by Business */}
+      {/* Top Businesses */}
       <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-foreground">Usage by Business</CardTitle>
+          <CardTitle className="text-foreground">Top Businesses by Credit Usage</CardTitle>
           <CardDescription className="text-muted-foreground/60">
-            Aggregated credit consumption for the selected period.
+            Businesses consuming the most credits in the selected period.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader className="bg-muted/50">
               <TableRow className="hover:bg-transparent border-border">
+                <TableHead className="text-muted-foreground">Rank</TableHead>
                 <TableHead className="text-muted-foreground">Business</TableHead>
                 <TableHead className="text-muted-foreground text-right">AI Chat</TableHead>
                 <TableHead className="text-muted-foreground text-right">Forms / Flows</TableHead>
                 <TableHead className="text-muted-foreground text-right">Broadcasts</TableHead>
+                <TableHead className="text-muted-foreground text-right">SMS</TableHead>
                 <TableHead className="text-muted-foreground text-right">Total Credits</TableHead>
                 <TableHead className="text-muted-foreground">Last Used</TableHead>
               </TableRow>
@@ -275,24 +280,26 @@ export default function AdminCreditsPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                     <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" />
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : filteredByBusiness.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                     No credit usage for the selected filters.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredByBusiness.slice(0, 50).map((b) => (
+                filteredByBusiness.slice(0, 20).map((b, i) => (
                   <TableRow key={b.business_id} className="border-border hover:bg-muted/30">
+                    <TableCell className="text-sm font-bold text-primary tabular-nums">#{i + 1}</TableCell>
                     <TableCell className="text-sm font-medium text-foreground">{b.business_name}</TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">{b.ai_chat}</TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">{b.interactive_form}</TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">{b.bulk_broadcast}</TableCell>
+                    <TableCell className="text-right text-sm text-muted-foreground">{b.sms}</TableCell>
                     <TableCell className="text-right text-sm font-bold text-primary">{b.total_credits.toLocaleString()}</TableCell>
                     <TableCell className="text-xs text-muted-foreground/60 whitespace-nowrap">
                       {b.last_used ? format(new Date(b.last_used), "MMM d, HH:mm") : "—"}

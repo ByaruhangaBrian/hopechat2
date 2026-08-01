@@ -16,6 +16,7 @@ import {
   Info,
   Coins,
   Zap,
+  MessageSquareText,
 } from "lucide-react";
 import {
   Card,
@@ -68,7 +69,15 @@ export default function AdminSettingsPage() {
     ai_chat: { credits: 1, label: "Inbound AI Chat Session" },
     interactive_form: { credits: 1, label: "Interactive Form / Flow" },
     bulk_broadcast: { credits: 15, label: "Bulk Broadcast" },
+    sms_per_message: { credits: 1, label: "SMS Message" },
     credit_ugx_rate: 40,
+  });
+  const [smsSettings, setSmsSettings] = useState({
+    url: "",
+    username: "",
+    password: "",
+    sender: "",
+    enabled: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -84,6 +93,7 @@ export default function AdminSettingsPage() {
         { data: pp },
         { data: cc },
         { data: gcc },
+        { data: sms },
       ] = await Promise.all([
         supabase.from("system_settings").select("*").eq("id", "whatsapp_global").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "system_config").maybeSingle(),
@@ -92,6 +102,7 @@ export default function AdminSettingsPage() {
         supabase.from("system_settings").select("*").eq("id", "pesapal_global").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "credit_costs").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "gemini_context_caching").maybeSingle(),
+        supabase.from("system_settings").select("*").eq("id", "sms_settings").maybeSingle(),
       ]);
 
       if (wa) setWhatsappSettings(wa.value);
@@ -111,7 +122,18 @@ export default function AdminSettingsPage() {
           ai_chat: cc.value.ai_chat ?? { credits: 1, label: "Inbound AI Chat Session" },
           interactive_form: cc.value.interactive_form ?? { credits: 1, label: "Interactive Form / Flow" },
           bulk_broadcast: cc.value.bulk_broadcast ?? { credits: 15, label: "Bulk Broadcast" },
+          sms_per_message: cc.value.sms_per_message ?? { credits: 1, label: "SMS Message" },
           credit_ugx_rate: cc.value.credit_ugx_rate ?? 40,
+        });
+      }
+
+      if (sms?.value) {
+        setSmsSettings({
+          url: sms.value.url || "",
+          username: sms.value.username || "",
+          password: sms.value.password || "",
+          sender: sms.value.sender || "",
+          enabled: !!sms.value.enabled,
         });
       }
 
@@ -248,6 +270,24 @@ export default function AdminSettingsPage() {
     setSaving(false);
   }
 
+  async function handleSaveSmsSettings() {
+    setSaving(true);
+    const { error } = await supabase
+      .from("system_settings")
+      .upsert({
+        id: "sms_settings",
+        value: smsSettings,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (error) {
+      toast.error("Failed to save SMS settings");
+    } else {
+      toast.success("SMS provider settings updated");
+    }
+    setSaving(false);
+  }
+
   async function handleSaveGeminiCaching() {
     setSaving(true);
     const { error } = await supabase
@@ -294,6 +334,9 @@ export default function AdminSettingsPage() {
           </TabsTrigger>
           <TabsTrigger value="credentials" className="px-4 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
             Credentials
+          </TabsTrigger>
+          <TabsTrigger value="sms" className="px-4 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+            SMS
           </TabsTrigger>
           <TabsTrigger value="integrations" className="px-4 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
             Integrations
@@ -566,6 +609,115 @@ export default function AdminSettingsPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="sms" className="space-y-6 outline-none">
+          <Card className="max-w-3xl border-border bg-card">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
+                <MessageSquareText className="h-5 w-5 text-primary" />
+                SMS Provider Configuration
+              </CardTitle>
+              <CardDescription>
+                Configure the bulk SMS gateway used for SMS broadcasts. Swappable — any
+                gateway with the KintuSMS-style API shape works.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="rounded-lg border border-border bg-muted/30 p-4 text-xs text-muted-foreground leading-relaxed">
+                  <p className="font-semibold text-foreground mb-1">KintuSMS</p>
+                  <p>
+                    Default endpoint:{' '}
+                    <code className="font-mono text-primary">http://www.kintusms.com/api.php</code>.
+                    Sends use the query params <code className="font-mono">user, password, sender,
+                    recipient, message</code>; the gateway replies with success code{' '}
+                    <code className="font-mono">1701</code>. Recipients are comma-separated and
+                    normalized to the <code className="font-mono">256</code> international format.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="sms_url" className="text-sm font-semibold text-foreground">
+                      API URL
+                    </Label>
+                    <Input
+                      id="sms_url"
+                      value={smsSettings.url}
+                      onChange={(e) => setSmsSettings(prev => ({ ...prev, url: e.target.value }))}
+                      placeholder="http://www.kintusms.com/api.php"
+                      className="bg-background border-border text-foreground font-mono"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="sms_username" className="text-sm font-semibold text-foreground">
+                      Username
+                    </Label>
+                    <Input
+                      id="sms_username"
+                      value={smsSettings.username}
+                      onChange={(e) => setSmsSettings(prev => ({ ...prev, username: e.target.value }))}
+                      placeholder="API username"
+                      className="bg-background border-border text-foreground font-mono"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="sms_password" className="text-sm font-semibold text-foreground">
+                      Password
+                    </Label>
+                    <Input
+                      id="sms_password"
+                      type="password"
+                      value={smsSettings.password}
+                      onChange={(e) => setSmsSettings(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="API password"
+                      className="bg-background border-border text-foreground font-mono"
+                    />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="sms_sender" className="text-sm font-semibold text-foreground">
+                      Sender ID
+                    </Label>
+                    <Input
+                      id="sms_sender"
+                      value={smsSettings.sender}
+                      onChange={(e) => setSmsSettings(prev => ({ ...prev, sender: e.target.value }))}
+                      placeholder="HeloWOrld"
+                      className="bg-background border-border text-foreground font-mono"
+                    />
+                    <p className="text-[11px] text-muted-foreground/60">
+                      Shown as the sender name on recipients' phones. Must be registered with
+                      your SMS provider.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-muted/30 border border-border rounded-lg">
+                  <div className="space-y-1">
+                    <Label htmlFor="sms_enabled" className="text-sm font-semibold text-foreground">
+                      SMS Sending Enabled
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      When disabled, businesses cannot create or send SMS broadcasts.
+                    </p>
+                  </div>
+                  <Switch
+                    id="sms_enabled"
+                    checked={smsSettings.enabled}
+                    onCheckedChange={(val) => setSmsSettings(prev => ({ ...prev, enabled: val }))}
+                  />
+                </div>
+
+                <div className="flex justify-end border-t border-border pt-6">
+                  <Button onClick={handleSaveSmsSettings} disabled={saving || loading} className="bg-primary hover:bg-primary/90">
+                    <Save className="mr-2 h-4 w-4" />
+                    {saving ? "Saving..." : "Save SMS Settings"}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="integrations" className="space-y-6 outline-none">
           <Card className="bg-card border-border">
             <CardHeader>
@@ -760,6 +912,7 @@ export default function AdminSettingsPage() {
                     <li>Each <strong>Inbound AI Chat</strong> response costs the configured number of credits.</li>
                     <li>Each <strong>Interactive Form / Flow</strong> sent via automation costs credits.</li>
                     <li>Each <strong>Bulk Broadcast</strong> action costs credits (per broadcast, not per recipient).</li>
+                    <li>Each <strong>SMS Message</strong> sent in an SMS broadcast costs credits (per recipient).</li>
                     <li>The UGX rate determines how much each credit costs when displayed to businesses.</li>
                   </ul>
                 </div>
@@ -768,7 +921,7 @@ export default function AdminSettingsPage() {
               <div className="space-y-4">
                 <h3 className="text-sm font-medium text-foreground">Action Credit Costs</h3>
 
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-2">
                     <Label className="text-muted-foreground text-xs">
                       {creditCosts.ai_chat.label}
@@ -836,6 +989,32 @@ export default function AdminSettingsPage() {
                         credits
                       </span>
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs">
+                      {creditCosts.sms_per_message.label}
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={creditCosts.sms_per_message.credits}
+                        onChange={(e) =>
+                          setCreditCosts((prev) => ({
+                            ...prev,
+                            sms_per_message: { ...prev.sms_per_message, credits: Number(e.target.value) },
+                          }))
+                        }
+                        className="bg-muted border-border text-foreground font-semibold text-lg pr-12"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        credits
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground/60">
+                      per SMS message
+                    </p>
                   </div>
                 </div>
               </div>

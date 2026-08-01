@@ -9,21 +9,39 @@ import { Step1ChooseTemplate } from '@/components/broadcasts/step1-choose-templa
 import { Step2SelectAudience } from '@/components/broadcasts/step2-select-audience';
 import { Step3Personalize } from '@/components/broadcasts/step3-personalize';
 import { Step4ScheduleSend } from '@/components/broadcasts/step4-schedule-send';
+import {
+  ChannelSelect,
+  type BroadcastChannel,
+} from '@/components/broadcasts/channel-select';
+import { SmsCompose } from '@/components/broadcasts/sms-compose';
+import { SmsReview } from '@/components/broadcasts/sms-review';
 import { useBroadcastSending } from '@/hooks/use-broadcast-sending';
+import { useSmsSending } from '@/hooks/use-sms-sending';
 import { Check } from 'lucide-react';
 
-const steps = [
+const whatsappSteps = [
   { label: 'Template', key: 'template' },
   { label: 'Audience', key: 'audience' },
   { label: 'Personalize', key: 'personalize' },
   { label: 'Send', key: 'send' },
 ] as const;
 
+const smsSteps = [
+  { label: 'Message', key: 'message' },
+  { label: 'Audience', key: 'audience' },
+  { label: 'Send', key: 'send' },
+] as const;
+
 export default function NewBroadcastPage() {
   const router = useRouter();
   const { createAndSendBroadcast, isProcessing, progress } = useBroadcastSending();
+  const { sendSmsBroadcast, isProcessing: smsProcessing, progress: smsProgress } =
+    useSmsSending();
 
+  const [channel, setChannel] = useState<BroadcastChannel>('whatsapp');
   const [currentStep, setCurrentStep] = useState(0);
+  const [smsName, setSmsName] = useState('');
+  const [smsMessage, setSmsMessage] = useState('');
   const [template, setTemplate] = useState<MessageTemplate | null>(null);
   const [audience, setAudience] = useState<{
     type: 'all' | 'tags' | 'custom_field' | 'csv';
@@ -63,6 +81,28 @@ export default function NewBroadcastPage() {
       // just no-op, leaving the user confused. Surface the reason.
       const message = err instanceof Error ? err.message : 'Broadcast failed';
       console.error('Broadcast failed:', err);
+      toast.error(message);
+    }
+  }
+
+  async function handleSmsSend() {
+    try {
+      const broadcastId = await sendSmsBroadcast({
+        name: smsName,
+        message: smsMessage,
+        audience: {
+          type: audience.type,
+          tagIds: audience.tagIds,
+          customField: audience.customField,
+          csvContacts: audience.csvContacts,
+          excludeTagIds: audience.excludeTagIds,
+        },
+      });
+      toast.success('SMS broadcast sent successfully');
+      router.push('/broadcasts');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'SMS broadcast failed';
+      console.error('SMS broadcast failed:', err);
       toast.error(message);
     }
   }
@@ -118,6 +158,14 @@ export default function NewBroadcastPage() {
     router.push('/broadcasts');
   }
 
+  const steps = channel === 'whatsapp' ? whatsappSteps : smsSteps;
+  const busy = channel === 'whatsapp' ? isProcessing : smsProcessing;
+
+  function switchChannel(next: BroadcastChannel) {
+    setChannel(next);
+    setCurrentStep(0);
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       {/* Header */}
@@ -127,6 +175,9 @@ export default function NewBroadcastPage() {
           Create and send a broadcast message to your contacts.
         </p>
       </div>
+
+      {/* Channel selection */}
+      <ChannelSelect channel={channel} onChange={switchChannel} disabled={busy} />
 
       {/* Step Indicator */}
       <div className="flex items-center justify-between">
@@ -173,47 +224,83 @@ export default function NewBroadcastPage() {
         <div
           className="transition-all duration-300 ease-in-out"
           style={{
-            opacity: isProcessing ? 0.6 : 1,
-            pointerEvents: isProcessing ? 'none' : 'auto',
+            opacity: busy ? 0.6 : 1,
+            pointerEvents: busy ? 'none' : 'auto',
           }}
         >
-          {currentStep === 0 && (
-            <Step1ChooseTemplate
-              selectedTemplate={template}
-              onSelect={setTemplate}
-              onNext={() => setCurrentStep(1)}
-              onBack={() => router.push('/broadcasts')}
-            />
-          )}
-          {currentStep === 1 && (
-            <Step2SelectAudience
-              audience={audience}
-              onUpdate={setAudience}
-              onNext={() => setCurrentStep(2)}
-              onBack={() => setCurrentStep(0)}
-            />
-          )}
-          {currentStep === 2 && template && (
-            <Step3Personalize
-              template={template}
-              variables={variables}
-              onUpdate={setVariables}
-              onNext={() => setCurrentStep(3)}
-              onBack={() => setCurrentStep(1)}
-            />
-          )}
-          {currentStep === 3 && template && (
-            <Step4ScheduleSend
-              name={name}
-              onNameChange={setName}
-              template={template}
-              audience={audience}
-              onSend={handleSend}
-              onSaveDraft={handleSaveDraft}
-              onBack={() => setCurrentStep(2)}
-              isProcessing={isProcessing}
-              progress={progress}
-            />
+          {channel === 'whatsapp' ? (
+            <>
+              {currentStep === 0 && (
+                <Step1ChooseTemplate
+                  selectedTemplate={template}
+                  onSelect={setTemplate}
+                  onNext={() => setCurrentStep(1)}
+                  onBack={() => router.push('/broadcasts')}
+                />
+              )}
+              {currentStep === 1 && (
+                <Step2SelectAudience
+                  audience={audience}
+                  onUpdate={setAudience}
+                  onNext={() => setCurrentStep(2)}
+                  onBack={() => setCurrentStep(0)}
+                />
+              )}
+              {currentStep === 2 && template && (
+                <Step3Personalize
+                  template={template}
+                  variables={variables}
+                  onUpdate={setVariables}
+                  onNext={() => setCurrentStep(3)}
+                  onBack={() => setCurrentStep(1)}
+                />
+              )}
+              {currentStep === 3 && template && (
+                <Step4ScheduleSend
+                  name={name}
+                  onNameChange={setName}
+                  template={template}
+                  audience={audience}
+                  onSend={handleSend}
+                  onSaveDraft={handleSaveDraft}
+                  onBack={() => setCurrentStep(2)}
+                  isProcessing={isProcessing}
+                  progress={progress}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              {currentStep === 0 && (
+                <SmsCompose
+                  name={smsName}
+                  onNameChange={setSmsName}
+                  message={smsMessage}
+                  onMessageChange={setSmsMessage}
+                  onNext={() => setCurrentStep(1)}
+                  onBack={() => router.push('/broadcasts')}
+                />
+              )}
+              {currentStep === 1 && (
+                <Step2SelectAudience
+                  audience={audience}
+                  onUpdate={setAudience}
+                  onNext={() => setCurrentStep(2)}
+                  onBack={() => setCurrentStep(0)}
+                />
+              )}
+              {currentStep === 2 && (
+                <SmsReview
+                  name={smsName}
+                  message={smsMessage}
+                  audience={audience}
+                  onSend={handleSmsSend}
+                  onBack={() => setCurrentStep(1)}
+                  isProcessing={smsProcessing}
+                  progress={smsProgress}
+                />
+              )}
+            </>
           )}
         </div>
       </div>

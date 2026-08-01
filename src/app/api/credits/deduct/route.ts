@@ -26,18 +26,19 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { businessId, action, description, referenceId } = body as {
+    const { businessId, action, description, referenceId, amount } = body as {
       businessId: string
       action: CreditAction
       description?: string
       referenceId?: string
+      amount?: number
     }
 
     if (!businessId || !action) {
       return NextResponse.json({ error: 'Missing businessId or action' }, { status: 400 })
     }
 
-    const validActions: CreditAction[] = ['ai_chat', 'interactive_form', 'bulk_broadcast']
+    const validActions: CreditAction[] = ['ai_chat', 'interactive_form', 'bulk_broadcast', 'sms']
     if (!validActions.includes(action)) {
       return NextResponse.json({ error: `Invalid action. Must be one of: ${validActions.join(', ')}` }, { status: 400 })
     }
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
       userId: user.id,
       description,
       referenceId,
+      amount,
     })
 
     if (!result.ok) {

@@ -13,7 +13,11 @@ function admin(): SupabaseClient {
   return _adminClient
 }
 
-export type CreditAction = 'ai_chat' | 'interactive_form' | 'bulk_broadcast'
+export type CreditAction =
+  | 'ai_chat'
+  | 'interactive_form'
+  | 'bulk_broadcast'
+  | 'sms'
 
 export interface CreditCostEntry {
   credits: number
@@ -24,6 +28,8 @@ export interface CreditCosts {
   ai_chat: CreditCostEntry
   interactive_form: CreditCostEntry
   bulk_broadcast: CreditCostEntry
+  /** Cost per SMS message sent in a bulk SMS broadcast. */
+  sms_per_message: CreditCostEntry
   credit_ugx_rate: number
 }
 
@@ -31,6 +37,7 @@ const DEFAULT_COSTS: CreditCosts = {
   ai_chat: { credits: 1, label: 'Inbound AI Chat Session' },
   interactive_form: { credits: 1, label: 'Interactive Form / Flow' },
   bulk_broadcast: { credits: 15, label: 'Bulk Broadcast' },
+  sms_per_message: { credits: 1, label: 'SMS Message' },
   credit_ugx_rate: 40,
 }
 
@@ -53,6 +60,7 @@ export async function getCreditCosts(): Promise<CreditCosts> {
     ai_chat: v.ai_chat ?? DEFAULT_COSTS.ai_chat,
     interactive_form: v.interactive_form ?? DEFAULT_COSTS.interactive_form,
     bulk_broadcast: v.bulk_broadcast ?? DEFAULT_COSTS.bulk_broadcast,
+    sms_per_message: v.sms_per_message ?? DEFAULT_COSTS.sms_per_message,
     credit_ugx_rate: v.credit_ugx_rate ?? DEFAULT_COSTS.credit_ugx_rate,
   }
 }
@@ -62,7 +70,8 @@ export async function getCreditCosts(): Promise<CreditCosts> {
  */
 export async function getCreditCost(action: CreditAction): Promise<number> {
   const costs = await getCreditCosts()
-  return costs[action].credits
+  const costKey = action === 'sms' ? 'sms_per_message' : action
+  return costs[costKey].credits
 }
 
 /**
@@ -98,6 +107,12 @@ export interface ConsumeCreditsOptions {
   contactId?: string | null
   /** Optional extra context stored on the ledger row. */
   metadata?: Record<string, unknown>
+  /**
+   * Optional explicit credit amount. When set, it overrides the
+   * per-action configured cost — used by bulk SMS broadcasts where the
+   * total is recipients × cost-per-message rather than a fixed charge.
+   */
+  amount?: number
 }
 
 export interface ConsumeCreditsSuccess {
@@ -123,7 +138,10 @@ export async function consumeCredits(
   action: CreditAction,
   options: ConsumeCreditsOptions = {},
 ): Promise<ConsumeCreditsResult> {
-  const required = await getCreditCost(action)
+  if (options.amount !== undefined && options.amount <= 0) {
+    return { ok: false, reason: 'Credit amount must be a positive number' }
+  }
+  const required = options.amount ?? (await getCreditCost(action))
   const db = admin()
 
   for (let attempt = 0; attempt < 3; attempt++) {

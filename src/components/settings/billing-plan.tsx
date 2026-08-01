@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Coins, CreditCard, Landmark, Loader2, ArrowRight, ShieldCheck, Check, Clock, History, Activity } from 'lucide-react';
+import { Coins, CreditCard, Landmark, Loader2, ArrowRight, ShieldCheck, Check, Clock, History, Activity, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -39,17 +39,28 @@ interface Transaction {
 
 interface CreditUsageLog {
   id: string;
-  action: 'ai_chat' | 'interactive_form' | 'bulk_broadcast';
+  action: 'ai_chat' | 'interactive_form' | 'bulk_broadcast' | 'sms';
   credits_used: number;
   description: string | null;
   reference_id: string | null;
   created_at: string;
+  contact_id: string | null;
+  contact: { name: string | null; phone: string } | null;
+}
+
+interface ContactUsage {
+  contact_id: string;
+  name: string;
+  phone: string;
+  ai_responses: number;
+  credits: number;
 }
 
 const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   ai_chat: { label: 'AI Chat Response', color: 'text-primary' },
   interactive_form: { label: 'Interactive Form / Flow', color: 'text-sky-500' },
   bulk_broadcast: { label: 'Bulk Broadcast', color: 'text-violet-500' },
+  sms: { label: 'SMS Broadcast', color: 'text-emerald-500' },
 };
 
 export function BillingPlan() {
@@ -63,6 +74,7 @@ export function BillingPlan() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [liveBalance, setLiveBalance] = useState<{ credits_remaining: number; balance_ugx: number } | null>(null);
   const [usageLogs, setUsageLogs] = useState<CreditUsageLog[]>([]);
+  const [contactUsage, setContactUsage] = useState<ContactUsage[]>([]);
   const [usageMonth, setUsageMonth] = useState<number>(0);
   const [usageLoading, setUsageLoading] = useState(true);
 
@@ -120,7 +132,7 @@ export function BillingPlan() {
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const [balanceRes, recentRes, monthRes] = await Promise.all([
+      const [balanceRes, recentRes, monthRes, contactRes] = await Promise.all([
         supabase
           .from('businesses')
           .select('credits_remaining, balance_ugx')
@@ -128,13 +140,19 @@ export function BillingPlan() {
           .single(),
         supabase
           .from('credit_usage_logs')
-          .select('id, action, credits_used, description, reference_id, created_at')
+          .select('id, action, credits_used, description, reference_id, created_at, contact_id, contact:contacts(name, phone)')
           .eq('business_id', businessId)
           .order('created_at', { ascending: false })
           .limit(50),
         supabase
           .from('credit_usage_logs')
           .select('credits_used')
+          .eq('business_id', businessId)
+          .gte('created_at', startOfMonth.toISOString())
+          .limit(5000),
+        supabase
+          .from('credit_usage_logs')
+          .select('contact_id, credits_used, action, contact:contacts(name, phone)')
           .eq('business_id', businessId)
           .gte('created_at', startOfMonth.toISOString())
           .limit(5000),
@@ -148,10 +166,28 @@ export function BillingPlan() {
         });
       }
       if (!recentRes.error && recentRes.data) {
-        setUsageLogs(recentRes.data as CreditUsageLog[]);
+        setUsageLogs(recentRes.data as unknown as CreditUsageLog[]);
       }
       if (!monthRes.error && monthRes.data) {
         setUsageMonth(monthRes.data.reduce((sum, l) => sum + (l.credits_used || 0), 0));
+      }
+      if (!contactRes.error && contactRes.data) {
+        const map = new Map<string, ContactUsage>();
+        for (const row of contactRes.data as unknown as CreditUsageLog[]) {
+          if (!row.contact_id || !row.contact) continue;
+          const c = row.contact;
+          const entry = map.get(row.contact_id) ?? {
+            contact_id: row.contact_id,
+            name: c.name || c.phone,
+            phone: c.phone,
+            ai_responses: 0,
+            credits: 0,
+          };
+          entry.ai_responses += row.action === 'ai_chat' ? 1 : 0;
+          entry.credits += row.credits_used || 0;
+          map.set(row.contact_id, entry);
+        }
+        setContactUsage([...map.values()].sort((a, b) => b.credits - a.credits).slice(0, 10));
       }
       setUsageLoading(false);
     }
@@ -493,12 +529,48 @@ export function BillingPlan() {
           </div>
         </CardHeader>
         <CardContent>
+          {contactUsage.length > 0 && (
+            <div className="mb-5">
+              <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
+                Top Contacts This Month
+              </h3>
+              <div className="rounded-xl border border-border overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow className="hover:bg-transparent border-border">
+                      <TableHead className="text-muted-foreground">Contact</TableHead>
+                      <TableHead className="text-muted-foreground text-right">AI Responses</TableHead>
+                      <TableHead className="text-muted-foreground text-right">Credits</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {contactUsage.map((c) => (
+                      <TableRow key={c.contact_id} className="border-border hover:bg-muted/30">
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-foreground">{c.name}</span>
+                            <span className="text-[10px] text-muted-foreground/60 font-mono">{c.phone}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right text-sm text-muted-foreground">{c.ai_responses}</TableCell>
+                        <TableCell className="text-right text-sm font-bold text-red-500">
+                          -{c.credits.toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
           <div className="rounded-xl border border-border overflow-hidden">
             <Table>
               <TableHeader className="bg-muted/50">
                 <TableRow className="hover:bg-transparent border-border">
                   <TableHead className="text-muted-foreground">Date</TableHead>
                   <TableHead className="text-muted-foreground">Action</TableHead>
+                  <TableHead className="text-muted-foreground">Contact</TableHead>
                   <TableHead className="text-muted-foreground">Description</TableHead>
                   <TableHead className="text-muted-foreground text-right">Credits</TableHead>
                 </TableRow>
@@ -506,7 +578,7 @@ export function BillingPlan() {
               <TableBody>
                 {usageLoading ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-16 text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="h-16 text-center text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
                         <Clock className="h-4 w-4 animate-spin" />
                         Loading usage...
@@ -515,7 +587,7 @@ export function BillingPlan() {
                   </TableRow>
                 ) : usageLogs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-16 text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="h-16 text-center text-muted-foreground">
                       No credit usage yet. Usage appears here as your AI, forms, and broadcasts run.
                     </TableCell>
                   </TableRow>
@@ -529,6 +601,9 @@ export function BillingPlan() {
                         </TableCell>
                         <TableCell>
                           <span className={`text-xs font-semibold ${action.color}`}>{action.label}</span>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[180px] truncate">
+                          {log.contact?.name || log.contact?.phone || '—'}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground max-w-[280px] truncate">
                           {log.description || '—'}

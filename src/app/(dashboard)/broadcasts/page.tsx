@@ -24,6 +24,29 @@ import { getBroadcastStatus } from '@/lib/broadcast-status';
  */
 const POLL_INTERVAL_MS = 5_000;
 
+interface SmsBroadcast {
+  id: string;
+  name: string;
+  message: string;
+  status: 'sending' | 'sent' | 'failed';
+  total_recipients: number;
+  sent_count: number;
+  failed_count: number;
+  created_at: string;
+}
+
+interface BroadcastRow {
+  id: string;
+  channel: 'whatsapp' | 'sms';
+  name: string;
+  template_name?: string;
+  status: string;
+  total_recipients: number;
+  delivered_count: number;
+  read_count: number;
+  created_at: string;
+}
+
 function percent(numerator: number, denominator: number): number {
   if (!denominator) return 0;
   return Math.round((numerator / denominator) * 100);
@@ -59,6 +82,7 @@ export default function BroadcastsPage() {
   const router = useRouter();
   const { profile } = useAuth();
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
+  const [smsBroadcasts, setSmsBroadcasts] = useState<SmsBroadcast[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,13 +92,14 @@ export default function BroadcastsPage() {
   async function fetchBroadcasts() {
     try {
       const supabase = createClient();
-      const { data, error: fetchError } = await supabase
-        .from('broadcasts')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (fetchError) throw fetchError;
-      setBroadcasts(data ?? []);
+      const [waRes, smsRes] = await Promise.all([
+        supabase.from('broadcasts').select('*').order('created_at', { ascending: false }),
+        supabase.from('sms_broadcasts').select('*').order('created_at', { ascending: false }),
+      ]);
+      if (waRes.error) throw waRes.error;
+      if (smsRes.error) throw smsRes.error;
+      setBroadcasts(waRes.data ?? []);
+      setSmsBroadcasts(smsRes.data ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load broadcasts');
     } finally {
@@ -87,8 +112,10 @@ export default function BroadcastsPage() {
   }, []);
 
   const anySending = useMemo(
-    () => broadcasts.some((b) => b.status === 'sending'),
-    [broadcasts],
+    () =>
+      broadcasts.some((b) => b.status === 'sending') ||
+      smsBroadcasts.some((b) => b.status === 'sending'),
+    [broadcasts, smsBroadcasts],
   );
 
   useEffect(() => {
@@ -146,6 +173,33 @@ export default function BroadcastsPage() {
     );
   }
 
+  const rows: BroadcastRow[] = [
+    ...broadcasts.map((b) => ({
+      id: b.id,
+      channel: 'whatsapp' as const,
+      name: b.name,
+      template_name: b.template_name,
+      status: b.status,
+      total_recipients: b.total_recipients,
+      delivered_count: b.delivered_count,
+      read_count: b.read_count,
+      created_at: b.created_at,
+    })),
+    ...smsBroadcasts.map((b) => ({
+      id: b.id,
+      channel: 'sms' as const,
+      name: b.name,
+      template_name: 'SMS Message',
+      status: b.status,
+      total_recipients: b.total_recipients,
+      delivered_count: 0,
+      read_count: 0,
+      created_at: b.created_at,
+    })),
+  ].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
+
   return (
     <div className="space-y-6">
       {/* Top indeterminate progress bar: only visible while a broadcast
@@ -200,7 +254,7 @@ export default function BroadcastsPage() {
         </div>
       </div>
 
-      {broadcasts.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-border bg-card">
           <Radio className="mb-3 h-10 w-10 text-muted-foreground" />
           <p className="text-sm font-medium text-foreground">No broadcasts yet</p>
@@ -232,36 +286,59 @@ export default function BroadcastsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {broadcasts.map((broadcast) => {
+              {rows.map((broadcast) => {
                 const status = getBroadcastStatus(broadcast.status);
+                const isSms = broadcast.channel === 'sms';
                 return (
                   <TableRow
-                    key={broadcast.id}
-                    className="cursor-pointer border-border hover:bg-muted/50"
-                    onClick={() => router.push(`/broadcasts/${broadcast.id}`)}
+                    key={`${broadcast.channel}-${broadcast.id}`}
+                    className={
+                      isSms
+                        ? 'border-border hover:bg-muted/50'
+                        : 'cursor-pointer border-border hover:bg-muted/50'
+                    }
+                    onClick={
+                      isSms
+                        ? undefined
+                        : () => router.push(`/broadcasts/${broadcast.id}`)
+                    }
                   >
                     <TableCell className="font-medium text-foreground">
                       {broadcast.name}
                     </TableCell>
-                    <TableCell className="hidden text-muted-foreground md:table-cell">
-                      {broadcast.template_name}
+                    <TableCell className="hidden md:table-cell">
+                      {isSms ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-500">
+                          SMS
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">{broadcast.template_name}</span>
+                      )}
                     </TableCell>
                     <TableCell className="hidden text-right text-muted-foreground tabular-nums sm:table-cell">
                       {broadcast.total_recipients}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      <RateCell
-                        value={broadcast.delivered_count}
-                        total={broadcast.total_recipients}
-                        color="bg-primary"
-                      />
+                      {isSms ? (
+                        <span className="text-xs text-muted-foreground/60">—</span>
+                      ) : (
+                        <RateCell
+                          value={broadcast.delivered_count}
+                          total={broadcast.total_recipients}
+                          color="bg-primary"
+                        />
+                      )}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      <RateCell
-                        value={broadcast.read_count}
-                        total={broadcast.total_recipients}
-                        color="bg-blue-500"
-                      />
+                      {isSms ? (
+                        <span className="text-xs text-muted-foreground/60">—</span>
+                      ) : (
+                        <RateCell
+                          value={broadcast.read_count}
+                          total={broadcast.total_recipients}
+                          color="bg-blue-500"
+                        />
+                      )}
                     </TableCell>
                     <TableCell>
                       <span
