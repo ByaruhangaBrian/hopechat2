@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Coins, CreditCard, Landmark, Loader2, ArrowRight, ShieldCheck, Check, Clock, History } from 'lucide-react';
+import { Coins, CreditCard, Landmark, Loader2, ArrowRight, ShieldCheck, Check, Clock, History, Activity } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,21 @@ interface Transaction {
   timestamp: string;
 }
 
+interface CreditUsageLog {
+  id: string;
+  action: 'ai_chat' | 'interactive_form' | 'bulk_broadcast';
+  credits_used: number;
+  description: string | null;
+  reference_id: string | null;
+  created_at: string;
+}
+
+const ACTION_LABELS: Record<string, { label: string; color: string }> = {
+  ai_chat: { label: 'AI Chat Response', color: 'text-primary' },
+  interactive_form: { label: 'Interactive Form / Flow', color: 'text-sky-500' },
+  bulk_broadcast: { label: 'Bulk Broadcast', color: 'text-violet-500' },
+};
+
 export function BillingPlan() {
   const { profile } = useAuth();
   const searchParams = useSearchParams();
@@ -46,6 +61,10 @@ export function BillingPlan() {
   const [loading, setLoading] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [liveBalance, setLiveBalance] = useState<{ credits_remaining: number; balance_ugx: number } | null>(null);
+  const [usageLogs, setUsageLogs] = useState<CreditUsageLog[]>([]);
+  const [usageMonth, setUsageMonth] = useState<number>(0);
+  const [usageLoading, setUsageLoading] = useState(true);
 
   // Check top-up status from URL query parameters
   useEffect(() => {
@@ -85,6 +104,62 @@ export function BillingPlan() {
       setHistoryLoading(false);
     }
     fetchTransactions();
+  }, [profile?.business_id]);
+
+  // Live balance + credit usage, so the page reflects deductions without
+  // relying on the (login-cached) auth profile.
+  useEffect(() => {
+    const businessId = profile?.business_id;
+    if (!businessId) return;
+    let cancelled = false;
+    const supabase = createClient();
+
+    async function fetchLive() {
+      setUsageLoading(true);
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const [balanceRes, recentRes, monthRes] = await Promise.all([
+        supabase
+          .from('businesses')
+          .select('credits_remaining, balance_ugx')
+          .eq('id', businessId)
+          .single(),
+        supabase
+          .from('credit_usage_logs')
+          .select('id, action, credits_used, description, reference_id, created_at')
+          .eq('business_id', businessId)
+          .order('created_at', { ascending: false })
+          .limit(50),
+        supabase
+          .from('credit_usage_logs')
+          .select('credits_used')
+          .eq('business_id', businessId)
+          .gte('created_at', startOfMonth.toISOString())
+          .limit(5000),
+      ]);
+
+      if (cancelled) return;
+      if (balanceRes.data) {
+        setLiveBalance({
+          credits_remaining: balanceRes.data.credits_remaining ?? 0,
+          balance_ugx: balanceRes.data.balance_ugx ?? 0,
+        });
+      }
+      if (!recentRes.error && recentRes.data) {
+        setUsageLogs(recentRes.data as CreditUsageLog[]);
+      }
+      if (!monthRes.error && monthRes.data) {
+        setUsageMonth(monthRes.data.reduce((sum, l) => sum + (l.credits_used || 0), 0));
+      }
+      setUsageLoading(false);
+    }
+
+    fetchLive();
+    return () => {
+      cancelled = true;
+    };
   }, [profile?.business_id]);
 
   const creditsToAdd = amount && !isNaN(Number(amount))
@@ -146,8 +221,8 @@ export function BillingPlan() {
   };
   const tierId = profile?.business?.tier_id || profile?.business?.plan_tier || '';
   const currentPlan = tierNames[tierId] || tierId || 'Starter Plan';
-  const remainingCredits = profile?.business?.credits_remaining ?? 0;
-  const balanceUgx = profile?.business?.balance_ugx ?? 0;
+  const remainingCredits = liveBalance?.credits_remaining ?? profile?.business?.credits_remaining ?? 0;
+  const balanceUgx = liveBalance?.balance_ugx ?? profile?.business?.balance_ugx ?? 0;
 
   return (
     <div className="space-y-6">
@@ -172,7 +247,7 @@ export function BillingPlan() {
                 </span>
               </div>
               <p className="mt-3 text-xs text-muted-foreground/80">
-                Credits are consumed on sending broadcasts and automations. 
+                Credits are consumed on AI chat replies, interactive forms, and broadcasts.
                 Ledger Balance: <span className="font-mono font-medium text-foreground">UGX {balanceUgx.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </p>
             </CardContent>
@@ -387,6 +462,83 @@ export function BillingPlan() {
                       </TableCell>
                     </TableRow>
                   ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Credit Usage History */}
+      <Card className="bg-card border-border shadow-sm">
+        <CardHeader className="flex flex-row items-start justify-between space-y-0">
+          <div>
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
+              Credit Usage
+            </CardTitle>
+            <CardDescription>
+              Track how your message credits are being consumed.
+            </CardDescription>
+          </div>
+          <div className="flex gap-3">
+            <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-right">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">This Month</p>
+              <p className="text-lg font-bold text-primary tabular-nums">-{usageMonth.toLocaleString()}</p>
+            </div>
+            <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-right">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Remaining</p>
+              <p className="text-lg font-bold text-foreground tabular-nums">{remainingCredits.toLocaleString()}</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-xl border border-border overflow-hidden">
+            <Table>
+              <TableHeader className="bg-muted/50">
+                <TableRow className="hover:bg-transparent border-border">
+                  <TableHead className="text-muted-foreground">Date</TableHead>
+                  <TableHead className="text-muted-foreground">Action</TableHead>
+                  <TableHead className="text-muted-foreground">Description</TableHead>
+                  <TableHead className="text-muted-foreground text-right">Credits</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {usageLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-16 text-center text-muted-foreground">
+                      <div className="flex items-center justify-center gap-2">
+                        <Clock className="h-4 w-4 animate-spin" />
+                        Loading usage...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : usageLogs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-16 text-center text-muted-foreground">
+                      No credit usage yet. Usage appears here as your AI, forms, and broadcasts run.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  usageLogs.map((log) => {
+                    const action = ACTION_LABELS[log.action] ?? { label: log.action, color: 'text-foreground' };
+                    return (
+                      <TableRow key={log.id} className="border-border hover:bg-muted/30">
+                        <TableCell className="text-xs font-mono text-muted-foreground/60 whitespace-nowrap">
+                          {format(new Date(log.created_at), 'MMM d, HH:mm')}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`text-xs font-semibold ${action.color}`}>{action.label}</span>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[280px] truncate">
+                          {log.description || '—'}
+                        </TableCell>
+                        <TableCell className="text-right text-sm font-bold text-red-500">
+                          -{log.credits_used.toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

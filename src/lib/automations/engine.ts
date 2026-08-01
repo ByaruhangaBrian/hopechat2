@@ -26,7 +26,7 @@ import { getOrSetCache } from '@/lib/whatsapp/gemini-cache'
 import { logHttpEvent } from '@/lib/logs/http-logs'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import { lookupRow } from '@/lib/integrations/google-sheets'
-import { consumeCredits } from '@/lib/credits'
+import { consumeCredits, checkCredits } from '@/lib/credits'
 
 // ------------------------------------------------------------
 // Public API
@@ -782,6 +782,12 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         console.error('[engine] Cache lookup failed, falling back to uncached:', err)
       }
 
+      // Credit gate: only charge when the AI actually produces a reply.
+      const creditGate = await checkCredits(args.businessId, 'ai_chat')
+      if (!creditGate.ok) {
+        throw new Error(`Insufficient credits: have ${creditGate.remaining}, need ${creditGate.required}`)
+      }
+
       try {
         const replyText = await generateGeminiResponse(
           userMessage,
@@ -791,7 +797,20 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
           args.businessId,
           cachedContent,
         )
-        
+
+        const creditResult = await consumeCredits(args.businessId, 'ai_chat', {
+          userId: args.automation.user_id,
+          referenceId: conversationId,
+          description: 'AI reply via assign-to-AI automation step',
+          metadata: {
+            automation_id: args.automation.id,
+            contact_id: args.contactId,
+          },
+        })
+        if (!creditResult.ok) {
+          throw new Error(`Insufficient credits: ${creditResult.reason}`)
+        }
+
         const { whatsapp_message_id } = await engineSendText({
           userId: args.automation.user_id,
           conversationId,

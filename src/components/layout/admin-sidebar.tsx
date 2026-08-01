@@ -24,6 +24,7 @@ import {
   Activity,
   TrendingUp,
   Radio,
+  Wallet,
 } from "lucide-react";
 import {
   Avatar,
@@ -48,6 +49,7 @@ const adminNavItems = [
   { href: "/admin/alerts", label: "Alerts", icon: Bell },
   { href: "/admin/health", label: "System Health", icon: Activity },
   { href: "/admin/ai-usage", label: "AI Usage", icon: Cpu },
+  { href: "/admin/credits", label: "Credit Usage", icon: Wallet },
   { href: "/admin/broadcast-monitor", label: "Broadcast Monitor", icon: Radio },
   { href: "/admin/revenue", label: "Revenue & Ledger", icon: TrendingUp },
   { href: "/admin/impersonation-logs", label: "Impersonation Logs", icon: Shield },

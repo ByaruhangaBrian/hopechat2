@@ -423,9 +423,9 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
       // ── Credit gate: deduct bulk_broadcast credits before sending ──
       const { data: profile } = await supabase
-        .from('users')
+        .from('profiles')
         .select('business_id')
-        .eq('id', user.id)
+        .eq('user_id', user.id)
         .single();
 
       if (profile?.business_id) {
@@ -435,6 +435,8 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
           body: JSON.stringify({
             businessId: profile.business_id,
             action: 'bulk_broadcast',
+            referenceId: broadcast.id,
+            description: `Bulk broadcast: ${broadcast.name}`,
           }),
         });
 

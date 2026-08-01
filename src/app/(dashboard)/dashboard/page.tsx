@@ -42,7 +42,7 @@ import { ActivityFeed } from '@/components/dashboard/activity-feed'
 type RangeDays = 7 | 30 | 90
 
 export default function DashboardPage() {
-  const { profile } = useAuth()
+  const { profile, refreshProfile } = useAuth()
   const router = useRouter()
   const [metrics, setMetrics] = useState<MetricsBundle | null>(null)
   const [metricsLoading, setMetricsLoading] = useState(true)
@@ -123,6 +123,15 @@ export default function DashboardPage() {
     },
     [series],
   )
+
+  // Keep the credits-remaining badge fresh: credits are deducted server-side
+  // as messages/broadcasts run, so re-sync the cached profile periodically.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      void refreshProfile()
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [refreshProfile])
 
   return (
     <div className="space-y-5">

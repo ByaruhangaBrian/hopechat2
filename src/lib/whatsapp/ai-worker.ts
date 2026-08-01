@@ -7,7 +7,7 @@ import { getBusinessAiConfig } from './ai-config-cache';
 import { getOrSetCache, deleteCache } from './gemini-cache';
 import { runAutomationsForTrigger, resumeAutomationWithInteraction } from '@/lib/automations/engine';
 import { decrypt } from './encryption';
-import { consumeCredits } from '@/lib/credits';
+import { consumeCredits, checkCredits } from '@/lib/credits';
 // @google/genai used via gemini-client.ts
 
 const DEBOUNCE_DELAY_MS = 5000; // 5 seconds
@@ -296,21 +296,22 @@ async function executeAiJob(job: any): Promise<void> {
     throw new Error('Access restriction: Broadcasts are not allowed on this subscription tier.');
   }
 
-  // 1.6 Credit gate — deduct credits before generating an AI response
-  const creditResult = await consumeCredits(job.business_id, 'ai_chat');
-  if (!creditResult.ok) {
-    console.error(`[ai-worker] Insufficient credits for business ${job.business_id}: ${creditResult.reason}`);
+  // 1.6 Credit gate — verify credits before spending Gemini compute, but only
+  // deduct once the AI has actually produced a response (see below).
+  const creditCheck = await checkCredits(job.business_id, 'ai_chat');
+  if (!creditCheck.ok) {
+    console.error(`[ai-worker] Insufficient credits for business ${job.business_id}: have ${creditCheck.remaining}, need ${creditCheck.required}`);
     void logHttpEvent({
       userId: job.user_id,
       businessId: job.business_id,
       direction: 'system',
       service: 'ai-worker',
       endpoint: 'execute',
-      payload: { error: 'Insufficient credits', detail: creditResult.reason },
+      payload: { error: 'Insufficient credits', detail: `have ${creditCheck.remaining}, need ${creditCheck.required}` },
       statusCode: 402,
       note: 'insufficient_credits'
     });
-    return; // Silently skip — don't reply if no credits
+    return; // Silently skip — don't call Gemini without credits
   }
 
   // 2. Load Context (Cached)
@@ -423,6 +424,33 @@ async function executeAiJob(job: any): Promise<void> {
     job.business_id,
     cacheName
   );
+
+  // 4c. Credit gate (consume) — the AI produced a response, so now deduct.
+  // Charged per AI session, only when a reply was actually generated.
+  const creditResult = await consumeCredits(job.business_id, 'ai_chat', {
+    userId: job.user_id,
+    referenceId: job.conversation_id,
+    description: 'Inbound AI chat response',
+    metadata: {
+      conversation_id: job.conversation_id,
+      contact_id: conv.contact_id,
+      phone_number_id: job.phone_number_id,
+    },
+  });
+  if (!creditResult.ok) {
+    console.error(`[ai-worker] Insufficient credits for business ${job.business_id}: ${creditResult.reason}`);
+    void logHttpEvent({
+      userId: job.user_id,
+      businessId: job.business_id,
+      direction: 'system',
+      service: 'ai-worker',
+      endpoint: 'execute',
+      payload: { error: 'Insufficient credits', detail: creditResult.reason },
+      statusCode: 402,
+      note: 'insufficient_credits'
+    });
+    return; // Don't send the reply without credits
+  }
 
   // 5. Escalation Check
   if (aiText.includes('[ESCALATE]') || /angry|refund|human|manager/i.test(lastUserMessage)) {

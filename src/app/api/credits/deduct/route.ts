@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { consumeCredits, checkCredits, getCreditCosts, type CreditAction } from '@/lib/credits'
+import { consumeCredits, getCreditCosts, type CreditAction } from '@/lib/credits'
 
 /**
  * POST /api/credits/deduct
@@ -26,7 +26,12 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { businessId, action } = body as { businessId: string; action: CreditAction }
+    const { businessId, action, description, referenceId } = body as {
+      businessId: string
+      action: CreditAction
+      description?: string
+      referenceId?: string
+    }
 
     if (!businessId || !action) {
       return NextResponse.json({ error: 'Missing businessId or action' }, { status: 400 })
@@ -48,7 +53,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Business mismatch' }, { status: 403 })
     }
 
-    const result = await consumeCredits(businessId, action)
+    const result = await consumeCredits(businessId, action, {
+      userId: user.id,
+      description,
+      referenceId,
+    })
 
     if (!result.ok) {
       return NextResponse.json(
@@ -58,7 +67,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ ok: true, newBalance: result.newBalance })
-  } catch (err: any) {
+  } catch {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
@@ -72,7 +81,7 @@ export async function GET() {
   try {
     const costs = await getCreditCosts()
     return NextResponse.json(costs)
-  } catch (err: any) {
+  } catch {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

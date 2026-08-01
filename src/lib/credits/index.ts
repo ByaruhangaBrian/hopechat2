@@ -87,45 +87,109 @@ export async function checkCredits(
   return { ok: false, remaining, required }
 }
 
+export interface ConsumeCreditsOptions {
+  /** The actor who triggered the consumption, if any. */
+  userId?: string | null
+  /** Human-readable reason, e.g. "Inbound AI chat response". */
+  description?: string
+  /** Optional business-scoped reference (conversation_id, broadcast_id, ...). */
+  referenceId?: string
+  /** Optional extra context stored on the ledger row. */
+  metadata?: Record<string, unknown>
+}
+
+export interface ConsumeCreditsSuccess {
+  ok: true
+  newBalance: number
+  /** Id of the ledger row written to credit_usage_logs. */
+  usageId: string | null
+}
+
+export type ConsumeCreditsResult =
+  | ConsumeCreditsSuccess
+  | { ok: false; reason: string }
+
 /**
  * Atomically deduct credits from a business.
- * Uses a conditional UPDATE to prevent race conditions (credits_remaining >= N).
- *
- * Returns { ok: true, newBalance } on success, or { ok: false, reason } on failure.
+ * Uses a conditional UPDATE (credits_remaining >= N) to prevent races and
+ * re-reads after the write so a 0-row match (concurrent double-spend) is
+ * detected instead of silently reporting success. Retries a few times on
+ * contention. Every successful deduction is recorded in credit_usage_logs.
  */
 export async function consumeCredits(
   businessId: string,
   action: CreditAction,
-): Promise<{ ok: true; newBalance: number } | { ok: false; reason: string }> {
+  options: ConsumeCreditsOptions = {},
+): Promise<ConsumeCreditsResult> {
   const required = await getCreditCost(action)
   const db = admin()
 
-  // Step 1: Check current balance
-  const { data: row } = await db
-    .from('businesses')
-    .select('credits_remaining')
-    .eq('id', businessId)
-    .single()
+  for (let attempt = 0; attempt < 3; attempt++) {
+    // Step 1: Check current balance
+    const { data: row } = await db
+      .from('businesses')
+      .select('credits_remaining')
+      .eq('id', businessId)
+      .single()
 
-  const current = row?.credits_remaining ?? 0
-  if (current < required) {
-    return {
-      ok: false,
-      reason: `Insufficient credits: have ${current}, need ${required}`,
+    const current = row?.credits_remaining ?? 0
+    if (current < required) {
+      return {
+        ok: false,
+        reason: `Insufficient credits: have ${current}, need ${required}`,
+      }
     }
+
+    // Step 2: Atomic conditional update (prevents double-spend via race).
+    // `.select()` + `.maybeSingle()` lets us tell whether the row actually
+    // matched the guard; a 0-row match means another request won the race.
+    const newBalance = current - required
+    const { data: updated, error } = await db
+      .from('businesses')
+      .update({ credits_remaining: newBalance })
+      .eq('id', businessId)
+      .gte('credits_remaining', current)
+      .select('credits_remaining')
+      .maybeSingle()
+
+    if (error) {
+      return { ok: false, reason: `Database error: ${error.message}` }
+    }
+
+    if (!updated) {
+      // Concurrent deduction happened between our read and write — retry.
+      continue
+    }
+
+    // Step 3: Record the consumption in the credit ledger.
+    // The balance update is authoritative; if this insert fails we surface
+    // the error but do not roll back the deduction.
+    const { data: usage, error: usageError } = await db
+      .from('credit_usage_logs')
+      .insert({
+        business_id: businessId,
+        user_id: options.userId ?? null,
+        action,
+        credits_used: required,
+        description: options.description ?? null,
+        reference_id: options.referenceId ?? null,
+        metadata: options.metadata ?? {},
+      })
+      .select('id')
+      .single()
+
+    if (usageError) {
+      console.error(
+        `[credits] Deducted ${required} credit(s) but failed to write usage log for business ${businessId}:`,
+        usageError.message,
+      )
+    }
+
+    return { ok: true, newBalance, usageId: usage?.id ?? null }
   }
 
-  // Step 2: Atomic conditional update (prevents double-spend via race)
-  const newBalance = current - required
-  const { error } = await db
-    .from('businesses')
-    .update({ credits_remaining: newBalance })
-    .eq('id', businessId)
-    .gte('credits_remaining', current) // optimistic lock: still >= what we read
-
-  if (error) {
-    return { ok: false, reason: `Database error: ${error.message}` }
+  return {
+    ok: false,
+    reason: 'Credits are being deducted concurrently — please retry',
   }
-
-  return { ok: true, newBalance }
 }
