@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
-import { getCreditCosts, consumeCredits } from '@/lib/credits'
+import { getCreditCosts, consumeCredits, refundCredits } from '@/lib/credits'
 import {
   getSmsSettings,
   normalizeUgPhone,
@@ -38,6 +38,10 @@ interface SmsRecipientInput {
  * Flow: validates the request, writes the sms_broadcast + recipient
  * rows, deducts recipients × cost-per-message credits up front, then
  * dispatches the whole audience to KintuSMS in one comma-separated call.
+ *
+ * Credits are charged only when the gateway actually accepts the send:
+ * a rejected call (the whole batch fails together) is refunded and the
+ * broadcast is recorded as failed with credits_used = 0.
  */
 export async function POST(request: Request) {
   try {
@@ -212,7 +216,7 @@ export async function POST(request: Request) {
       if (recipientError) {
         await db
           .from('sms_broadcasts')
-          .update({ status: 'failed', failed_count: valid.length })
+          .update({ status: 'failed', failed_count: valid.length, credits_used: 0 })
           .eq('id', broadcast.id)
         return NextResponse.json(
           { error: `Failed to save recipients: ${recipientError.message}` },
@@ -236,7 +240,7 @@ export async function POST(request: Request) {
     if (!deduction.ok) {
       await db
         .from('sms_broadcasts')
-        .update({ status: 'failed' })
+        .update({ status: 'failed', credits_used: 0 })
         .eq('id', broadcast.id)
       return NextResponse.json({ error: deduction.reason, ok: false }, { status: 402 })
     }
@@ -278,13 +282,23 @@ export async function POST(request: Request) {
       })
     }
 
+    // ── Refund: the gateway rejected the whole call, so nothing was
+    //    actually sent. Restore the balance and erase the ledger charge.
+    const refund = await refundCredits(businessId, {
+      amount: totalCost,
+      referenceId: broadcast.id,
+    })
+    if (!refund.ok) {
+      console.error(`[sms] Refund failed for broadcast ${broadcast.id}:`, refund.reason)
+    }
+
     await db
       .from('sms_recipients')
       .update({ status: 'failed', error_message: result.raw.slice(0, 500) })
       .eq('sms_broadcast_id', broadcast.id)
     await db
       .from('sms_broadcasts')
-      .update({ status: 'failed', failed_count: valid.length })
+      .update({ status: 'failed', failed_count: valid.length, credits_used: 0 })
       .eq('id', broadcast.id)
 
     return NextResponse.json(

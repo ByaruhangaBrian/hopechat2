@@ -214,3 +214,81 @@ export async function consumeCredits(
     reason: 'Credits are being deducted concurrently — please retry',
   }
 }
+
+export interface RefundCreditsOptions {
+  /** Number of credits to restore to the business balance. */
+  amount: number
+  /**
+   * When set, the matching ledger row (by business + reference) is
+   * deleted so the audit shows the charge never stuck. Used by bulk SMS
+   * broadcasts where a rejected gateway call means nothing was sent.
+   */
+  referenceId?: string
+}
+
+export type RefundCreditsResult =
+  | { ok: true; newBalance: number }
+  | { ok: false; reason: string }
+
+/**
+ * Reverse a credit deduction.
+ *
+ * Restores the business balance with the same guarded read-modify-write
+ * (retried on contention) that consumeCredits uses, then removes the
+ * original ledger row when a reference is given — the row was recorded
+ * with `credits_used > 0`, so a plain reverse would violate that CHECK.
+ */
+export async function refundCredits(
+  businessId: string,
+  options: RefundCreditsOptions,
+): Promise<RefundCreditsResult> {
+  if (options.amount <= 0) {
+    return { ok: false, reason: 'Refund amount must be a positive number' }
+  }
+  const db = admin()
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: row } = await db
+      .from('businesses')
+      .select('credits_remaining')
+      .eq('id', businessId)
+      .single()
+
+    const current = row?.credits_remaining ?? 0
+    const newBalance = current + options.amount
+
+    const { data: updated, error } = await db
+      .from('businesses')
+      .update({ credits_remaining: newBalance })
+      .eq('id', businessId)
+      .eq('credits_remaining', current)
+      .select('credits_remaining')
+      .maybeSingle()
+
+    if (error) {
+      return { ok: false, reason: `Database error: ${error.message}` }
+    }
+    if (!updated) continue
+
+    if (options.referenceId) {
+      const { error: deleteError } = await db
+        .from('credit_usage_logs')
+        .delete()
+        .eq('business_id', businessId)
+        .eq('reference_id', options.referenceId)
+      if (deleteError) {
+        console.error(
+          `[credits] Refunded ${options.amount} credit(s) to business ${businessId} but failed to remove ledger row ${options.referenceId}:`,
+          deleteError.message,
+        )
+      }
+    }
+
+    return { ok: true, newBalance }
+  }
+
+  return {
+    ok: false,
+    reason: 'Could not refund credits — please retry',
+  }
+}

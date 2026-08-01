@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Radio, Plus, Loader2, Coins } from 'lucide-react';
+import { Radio, Plus, Loader2, Coins, Copy } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { getBroadcastStatus } from '@/lib/broadcast-status';
 
@@ -283,6 +283,7 @@ export default function BroadcastsPage() {
                 <TableHead className="hidden text-muted-foreground lg:table-cell">Read</TableHead>
                 <TableHead className="text-muted-foreground">Status</TableHead>
                 <TableHead className="hidden text-muted-foreground sm:table-cell">Date</TableHead>
+                <TableHead className="text-right text-muted-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -355,6 +356,23 @@ export default function BroadcastsPage() {
                     </TableCell>
                     <TableCell className="hidden text-muted-foreground sm:table-cell">
                       {new Date(broadcast.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {isSms && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/broadcasts/new?copy=${broadcast.id}`);
+                          }}
+                          title="Duplicate this broadcast so you can send it again (the original is kept for tracking)"
+                          className="h-7 border-border text-muted-foreground hover:bg-muted"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          Copy
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

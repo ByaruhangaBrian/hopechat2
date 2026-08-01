@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { MessageTemplate } from '@/types';
@@ -33,7 +33,22 @@ const smsSteps = [
 ] as const;
 
 export default function NewBroadcastPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-64 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      }
+    >
+      <NewBroadcastContent />
+    </Suspense>
+  );
+}
+
+function NewBroadcastContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { createAndSendBroadcast, isProcessing, progress } = useBroadcastSending();
   const { sendSmsBroadcast, isProcessing: smsProcessing, progress: smsProgress } =
     useSmsSending();
@@ -58,6 +73,7 @@ export default function NewBroadcastPage() {
     Record<string, { type: 'static' | 'field' | 'custom_field'; value: string }>
   >({});
   const [name, setName] = useState('');
+  const [copyLoading, setCopyLoading] = useState(false);
 
   async function handleSend() {
     if (!template) return;
@@ -87,7 +103,7 @@ export default function NewBroadcastPage() {
 
   async function handleSmsSend() {
     try {
-      const broadcastId = await sendSmsBroadcast({
+      await sendSmsBroadcast({
         name: smsName,
         message: smsMessage,
         audience: {
@@ -158,6 +174,51 @@ export default function NewBroadcastPage() {
     router.push('/broadcasts');
   }
 
+  /**
+   * `?copy=<smsBroadcastId>` pre-fills the wizard from an existing SMS
+   * broadcast (used by the "Copy" action on the broadcasts list) and
+   * jumps straight to the review step so the user can re-send or tweak
+   * before sending. The original broadcast row is left untouched.
+   */
+  useEffect(() => {
+    const copyId = searchParams.get('copy');
+    if (!copyId) return;
+
+    let cancelled = false;
+    (async () => {
+      setCopyLoading(true);
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('sms_broadcasts')
+          .select('*')
+          .eq('id', copyId)
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error('That broadcast no longer exists.');
+        if (cancelled) return;
+
+        setChannel('sms');
+        setSmsName(`${data.name} (copy)`);
+        setSmsMessage(data.message ?? '');
+        if (data.audience_filter) {
+          setAudience(data.audience_filter as typeof audience);
+        }
+        setCurrentStep(smsSteps.length - 1);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to copy broadcast';
+        toast.error(message);
+        router.replace('/broadcasts/new');
+      } finally {
+        if (!cancelled) setCopyLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, router]);
+
   const steps = channel === 'whatsapp' ? whatsappSteps : smsSteps;
   const busy = channel === 'whatsapp' ? isProcessing : smsProcessing;
 
@@ -221,6 +282,14 @@ export default function NewBroadcastPage() {
 
       {/* Step Content */}
       <div className="relative min-h-[400px]">
+        {copyLoading ? (
+          <div className="flex h-[400px] items-center justify-center">
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              Loading broadcast...
+            </div>
+          </div>
+        ) : (
         <div
           className="transition-all duration-300 ease-in-out"
           style={{
@@ -303,6 +372,7 @@ export default function NewBroadcastPage() {
             </>
           )}
         </div>
+        )}
       </div>
     </div>
   );
