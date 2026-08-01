@@ -422,7 +422,14 @@ async function executeAiJob(job: any): Promise<void> {
     history.slice(0, -1), 
     aiConfig.api_key,
     job.business_id,
-    cacheName
+    cacheName,
+    {
+      action: 'chat_response',
+      metadata: {
+        conversation_id: job.conversation_id,
+        contact_id: conv.contact_id,
+      },
+    }
   );
 
   // 4c. Credit gate (consume) — the AI produced a response, so now deduct.
@@ -430,6 +437,7 @@ async function executeAiJob(job: any): Promise<void> {
   const creditResult = await consumeCredits(job.business_id, 'ai_chat', {
     userId: job.user_id,
     referenceId: job.conversation_id,
+    contactId: conv.contact_id,
     description: 'Inbound AI chat response',
     metadata: {
       conversation_id: job.conversation_id,

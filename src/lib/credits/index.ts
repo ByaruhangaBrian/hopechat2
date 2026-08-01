@@ -94,6 +94,8 @@ export interface ConsumeCreditsOptions {
   description?: string
   /** Optional business-scoped reference (conversation_id, broadcast_id, ...). */
   referenceId?: string
+  /** The contact who triggered the consumption, if any. Stored as a column for per-contact reporting. */
+  contactId?: string | null
   /** Optional extra context stored on the ledger row. */
   metadata?: Record<string, unknown>
 }
@@ -173,6 +175,7 @@ export async function consumeCredits(
         credits_used: required,
         description: options.description ?? null,
         reference_id: options.referenceId ?? null,
+        contact_id: options.contactId ?? null,
         metadata: options.metadata ?? {},
       })
       .select('id')

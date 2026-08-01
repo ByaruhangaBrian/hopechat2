@@ -796,11 +796,20 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
           apiKey,
           args.businessId,
           cachedContent,
+          {
+            action: 'chat_response',
+            metadata: {
+              conversation_id: conversationId,
+              contact_id: args.contactId,
+              automation_id: args.automation.id,
+            },
+          },
         )
 
         const creditResult = await consumeCredits(args.businessId, 'ai_chat', {
           userId: args.automation.user_id,
           referenceId: conversationId,
+          contactId: args.contactId,
           description: 'AI reply via assign-to-AI automation step',
           metadata: {
             automation_id: args.automation.id,

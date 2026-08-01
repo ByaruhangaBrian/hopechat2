@@ -1,8 +1,25 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { searchSheets } from '@/lib/integrations/google-sheets';
 import { supabaseAdmin } from '@/lib/automations/admin-client';
+import { logAIUsage, type AIUsageAction } from '@/lib/ai-usage';
+import { getCreditCost, type CreditAction } from '@/lib/credits';
 
 const MAX_RETRIES = 3;
+
+const CREDIT_ACTION_BY_AI_ACTION: Record<AIUsageAction, CreditAction> = {
+  chat_response: 'ai_chat',
+  image_analysis: 'ai_chat',
+  voice_transcription: 'ai_chat',
+  document_summary: 'ai_chat',
+  flow_execution: 'interactive_form',
+};
+
+export interface GeminiCallOptions {
+  /** Which ai_usage_logs action this call maps to. Defaults to 'chat_response'. */
+  action?: AIUsageAction
+  /** Extra context stored in ai_usage_logs.metadata (conversation_id, contact_id, ...). */
+  metadata?: Record<string, unknown>
+}
 
 async function getGlobalGeminiKey(): Promise<string> {
   try {
@@ -35,6 +52,7 @@ export async function generateGeminiResponse(
   businessId?: string,
   /** Gemini explicit cache reference. When set, systemInstruction is already in the cache. */
   cachedContent?: string,
+  options: GeminiCallOptions = {},
 ): Promise<string> {
   const globalKey = apiKey ? '' : await getGlobalGeminiKey();
   const finalApiKey = apiKey || globalKey || process.env.GEMINI_API_KEY || '';
@@ -47,6 +65,34 @@ export async function generateGeminiResponse(
 
   // Standardize model to gemini-2.5-flash as requested
   const MODEL_NAME = 'gemini-2.5-flash';
+
+  const action = options.action ?? 'chat_response';
+  const startedAt = Date.now();
+  let promptTokens = 0;
+  let outputTokens = 0;
+  let totalTokens = 0;
+
+  // Resolve the credit cost up front so it overlaps the network wait.
+  const creditCostPromise = businessId
+    ? getCreditCost(CREDIT_ACTION_BY_AI_ACTION[action])
+    : Promise.resolve(0);
+
+  const recordUsage = async (success: boolean, errorMessage: string | null): Promise<void> => {
+    if (!businessId) return;
+    await logAIUsage({
+      businessId,
+      action,
+      model: MODEL_NAME,
+      inputTokens: promptTokens,
+      outputTokens,
+      totalTokens: totalTokens || promptTokens + outputTokens,
+      latencyMs: Date.now() - startedAt,
+      creditsUsed: success ? await creditCostPromise : 0,
+      success,
+      errorMessage,
+      metadata: options.metadata,
+    });
+  };
 
   // Load integration config to dynamically adjust tool parameter descriptions
   let toolDescription = 'The search query (e.g., a product name, order ID, or keyword).';
@@ -128,6 +174,12 @@ export async function generateGeminiResponse(
         }
       });
 
+      if (response.usageMetadata) {
+        promptTokens += response.usageMetadata.promptTokenCount ?? 0;
+        outputTokens += response.usageMetadata.candidatesTokenCount ?? 0;
+        totalTokens += response.usageMetadata.totalTokenCount ?? 0;
+      }
+
       // Handle function calls if any
       const parts = response.candidates?.[0]?.content?.parts || [];
       const functionCall = parts.find((p: any) => p.functionCall)?.functionCall;
@@ -169,12 +221,19 @@ export async function generateGeminiResponse(
         });
       }
 
+      if (response.usageMetadata) {
+        promptTokens += response.usageMetadata.promptTokenCount ?? 0;
+        outputTokens += response.usageMetadata.candidatesTokenCount ?? 0;
+        totalTokens += response.usageMetadata.totalTokenCount ?? 0;
+      }
+
       const responseText = response.text;
 
       if (!responseText) {
         throw new Error('Gemini returned an empty response');
       }
 
+      await recordUsage(true, null);
       return responseText.trim();
     } catch (error: any) {
       attempt++;
@@ -196,6 +255,7 @@ export async function generateGeminiResponse(
         continue;
       }
 
+      await recordUsage(false, error?.message ?? 'Gemini request failed');
       throw error;
     }
   }
