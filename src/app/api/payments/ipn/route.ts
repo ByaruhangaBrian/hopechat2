@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { logHttpEvent } from "@/lib/logs/http-logs";
+import { applySuccessfulPayment } from "@/lib/subscriptions";
 import {
   getPesapalSettings,
   getPesapalBaseUrl,
@@ -116,6 +117,12 @@ export async function POST(req: Request) {
       note: `Pesapal IPN processed: ${tx.amount_ugx} UGX (+${tx.credits_added} credits) for ${OrderMerchantReference}`,
       statusCode: 200,
       payload: { OrderMerchantReference, amount: tx.amount_ugx, credits_added: tx.credits_added }
+    });
+
+    // Fire-and-forget: apply subscription / send receipt. Swallowed errors are
+    // logged inside so a failed email never breaks the Pesapal IPN handshake.
+    void applySuccessfulPayment(updatedTx).catch((err) => {
+      console.error("[payments] applySuccessfulPayment failed:", err?.message ?? err);
     });
 
     return NextResponse.json(

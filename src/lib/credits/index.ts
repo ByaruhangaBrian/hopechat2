@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { getSubscriptionGate } from '@/lib/subscriptions'
 
 // Lazy, shared service-role client — same pattern as automations/admin-client.
 let _adminClient: SupabaseClient | null = null
@@ -141,6 +142,16 @@ export async function consumeCredits(
   if (options.amount !== undefined && options.amount <= 0) {
     return { ok: false, reason: 'Credit amount must be a positive number' }
   }
+
+  // Subscription gate: fully locked after the grace period ends.
+  const gate = await getSubscriptionGate(businessId)
+  if (gate.status === 'expired') {
+    return {
+      ok: false,
+      reason: 'Your subscription has expired. Renew your plan in Billing to keep using HopeChat.',
+    }
+  }
+
   const required = options.amount ?? (await getCreditCost(action))
   const db = admin()
 

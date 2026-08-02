@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { logHttpEvent } from "@/lib/logs/http-logs";
+import { applySuccessfulPayment } from "@/lib/subscriptions";
 import {
   getPesapalSettings,
   getPesapalBaseUrl,
@@ -136,6 +137,13 @@ export async function GET(req: Request) {
       note: `Successfully verified Pesapal payment: ${tx.amount_ugx} UGX (+${tx.credits_added} credits) for ${merchantReference}`,
       statusCode: 200,
       payload: { merchantReference, amount: tx.amount_ugx, credits_added: tx.credits_added, paymentMethod: txStatus.paymentMethod, confirmationCode: txStatus.confirmationCode }
+    });
+
+    // Fire-and-forget: apply subscription / send receipt (IPN may have already
+    // done this — applySuccessfulPayment is idempotent for credit receipts and
+    // a no-op when the subscription was already written).
+    void applySuccessfulPayment(updatedTx).catch((err) => {
+      console.error("[payments] applySuccessfulPayment failed:", err?.message ?? err);
     });
 
     return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=success`);

@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { logHttpEvent } from "@/lib/logs/http-logs";
+import { getSubscriptionPrice } from "@/lib/subscriptions";
 import {
   getPesapalSettings,
   getPesapalBaseUrl,
@@ -10,6 +11,8 @@ import {
   createPesapalOrder,
   getOrCreateIpnId,
 } from "@/lib/payments/pesapal";
+
+const VALID_PERIODS = [1, 3, 6, 12];
 
 export async function POST(req: Request) {
   try {
@@ -23,13 +26,46 @@ export async function POST(req: Request) {
 
     // 2. Parse request payload
     const body = await req.json();
-    const { amount, businessId, paymentMethod } = body;
+    const { amount, businessId, paymentMethod, purpose = "credits", tierId, periodMonths } = body;
 
-    if (!amount || isNaN(amount) || amount <= 0) {
-      return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
-    }
     if (!businessId) {
       return NextResponse.json({ error: "Invalid business ID" }, { status: 400 });
+    }
+
+    if (purpose !== "credits" && purpose !== "subscription") {
+      return NextResponse.json({ error: "Invalid purchase purpose" }, { status: 400 });
+    }
+
+    // Subscription purchases are priced server-side from the tier + period.
+    // Credit top-ups are priced by the client-supplied amount.
+    const adminSupabase = createAdminClient();
+    let credits_added: number;
+    let finalAmount: number;
+    let description: string;
+
+    if (purpose === "subscription") {
+      if (!tierId || !VALID_PERIODS.includes(periodMonths)) {
+        return NextResponse.json({ error: "Invalid subscription plan or period" }, { status: 400 });
+      }
+      const { data: tier } = await adminSupabase
+        .from("subscription_tiers")
+        .select("id, name, price_ugx, base_credits_monthly")
+        .eq("id", tierId)
+        .single();
+      if (!tier) {
+        return NextResponse.json({ error: "Subscription plan not found" }, { status: 400 });
+      }
+      const period = periodMonths as number;
+      finalAmount = await getSubscriptionPrice(Number(tier.price_ugx), period);
+      credits_added = Number(tier.base_credits_monthly) * period;
+      description = `HopeChat ${tier.name} (${period} month${period > 1 ? "s" : ""})`;
+    } else {
+      if (!amount || isNaN(amount) || amount <= 0) {
+        return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+      }
+      finalAmount = Number(amount);
+      credits_added = Math.round((finalAmount / 10000) * 250);
+      description = `HopeChat Balance Top-up: ${credits_added} message credits`;
     }
 
     // Log checkout attempt
@@ -39,8 +75,8 @@ export async function POST(req: Request) {
       direction: "outgoing",
       service: "payment",
       endpoint: "/api/payments/checkout",
-      note: `Initiating checkout for ${amount.toLocaleString()} UGX via ${paymentMethod || "mobile_money"}`,
-      payload: { amount, paymentMethod }
+      note: `Initiating checkout for ${finalAmount.toLocaleString()} UGX (${purpose}) via ${paymentMethod || "mobile_money"}`,
+      payload: { amount: finalAmount, purpose, paymentMethod, tierId, periodMonths }
     });
 
     // 3. Verify user has access to the business (or is superadmin)
@@ -68,19 +104,20 @@ export async function POST(req: Request) {
 
     // 5. Generate unique merchant reference and calculate credits
     const merchantReference = `HC2-${Date.now()}-${crypto.randomUUID().substring(0, 8)}`;
-    const credits_added = Math.round((amount / 10000) * 250);
 
     // 6. Insert pending record in payment_transactions
-    const adminSupabase = createAdminClient();
     const { error: dbError } = await adminSupabase
       .from("payment_transactions")
       .insert({
         business_id: businessId,
-        amount_ugx: amount,
+        amount_ugx: finalAmount,
         credits_added: credits_added,
         payment_method: paymentMethod === "card" ? "card" : "mobile_money",
         payment_reference: merchantReference,
-        status: "pending"
+        status: "pending",
+        purpose,
+        tier_id: purpose === "subscription" ? tierId : null,
+        period_months: purpose === "subscription" ? (periodMonths as number) : null,
       });
 
     if (dbError) {
@@ -107,9 +144,9 @@ export async function POST(req: Request) {
       token,
       {
         id: merchantReference,
-        amount: amount,
+        amount: finalAmount,
         currency: "UGX",
-        description: `HopeChat Balance Top-up: ${credits_added} message credits`,
+        description,
         callbackUrl: `${siteUrl}/api/payments/callback`,
         notificationId: notificationId,
         billingEmail: user.email || "support@hopechat.com",

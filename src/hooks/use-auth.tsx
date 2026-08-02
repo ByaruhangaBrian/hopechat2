@@ -11,6 +11,17 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
+interface BusinessSubscription {
+  id: string;
+  tier_id: string;
+  period_months: number;
+  amount_ugx: number;
+  starts_on: string;
+  expires_on: string;
+  grace_ends_on: string;
+  created_at: string;
+}
+
 interface Profile {
   id: string;
   full_name: string | null;
@@ -27,6 +38,7 @@ interface Profile {
     tier_id: string;
     plan_tier: string;
     status: string;
+    subscriptions?: BusinessSubscription[];
   };
 }
 
@@ -98,12 +110,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               balance_ugx,
               tier_id,
               plan_tier,
-              status
+              status,
+              subscriptions (
+                id,
+                tier_id,
+                period_months,
+                amount_ugx,
+                starts_on,
+                expires_on,
+                grace_ends_on,
+                created_at
+              )
             )
           `,
           )
           .eq("business_id", imp.id)
           .order("created_at", { ascending: true })
+          .order("created_at", { foreignTable: "subscriptions", ascending: false })
           .limit(1)
           .maybeSingle();
       } else {
@@ -126,11 +149,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               balance_ugx,
               tier_id,
               plan_tier,
-              status
+              status,
+              subscriptions (
+                id,
+                tier_id,
+                period_months,
+                amount_ugx,
+                starts_on,
+                expires_on,
+                grace_ends_on,
+                created_at
+              )
             )
           `,
           )
           .eq("user_id", userId)
+          .order("created_at", { foreignTable: "subscriptions", ascending: false })
           .maybeSingle();
       }
 

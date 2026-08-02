@@ -79,6 +79,22 @@ export default function AdminSettingsPage() {
     sender: "",
     enabled: false,
   });
+  const [emailSettings, setEmailSettings] = useState({
+    host: "",
+    port: 587,
+    secure: false,
+    user: "",
+    password: "",
+    from_name: "HopeChat",
+    from_email: "",
+  });
+  const [subscriptionSettings, setSubscriptionSettings] = useState<{
+    grace_days: number;
+    discounts: Record<string, number>;
+  }>({
+    grace_days: 7,
+    discounts: { "3": 0, "6": 5, "12": 10 },
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const supabase = createClient();
@@ -94,6 +110,8 @@ export default function AdminSettingsPage() {
         { data: cc },
         { data: gcc },
         { data: sms },
+        { data: email },
+        { data: subs },
       ] = await Promise.all([
         supabase.from("system_settings").select("*").eq("id", "whatsapp_global").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "system_config").maybeSingle(),
@@ -103,6 +121,8 @@ export default function AdminSettingsPage() {
         supabase.from("system_settings").select("*").eq("id", "credit_costs").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "gemini_context_caching").maybeSingle(),
         supabase.from("system_settings").select("*").eq("id", "sms_settings").maybeSingle(),
+        supabase.from("system_settings").select("*").eq("id", "email_settings").maybeSingle(),
+        supabase.from("system_settings").select("*").eq("id", "subscription_settings").maybeSingle(),
       ]);
 
       if (wa) setWhatsappSettings(wa.value);
@@ -140,6 +160,25 @@ export default function AdminSettingsPage() {
       if (gcc?.value !== undefined) {
         const v = gcc.value;
         setGeminiContextCaching(v === true || v?.enabled === true);
+      }
+
+      if (email?.value) {
+        setEmailSettings({
+          host: email.value.host || "",
+          port: email.value.port ?? 587,
+          secure: !!email.value.secure,
+          user: email.value.user || "",
+          password: email.value.password || "",
+          from_name: email.value.from_name || "HopeChat",
+          from_email: email.value.from_email || "",
+        });
+      }
+
+      if (subs?.value) {
+        setSubscriptionSettings({
+          grace_days: subs.value.grace_days ?? 7,
+          discounts: { "3": 0, "6": 5, "12": 10, ...(subs.value.discounts ?? {}) },
+        });
       }
       
       setLoading(false);
@@ -305,6 +344,40 @@ export default function AdminSettingsPage() {
     setSaving(false);
   }
 
+  async function handleSaveEmailSettings() {
+    setSaving(true);
+    const { error } = await supabase
+      .from("system_settings")
+      .upsert({
+        id: "email_settings",
+        value: emailSettings,
+        updated_at: new Date().toISOString(),
+      });
+    if (error) {
+      toast.error("Failed to save email settings");
+    } else {
+      toast.success("Email (SMTP) settings updated");
+    }
+    setSaving(false);
+  }
+
+  async function handleSaveSubscriptionSettings() {
+    setSaving(true);
+    const { error } = await supabase
+      .from("system_settings")
+      .upsert({
+        id: "subscription_settings",
+        value: subscriptionSettings,
+        updated_at: new Date().toISOString(),
+      });
+    if (error) {
+      toast.error("Failed to save subscription settings");
+    } else {
+      toast.success("Subscription settings updated");
+    }
+    setSaving(false);
+  }
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard");
@@ -343,6 +416,12 @@ export default function AdminSettingsPage() {
           </TabsTrigger>
           <TabsTrigger value="credits" className="px-4 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
             Credits
+          </TabsTrigger>
+          <TabsTrigger value="email" className="px-4 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+            Email
+          </TabsTrigger>
+          <TabsTrigger value="subscriptions" className="px-4 py-1.5 text-sm font-medium transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+            Subscriptions
           </TabsTrigger>
         </TabsList>
 
@@ -1054,6 +1133,196 @@ export default function AdminSettingsPage() {
                 <Button onClick={handleSaveCreditCosts} disabled={saving || loading} className="bg-primary hover:bg-primary/90">
                   <Save className="mr-2 h-4 w-4" />
                   {saving ? "Saving..." : "Save Credit Config"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="email" className="space-y-6 outline-none">
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <MessageSquareText className="h-5 w-5 text-primary" />
+                Email (SMTP) Configuration
+              </CardTitle>
+              <CardDescription>
+                SMTP server used to send purchase receipts and expiry warnings to businesses.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex gap-3 text-xs leading-relaxed text-amber-600 dark:text-amber-100">
+                <Info className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold mb-1">Recipients</p>
+                  <p>Emails go to the email address of the business owner account. Emails are only sent when the host, username and from address are configured — otherwise they are silently skipped and no purchase flow breaks.</p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs">SMTP Host</Label>
+                  <Input
+                    placeholder="smtp.gmail.com"
+                    value={emailSettings.host}
+                    onChange={(e) => setEmailSettings((prev) => ({ ...prev, host: e.target.value }))}
+                    className="bg-muted border-border text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs">SMTP Port</Label>
+                  <Input
+                    type="number"
+                    value={emailSettings.port}
+                    onChange={(e) => setEmailSettings((prev) => ({ ...prev, port: Number(e.target.value) }))}
+                    className="bg-muted border-border text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs">Username</Label>
+                  <Input
+                    placeholder="you@gmail.com"
+                    value={emailSettings.user}
+                    onChange={(e) => setEmailSettings((prev) => ({ ...prev, user: e.target.value }))}
+                    className="bg-muted border-border text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs">Password / App Password</Label>
+                  <Input
+                    type="password"
+                    placeholder="••••••••••••"
+                    value={emailSettings.password}
+                    onChange={(e) => setEmailSettings((prev) => ({ ...prev, password: e.target.value }))}
+                    className="bg-muted border-border text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs">From Name</Label>
+                  <Input
+                    placeholder="HopeChat"
+                    value={emailSettings.from_name}
+                    onChange={(e) => setEmailSettings((prev) => ({ ...prev, from_name: e.target.value }))}
+                    className="bg-muted border-border text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs">From Email</Label>
+                  <Input
+                    placeholder="no-reply@hopechat.com"
+                    value={emailSettings.from_email}
+                    onChange={(e) => setEmailSettings((prev) => ({ ...prev, from_email: e.target.value }))}
+                    className="bg-muted border-border text-foreground"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Use TLS/SSL (secure connection)</p>
+                  <p className="text-xs text-muted-foreground">Enable for SSL/TLS ports (e.g. 465), disable for STARTTLS ports (e.g. 587).</p>
+                </div>
+                <Switch
+                  checked={emailSettings.secure}
+                  onCheckedChange={(checked) => setEmailSettings((prev) => ({ ...prev, secure: checked }))}
+                />
+              </div>
+
+              <div className="flex justify-end border-t border-border pt-6">
+                <Button onClick={handleSaveEmailSettings} disabled={saving || loading} className="bg-primary hover:bg-primary/90">
+                  <Save className="mr-2 h-4 w-4" />
+                  {saving ? "Saving..." : "Save Email Settings"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="subscriptions" className="space-y-6 outline-none">
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                Subscription Configuration
+              </CardTitle>
+              <CardDescription>
+                Grace period and multi-month discount pricing applied to plan purchases.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex gap-3 text-xs leading-relaxed text-amber-600 dark:text-amber-100">
+                <Info className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold mb-1">How expiry works</p>
+                  <p>The app keeps working through the grace period. After it ends, credit-consuming features (AI, broadcasts, SMS, forms) are blocked and the business sees an expired banner until they renew.</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-foreground">Grace Period</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs">Days after expiry before the account is locked</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={subscriptionSettings.grace_days}
+                        onChange={(e) =>
+                          setSubscriptionSettings((prev) => ({ ...prev, grace_days: Number(e.target.value) }))
+                        }
+                        className="bg-muted border-border text-foreground font-semibold text-lg pr-12"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        days
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground/60">
+                      Applies to new and renewed subscriptions.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 border-t border-border pt-6">
+                <h3 className="text-sm font-medium text-foreground">Multi-Month Discounts</h3>
+                <p className="text-xs text-muted-foreground">
+                  Discount percentage applied to the total (monthly price × months) when a business purchases multiple months at once.
+                </p>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {[3, 6, 12].map((m) => (
+                    <div key={m} className="space-y-2">
+                      <Label className="text-muted-foreground text-xs">{m}-month discount</Label>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={subscriptionSettings.discounts[String(m)] ?? 0}
+                          onChange={(e) =>
+                            setSubscriptionSettings((prev) => ({
+                              ...prev,
+                              discounts: {
+                                ...prev.discounts,
+                                [String(m)]: Number(e.target.value),
+                              },
+                            }))
+                          }
+                          className="bg-muted border-border text-foreground font-semibold text-lg pr-12"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                          %
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end border-t border-border pt-6">
+                <Button onClick={handleSaveSubscriptionSettings} disabled={saving || loading} className="bg-primary hover:bg-primary/90">
+                  <Save className="mr-2 h-4 w-4" />
+                  {saving ? "Saving..." : "Save Subscription Settings"}
                 </Button>
               </div>
             </CardContent>

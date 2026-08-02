@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Coins, CreditCard, Landmark, Loader2, ArrowRight, ShieldCheck, Check, Clock, History, Activity, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { SubscriptionPurchase } from '@/components/settings/subscription-purchase';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -260,8 +261,25 @@ export function BillingPlan() {
   const remainingCredits = liveBalance?.credits_remaining ?? profile?.business?.credits_remaining ?? 0;
   const balanceUgx = liveBalance?.balance_ugx ?? profile?.business?.balance_ugx ?? 0;
 
+  const latestSub = profile?.business?.subscriptions?.[0] ?? null;
+  const subStatus = (() => {
+    if (!latestSub) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expires = new Date(`${latestSub.expires_on}T00:00:00`);
+    const grace = new Date(`${latestSub.grace_ends_on}T00:00:00`);
+    if (today.getTime() <= expires.getTime()) {
+      return { label: 'Active', color: 'text-emerald-500', desc: `Expires ${format(expires, 'MMM d, yyyy')}` };
+    }
+    if (today.getTime() <= grace.getTime()) {
+      return { label: 'Grace Period', color: 'text-amber-500', desc: `Expired ${format(expires, 'MMM d, yyyy')} — renew by ${format(grace, 'MMM d, yyyy')}` };
+    }
+    return { label: 'Expired', color: 'text-red-500', desc: 'Service suspended — renew to reactivate' };
+  })();
+
   return (
     <div className="space-y-6">
+      <SubscriptionPurchase />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Left Side: Current Plan & Balances */}
         <div className="space-y-6">
@@ -309,18 +327,38 @@ export function BillingPlan() {
               </div>
               <div className="flex items-center justify-between border-b border-border/50 pb-3">
                 <span className="text-sm text-muted-foreground">Billing Period</span>
-                <span className="text-sm font-medium text-foreground">Monthly</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">WhatsApp API Status</span>
-                <span className="text-sm font-medium text-emerald-500 flex items-center gap-1">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                {latestSub ? (
+                  <span className="text-sm font-medium text-foreground">
+                    {latestSub.period_months} month{latestSub.period_months === 1 ? '' : 's'}
                   </span>
-                  Connected
-                </span>
+                ) : (
+                  <span className="text-sm font-medium text-foreground">Not subscribed</span>
+                )}
               </div>
+              {subStatus && (
+                <div className="flex items-center justify-between border-b border-border/50 pb-3">
+                  <span className="text-sm text-muted-foreground">Subscription Status</span>
+                  <span className={`text-sm font-semibold ${subStatus.color}`}>{subStatus.label}</span>
+                </div>
+              )}
+              {subStatus && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Subscription Period</span>
+                  <span className="text-sm font-medium text-foreground">{subStatus.desc}</span>
+                </div>
+              )}
+              {!subStatus && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">WhatsApp API Status</span>
+                  <span className="text-sm font-medium text-emerald-500 flex items-center gap-1">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                    </span>
+                    Connected
+                  </span>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
