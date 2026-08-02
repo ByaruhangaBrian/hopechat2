@@ -29,6 +29,8 @@ import {
   Search,
   Database,
   Timer,
+  MessageSquareText,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +55,7 @@ export default function LandingPage() {
 
   const navLinks = [
     { label: "Features", href: "#features" },
+    { label: "Pricing", href: "#pricing" },
     { label: "Integrations", href: "#integrations" },
     { label: "How It Works", href: "#how-it-works" },
     { label: "FAQ", href: "#faq" },
@@ -78,6 +81,18 @@ export default function LandingPage() {
     {
       q: "Is HopeChat compliant with Meta's Official WhatsApp API policies?",
       a: "Yes. HopeChat connects directly through Meta Business using the official WhatsApp Business API. Every message — broadcasts, chatbot replies, order updates — is delivered with enterprise-grade reliability and full Meta compliance.",
+    },
+    {
+      q: "How much does HopeChat cost?",
+      a: "HopeChat runs on simple monthly plans: Bronze at 65,000 UGX, Silver at 180,000 UGX, and Gold at 450,000 UGX per month. Save up to 10% by paying for 3, 6, or 12 months upfront. Every plan starts with a free trial — no credit card required.",
+    },
+    {
+      q: "How do I pay for my subscription?",
+      a: "Pay securely through Pesapal using Mobile Money or credit card, right from your dashboard. You can also top up message credits any time, and your plan, billing period, and credit balance are all visible in the Billing section.",
+    },
+    {
+      q: "Can HopeChat send SMS as well as WhatsApp messages?",
+      a: "Yes. In addition to WhatsApp broadcasts, HopeChat sends bulk SMS campaigns through the same dashboard, so you can reach contacts who aren't on WhatsApp. Both channels use credit-based pricing and report delivery status.",
     },
   ];
 
@@ -366,6 +381,30 @@ export default function LandingPage() {
                 ),
               },
               {
+                icon: MessageSquareText,
+                title: "Bulk SMS Broadcasts",
+                desc: "Reach customers who aren't on WhatsApp with affordable bulk SMS campaigns from the same dashboard — no separate tools needed.",
+                points: ["Bulk SMS to thousands of recipients", "Audience segmentation & targeting", "Pay per message with credit pricing", "Delivery tracking with one-tap retry"],
+                reverse: false,
+                mock: (
+                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
+                    <div className="flex justify-between items-center border-b border-border pb-2">
+                      <span className="text-xs font-bold text-foreground">SMS Broadcast</span>
+                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">Delivered</span>
+                    </div>
+                    {[
+                      { label: "Sent", value: "8,320" },
+                      { label: "Delivered", value: "8,014", cls: "text-emerald-600" },
+                      { label: "Failed", value: "306", cls: "text-red-500" },
+                      { label: "Retried", value: "306", cls: "text-primary font-bold" },
+                    ].map((r, i) => (
+                      <div key={i} className="flex justify-between text-xs"><span className="text-muted-foreground">{r.label}</span><span className={cn("font-bold", r.cls || "text-foreground")}>{r.value}</span></div>
+                    ))}
+                    <div className="h-2 w-full bg-background rounded-full overflow-hidden"><div className="h-full w-[96%] bg-emerald-500 rounded-full" /></div>
+                  </div>
+                ),
+              },
+              {
                 icon: Workflow,
                 title: "Visual No-Code Flow Builder",
                 desc: "Drag-and-drop builder to qualify leads, auto-reply, and route inquiries without writing code.",
@@ -545,6 +584,103 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* ─── PRICING ─── */}
+        <section id="pricing" className="py-20 lg:py-28 bg-background border-t border-border overflow-hidden">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-12">
+            <motion.div className="text-center space-y-4 max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
+              <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Simple plans that grow with you</motion.h2>
+              <motion.p variants={fadeUp} custom={0.1} className="text-base text-muted-foreground leading-relaxed font-medium">
+                Every plan includes a free trial. Pay securely with Mobile Money or cards and switch plans any time.
+              </motion.p>
+            </motion.div>
+
+            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {[
+                {
+                  name: "Bronze",
+                  tagline: "For solo sellers getting started",
+                  price: "65,000",
+                  credits: "1,500 credits / month",
+                  features: ["AI assistant & shared inbox", "WhatsApp coexistence", "1 team seat", "Sales pipeline & tags"],
+                  popular: false,
+                },
+                {
+                  name: "Silver",
+                  tagline: "For growing teams running campaigns",
+                  price: "180,000",
+                  credits: "5,000 credits / month",
+                  features: ["Everything in Bronze", "WhatsApp + SMS broadcasts", "Visual flow builder", "3 team seats"],
+                  popular: true,
+                },
+                {
+                  name: "Gold",
+                  tagline: "For high-volume operators",
+                  price: "450,000",
+                  credits: "High-volume credits / month",
+                  features: ["Everything in Silver", "Multimodal AI", "Larger contact limits", "10 team seats"],
+                  popular: false,
+                },
+              ].map((plan, i) => (
+                <motion.div
+                  key={i}
+                  className={cn(
+                    "relative flex flex-col rounded-2xl border p-6 lg:p-8",
+                    plan.popular
+                      ? "border-primary/40 bg-white shadow-xl shadow-primary/10 lg:scale-[1.03]"
+                      : "border-border bg-white shadow-sm",
+                  )}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                >
+                  {plan.popular && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-[10px] font-extrabold uppercase tracking-wider text-primary-foreground shadow-md">
+                      Most Popular
+                    </span>
+                  )}
+                  <h3 className="text-lg font-extrabold text-foreground">{plan.name}</h3>
+                  <p className="text-xs text-muted-foreground font-medium mt-1">{plan.tagline}</p>
+                  <div className="mt-4 flex items-baseline gap-1.5">
+                    <span className="text-4xl font-extrabold tracking-tight text-foreground">UGX {plan.price}</span>
+                    <span className="text-sm font-bold text-muted-foreground">/ month</span>
+                  </div>
+                  <p className="mt-1 text-xs font-bold text-primary">{plan.credits}</p>
+                  <ul className="mt-6 space-y-2.5 flex-1">
+                    {plan.features.map((f, j) => (
+                      <li key={j} className="flex items-start gap-2.5 text-sm font-medium text-foreground">
+                        <div className="h-4 w-4 rounded-full bg-primary/10 text-primary flex items-center justify-center mt-0.5 shrink-0">
+                          <Check className="h-2.5 w-2.5" />
+                        </div>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href="/signup"
+                    className={cn(
+                      buttonVariants(),
+                      "w-full mt-8 font-bold rounded-xl h-11",
+                      plan.popular
+                        ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 border-0"
+                        : "bg-white border border-primary/30 text-primary hover:bg-primary/5",
+                    )}
+                  >
+                    Start Free Trial
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+
+            <motion.div className="text-center" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
+              <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-5 py-3 text-sm font-medium text-foreground">
+                <Zap className="h-4 w-4 text-primary" />
+                Pay upfront and save: 3 months at full price, 6 months get 5% off, 12 months get 10% off. Powered by Pesapal.
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
         {/* ─── TESTIMONIALS ─── */}
         <section className="py-20 lg:py-28 bg-background border-t border-border overflow-hidden">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-16">
@@ -653,8 +789,8 @@ export default function LandingPage() {
                 <li><Link href="#features" className="hover:text-primary transition-colors">Shared Inbox</Link></li>
                 <li><Link href="#features" className="hover:text-primary transition-colors">AI Assistant</Link></li>
                 <li><Link href="#features" className="hover:text-primary transition-colors">Broadcasts</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">No-Code Chatbot</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">Sales Pipeline</Link></li>
+                <li><Link href="#features" className="hover:text-primary transition-colors">SMS</Link></li>
+                <li><Link href="#pricing" className="hover:text-primary transition-colors">Pricing</Link></li>
               </ul>
             </div>
 
