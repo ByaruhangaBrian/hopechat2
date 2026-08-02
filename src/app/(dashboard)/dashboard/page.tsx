@@ -163,7 +163,7 @@ export default function DashboardPage() {
             Your business is on a free trial. Upgrade to unlock all features.
           </span>
           <button
-            onClick={() => router.push('/settings/billing')}
+            onClick={() => router.push('/settings?tab=billing')}
             className="shrink-0 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
           >
             View Plans
@@ -181,7 +181,7 @@ export default function DashboardPage() {
             Your subscription has been canceled. Some features may be unavailable.
           </span>
           <button
-            onClick={() => router.push('/settings/billing')}
+            onClick={() => router.push('/settings?tab=billing')}
             className="shrink-0 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 transition-colors"
           >
             Reactivate
@@ -199,7 +199,7 @@ export default function DashboardPage() {
             Your payment is overdue. Please update your billing information to avoid service interruption.
           </span>
           <button
-            onClick={() => router.push('/settings/billing')}
+            onClick={() => router.push('/settings?tab=billing')}
             className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 transition-colors"
           >
             Update Billing
