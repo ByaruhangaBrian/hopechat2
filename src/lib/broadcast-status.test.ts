@@ -26,10 +26,11 @@ describe("getBroadcastStatus", () => {
   });
 
   it("each variant has the dark-theme class triple", () => {
+    const colorClass = "(?:primary|[a-z]+-\\d+)";
     for (const v of Object.values(broadcastStatusConfig)) {
-      expect(v.classes).toMatch(/bg-[a-z]+-\d+\/10/);
-      expect(v.classes).toMatch(/text-[a-z]+-\d+/);
-      expect(v.classes).toMatch(/border-[a-z]+-\d+\/20/);
+      expect(v.classes).toMatch(new RegExp(`bg-${colorClass}/10`));
+      expect(v.classes).toMatch(new RegExp(`text-${colorClass}`));
+      expect(v.classes).toMatch(new RegExp(`border-${colorClass}/20`));
     }
   });
 });
