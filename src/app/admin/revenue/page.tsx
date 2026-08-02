@@ -356,7 +356,7 @@ export default function RevenueDashboardPage() {
           </CardHeader>
           <CardContent>
             {Object.keys(byCategory).length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No expenses recorded. Click "Add Expense" to start tracking.</p>
+              <p className="text-sm text-muted-foreground text-center py-4">No expenses recorded. Click &ldquo;Add Expense&rdquo; to start tracking.</p>
             ) : (
               <div className="space-y-3">
                 {Object.entries(byCategory).sort((a, b) => b[1].total - a[1].total).map(([cat, data]) => (

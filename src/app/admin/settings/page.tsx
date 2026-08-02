@@ -465,7 +465,7 @@ export default function AdminSettingsPage() {
                   />
                 </div>
                 <p className="text-[11px] text-muted-foreground/60">
-                  Must match the "Verify Token" you set in the Meta App Dashboard.
+                  Must match the &ldquo;Verify Token&rdquo; you set in the Meta App Dashboard.
                 </p>
               </div>
 
@@ -673,7 +673,7 @@ export default function AdminSettingsPage() {
                     className="bg-muted border-border text-foreground"
                   />
                   <p className="text-[10px] text-muted-foreground/60">
-                    Fallback key used if a business hasn't provided their own API key.
+                    Fallback key used if a business hasn&apos;t provided their own API key.
                   </p>
                 </div>
               </div>
@@ -764,7 +764,7 @@ export default function AdminSettingsPage() {
                       className="bg-background border-border text-foreground font-mono"
                     />
                     <p className="text-[11px] text-muted-foreground/60">
-                      Shown as the sender name on recipients' phones. Must be registered with
+                      Shown as the sender name on recipients&apos; phones. Must be registered with
                       your SMS provider.
                     </p>
                   </div>
@@ -815,7 +815,7 @@ export default function AdminSettingsPage() {
                   <p className="font-semibold mb-1">Super Admin Instructions:</p>
                   <ul className="list-disc ml-4 space-y-1">
                     <li><strong>Service Account (Fallback):</strong> Configure a fallback Google Service Account so businesses do not need their own Google Cloud Projects. They will share their sheets with this email.</li>
-                    <li><strong>Dynamic Lookup:</strong> Business admins configure their Sheet URL, a "Reference Column" (e.g. `Order ID`), and "Return Columns" (e.g. `Status, Delivery Date`) in their portal.</li>
+                    <li><strong>Dynamic Lookup:</strong> Business admins configure their Sheet URL, a &ldquo;Reference Column&rdquo; (e.g. `Order ID`), and &ldquo;Return Columns&rdquo; (e.g. `Status, Delivery Date`) in their portal.</li>
                     <li><strong>How it works:</strong> The WhatsApp AI worker will detect these settings, ask the client for the reference key, look up the row, and return only the specified fields.</li>
                   </ul>
                 </div>

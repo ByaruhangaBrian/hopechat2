@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { encrypt } from '@/lib/whatsapp/encryption';
+import { appendFileSync } from 'fs';
+import { join } from 'path';
 
 export async function GET(req: Request) {
   try {
@@ -111,10 +113,8 @@ export async function POST(req: Request) {
   } catch (err: any) {
     console.error('[integrations] POST failed:', err);
     try {
-      const fs = require('fs');
-      const path = require('path');
-      fs.appendFileSync(
-        path.join(process.cwd(), 'error_log.txt'),
+      appendFileSync(
+        join(process.cwd(), 'error_log.txt'),
         `[${new Date().toISOString()}] POST failed: ${err.message}\nStack: ${err.stack}\nPayload config: ${JSON.stringify(requestBody?.config)}\n\n`
       );
     } catch (logErr) {
