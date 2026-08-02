@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           )
           .eq("business_id", imp.id)
           .order("created_at", { ascending: true })
-          .order("created_at", { foreignTable: "subscriptions", ascending: false })
+          .order("created_at", { foreignTable: "business.subscriptions", ascending: false })
           .limit(1)
           .maybeSingle();
       } else {
@@ -164,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           `,
           )
           .eq("user_id", userId)
-          .order("created_at", { foreignTable: "subscriptions", ascending: false })
+          .order("created_at", { foreignTable: "business.subscriptions", ascending: false })
           .maybeSingle();
       }
 
