@@ -4,14 +4,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { getErrorMessage, getResponseErrorMessage } from '@/lib/utils';
 
 interface AiSettingsPayload {
-    gemini_api_key?: string;
     system_prompt: string;
     training_documents: string[];
     is_enabled: boolean;
@@ -23,9 +21,6 @@ export function AiConfig() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [isEnabled, setIsEnabled] = useState(false);
-    const [hasApiKey, setHasApiKey] = useState(false);
-    const [apiKey, setApiKey] = useState('');
-    const [apiKeyEdited, setApiKeyEdited] = useState(false);
     const [systemPrompt, setSystemPrompt] = useState(DEFAULT_PROMPT);
     const [trainingDocuments, setTrainingDocuments] = useState('');
 
@@ -40,9 +35,6 @@ export function AiConfig() {
 
             const settings = payload.settings ?? {};
             setIsEnabled(Boolean(settings.is_enabled));
-            setHasApiKey(Boolean(settings.has_api_key));
-            setApiKey('');
-            setApiKeyEdited(false);
             setSystemPrompt(settings.system_prompt || DEFAULT_PROMPT);
             setTrainingDocuments((settings.training_documents ?? []).join('\n\n---\n\n'));
         } catch (err) {
@@ -58,11 +50,6 @@ export function AiConfig() {
     }, [fetchSettings]);
 
     const handleSave = useCallback(async () => {
-        if (isEnabled && !apiKeyEdited && !hasApiKey) {
-            toast.error('Please provide a Gemini API key before enabling AI.');
-            return;
-        }
-
         const docs = trainingDocuments
             .split(/^\s*---\s*$/m)
             .map((doc) => doc.trim())
@@ -73,10 +60,6 @@ export function AiConfig() {
             training_documents: docs,
             is_enabled: isEnabled,
         };
-
-        if (apiKeyEdited) {
-            payload.gemini_api_key = apiKey.trim();
-        }
 
         try {
             setSaving(true);
@@ -98,7 +81,7 @@ export function AiConfig() {
         } finally {
             setSaving(false);
         }
-    }, [apiKey, apiKeyEdited, fetchSettings, hasApiKey, isEnabled, systemPrompt, trainingDocuments]);
+    }, [fetchSettings, isEnabled, systemPrompt, trainingDocuments]);
 
     return (
         <Card>
@@ -120,26 +103,6 @@ export function AiConfig() {
                         <span className="text-sm text-muted-foreground">
                             When enabled, automations can send AI-generated responses.
                         </span>
-                    </div>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-start">
-                    <Label htmlFor="gemini-api-key">Gemini API Key</Label>
-                    <div className="space-y-2">
-                        <Input
-                            id="gemini-api-key"
-                            type="password"
-                            value={apiKey}
-                            onChange={(e) => {
-                                setApiKey(e.target.value);
-                                setApiKeyEdited(true);
-                            }}
-                            placeholder={hasApiKey ? 'Leave blank to keep existing key' : 'Enter your Gemini API key'}
-                            className="bg-muted border-border text-foreground"
-                        />
-                        <p className="text-xs text-muted-foreground/60">
-                            Your API key is encrypted and stored securely. {hasApiKey ? 'Existing key is already configured.' : 'A valid key is required to enable AI.'}
-                        </p>
                     </div>
                 </div>
 
@@ -174,7 +137,7 @@ export function AiConfig() {
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div className="text-sm text-muted-foreground/60">
-                        {loading ? 'Loading AI settings…' : hasApiKey ? 'Gemini key is configured.' : 'AI is not configured.'}
+                        {loading ? 'Loading AI settings…' : isEnabled ? 'AI is enabled.' : 'AI is disabled.'}
                     </div>
                     <Button
                         onClick={handleSave}

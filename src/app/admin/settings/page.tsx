@@ -673,7 +673,7 @@ export default function AdminSettingsPage() {
                     className="bg-muted border-border text-foreground"
                   />
                   <p className="text-[10px] text-muted-foreground/60">
-                    Fallback key used if a business hasn&apos;t provided their own API key.
+                    Default key used for all businesses. A business-specific key overrides this if one is configured.
                   </p>
                 </div>
               </div>

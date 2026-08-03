@@ -127,13 +127,6 @@ export async function POST(req: Request) {
     const rawKey = String(gemini_api_key ?? '').trim()
     const keyToSave = rawKey.length > 0 ? rawKey : existingSettings?.groq_api_key ?? ''
 
-    if (Boolean(is_enabled) && !keyToSave) {
-      return NextResponse.json(
-        { error: 'AI cannot be enabled without a Gemini API key' },
-        { status: 400 },
-      )
-    }
-
     try {
       await internalSaveAiSettings(supabase, user.id, {
         groq_api_key: keyToSave,
