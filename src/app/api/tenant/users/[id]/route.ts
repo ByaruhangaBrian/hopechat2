@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { normalizePermissions } from "@/lib/permissions";
 
 export async function PATCH(
   req: Request,
@@ -43,7 +44,7 @@ export async function PATCH(
       return NextResponse.json({ error: "No business context found" }, { status: 400 });
     }
 
-    const { full_name, role } = await req.json();
+    const { full_name, role, permissions } = await req.json();
 
     const adminClient = createAdminClient();
 
@@ -82,6 +83,9 @@ export async function PATCH(
     const updates: Record<string, any> = {};
     if (full_name !== undefined) updates.full_name = full_name;
     if (role !== undefined) updates.role = role;
+    if (permissions !== undefined) {
+      updates.permissions = normalizePermissions(permissions, role ?? targetProfile.role);
+    }
 
     if (Object.keys(updates).length > 0) {
       const { data: updatedProfile, error: updateError } = await adminClient

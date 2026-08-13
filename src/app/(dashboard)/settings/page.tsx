@@ -13,6 +13,7 @@ import { IntegrationsHub } from '@/components/settings/integrations-hub';
 import { BillingPlan } from '@/components/settings/billing-plan';
 import { UserManagement } from '@/components/settings/user-management';
 import { useAuth } from '@/hooks/use-auth';
+import { canAccess } from '@/lib/permissions';
 
 const TAB_VALUES = ['profile', 'whatsapp', 'templates', 'tags', 'integrations', 'billing', 'users'] as const;
 type TabValue = (typeof TAB_VALUES)[number];
@@ -27,13 +28,18 @@ export default function SettingsPage() {
   const { profile } = useAuth();
 
   const showUserManagement = profile?.role === 'owner' || profile?.role === 'admin' || profile?.is_superadmin;
+  const settingsEnabled = canAccess(profile?.permissions, 'settings', profile?.role);
 
   // The URL is the single source of truth for the active tab — no
   // local state, no sync effect. A previous revision duplicated this
   // into `useState` + a sync effect, which tripped React 19's
   // set-state-in-effect rule and was also redundant.
   const queryTab = searchParams.get('tab');
-  const tab: TabValue = isTabValue(queryTab) ? queryTab : 'profile';
+  const requestedTab = isTabValue(queryTab) ? queryTab : 'profile';
+  // Agents without the Settings permission can only reach their own
+  // profile tab; clamp the URL so business-config tabs are unreachable.
+  const tab: TabValue =
+    !settingsEnabled && requestedTab !== 'profile' ? 'profile' : requestedTab;
 
   const onChange = (next: TabValue) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -60,41 +66,45 @@ export default function SettingsPage() {
             <User className="size-4" />
             Profile
           </TabsTrigger>
-          <TabsTrigger
-            value="whatsapp"
-            className="data-active:bg-muted data-active:text-primary text-muted-foreground"
-          >
-            <Settings className="size-4" />
-            WhatsApp Config
-          </TabsTrigger>
-          <TabsTrigger
-            value="templates"
-            className="data-active:bg-muted data-active:text-primary text-muted-foreground"
-          >
-            <MessageSquare className="size-4" />
-            Templates
-          </TabsTrigger>
-          <TabsTrigger
-            value="tags"
-            className="data-active:bg-muted data-active:text-primary text-muted-foreground"
-          >
-            <Tag className="size-4" />
-            Tags
-          </TabsTrigger>
-          <TabsTrigger
-            value="integrations"
-            className="data-active:bg-muted data-active:text-primary text-muted-foreground"
-          >
-            <Blocks className="size-4" />
-            Integrations
-          </TabsTrigger>
-          <TabsTrigger
-            value="billing"
-            className="data-active:bg-muted data-active:text-primary text-muted-foreground"
-          >
-            <Coins className="size-4" />
-            Plan & Billing
-          </TabsTrigger>
+          {settingsEnabled && (
+            <>
+              <TabsTrigger
+                value="whatsapp"
+                className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+              >
+                <Settings className="size-4" />
+                WhatsApp Config
+              </TabsTrigger>
+              <TabsTrigger
+                value="templates"
+                className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+              >
+                <MessageSquare className="size-4" />
+                Templates
+              </TabsTrigger>
+              <TabsTrigger
+                value="tags"
+                className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+              >
+                <Tag className="size-4" />
+                Tags
+              </TabsTrigger>
+              <TabsTrigger
+                value="integrations"
+                className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+              >
+                <Blocks className="size-4" />
+                Integrations
+              </TabsTrigger>
+              <TabsTrigger
+                value="billing"
+                className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+              >
+                <Coins className="size-4" />
+                Plan & Billing
+              </TabsTrigger>
+            </>
+          )}
           {showUserManagement && (
             <TabsTrigger
               value="users"

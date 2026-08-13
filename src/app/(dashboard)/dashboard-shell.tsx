@@ -1,12 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { SubscriptionBanner } from "@/components/billing/subscription-banner";
 import { createClient } from "@/lib/supabase/client";
+import { canAccess, type PermissionKey } from "@/lib/permissions";
+
+// Paths that are business configuration — denied users get bounced to the
+// dashboard. The sidebar hides the links, this keeps direct URLs honest.
+const pathGates: { path: string; permission: PermissionKey }[] = [
+  { path: "/ai", permission: "ai" },
+  { path: "/automations", permission: "automations" },
+  { path: "/broadcasts", permission: "broadcasts" },
+];
 
 // Auth-gated dashboard shell. Extracted from the layout so the layout
 // itself can stay a server component and export metadata (noindex) —
@@ -15,6 +24,7 @@ import { createClient } from "@/lib/supabase/client";
 function DashboardShellInner({ children }: { children: React.ReactNode }) {
   const { user, profile, loading: authLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClient();
 
   // Profile loading state - wait for profile if user is present
@@ -34,6 +44,21 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       }
     }
   }, [user, profile, loading, router]);
+
+  // Enforce per-user menu permissions on direct URL access. Requires a
+  // loaded profile so we never bounce a user whose profile just errored.
+  useEffect(() => {
+    if (loading || !user || !profile) return;
+    const denied = pathGates.find(
+      (g) => pathname === g.path || pathname.startsWith(`${g.path}/`),
+    );
+    if (
+      denied &&
+      !canAccess(profile.permissions, denied.permission, profile.role)
+    ) {
+      router.replace("/dashboard");
+    }
+  }, [loading, user, profile, pathname, router]);
 
   // Handle post-signup onboarding automation
   useEffect(() => {

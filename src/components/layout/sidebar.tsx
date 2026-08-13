@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useState, useEffect } from "react";
 import { ShieldAlert } from "lucide-react";
+import { canAccess, type PermissionKey } from "@/lib/permissions";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -54,6 +55,16 @@ const navItems = [
   { href: "/automations", label: "Automations", icon: Zap },
   { href: "/ai", label: "AI Hub", icon: Cpu },
 ];
+
+const permissionByPath: Record<string, PermissionKey> = {
+  "/dashboard": "dashboard",
+  "/inbox": "inbox",
+  "/contacts": "contacts",
+  "/pipelines": "pipelines",
+  "/broadcasts": "broadcasts",
+  "/automations": "automations",
+  "/ai": "ai",
+};
 
 interface SidebarProps {
   /** Controlled on mobile by the Header's hamburger button. Ignored on lg+. */
@@ -69,7 +80,9 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
   const bottomNavItems = [
     ...(profile?.is_superadmin ? [{ href: "/admin", label: "System Admin", icon: ShieldCheck }] : []),
-    { href: "/settings", label: "Settings", icon: Settings },
+    ...(canAccess(profile?.permissions, "settings", profile?.role)
+      ? [{ href: "/settings", label: "Settings", icon: Settings }]
+      : []),
   ];
 
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -139,7 +152,10 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
   const filteredNavItems = navItems.filter((item) => {
     const flag = featureGates[item.href];
-    return !flag || features[flag] !== false;
+    const featureEnabled = !flag || features[flag] !== false;
+    const permKey = permissionByPath[item.href];
+    const permissionEnabled = !permKey || canAccess(profile?.permissions, permKey, profile?.role);
+    return featureEnabled && permissionEnabled;
   });
 
   useEffect(() => {
@@ -363,13 +379,15 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 >
                   <User className="size-4" /> Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  render={
-                    <Link href="/settings?tab=whatsapp" className="rounded-lg flex items-center gap-2" />
-                  }
-                >
-                  <Settings className="size-4" /> Settings
-                </DropdownMenuItem>
+                {canAccess(profile?.permissions, "settings", profile?.role) && (
+                  <DropdownMenuItem
+                    render={
+                      <Link href="/settings?tab=whatsapp" className="rounded-lg flex items-center gap-2" />
+                    }
+                  >
+                    <Settings className="size-4" /> Settings
+                  </DropdownMenuItem>
+                )}
               </div>
               
               <DropdownMenuSeparator className="bg-sidebar-border/50" />

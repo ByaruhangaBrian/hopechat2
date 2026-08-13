@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "next-themes";
+import { canAccess } from "@/lib/permissions";
 import { LogOut, Menu, Settings as SettingsIcon, User, Sun, Moon } from "lucide-react";
 import {
   Avatar,
@@ -108,13 +109,15 @@ export function Header({ onOpenSidebar }: HeaderProps) {
             >
               <User className="size-4" /> Profile
             </DropdownMenuItem>
-            <DropdownMenuItem
-              render={
-                <Link href="/settings?tab=whatsapp" className="rounded-lg flex items-center gap-2" />
-              }
-            >
-              <SettingsIcon className="size-4" /> Settings
-            </DropdownMenuItem>
+            {canAccess(profile?.permissions, "settings", profile?.role) && (
+              <DropdownMenuItem
+                render={
+                  <Link href="/settings?tab=whatsapp" className="rounded-lg flex items-center gap-2" />
+                }
+              >
+                <SettingsIcon className="size-4" /> Settings
+              </DropdownMenuItem>
+            )}
           </div>
           
           <DropdownMenuSeparator className="bg-border/50" />

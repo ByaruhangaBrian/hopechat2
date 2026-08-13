@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { normalizePermissions } from "@/lib/permissions";
 
 export async function GET() {
   try {
@@ -70,8 +71,13 @@ export async function GET() {
 
     const tierInfo = business.subscription_tiers as any;
 
+    const normalizedUsers = (users || []).map((u: any) => ({
+      ...u,
+      permissions: normalizePermissions(u.permissions, u.role),
+    }));
+
     return NextResponse.json({
-      users: users || [],
+      users: normalizedUsers,
       business: {
         name: business.name,
         tier_id: business.tier_id,
@@ -121,7 +127,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No business context found" }, { status: 400 });
     }
 
-    const { email, full_name, role, password } = await req.json();
+    const { email, full_name, role, password, permissions } = await req.json();
     if (!email || !full_name || !role || !password) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
@@ -197,7 +203,8 @@ export async function POST(req: Request) {
       .from("profiles")
       .update({
         role,
-        full_name
+        full_name,
+        permissions: normalizePermissions(permissions, role),
       })
       .eq("user_id", authUser.user.id);
 

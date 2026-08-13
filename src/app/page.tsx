@@ -429,8 +429,8 @@ export default function LandingPage() {
               {
                 icon: Users,
                 title: "Shared Team Inbox",
-                desc: "One WhatsApp number for your entire team with multi-agent routing, collision detection, custom tags, and internal notes.",
-                points: ["Smart routing to the right agent", "Tags, notes, and full chat history", "Assign and collaborate on chats", "One number, unlimited teammates"],
+                desc: "One WhatsApp number for your entire team with multi-agent routing, collision detection, custom tags, internal notes, and per-member access controls.",
+                points: ["Smart routing to the right agent", "Tags, notes, and full chat history", "Assign and collaborate on chats", "Granular permissions per menu, per member"],
                 reverse: true,
                 mock: (
                   <div className="bg-white border border-border rounded-xl p-4 space-y-3">

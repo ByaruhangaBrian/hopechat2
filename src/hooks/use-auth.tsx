@@ -10,6 +10,7 @@ import {
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import type { Permissions } from "@/lib/permissions";
 
 interface BusinessSubscription {
   id: string;
@@ -30,6 +31,7 @@ interface Profile {
   role: string | null;
   business_id: string | null;
   is_superadmin: boolean;
+  permissions: Permissions | null;
   business?: {
     name: string;
     features: Record<string, boolean>;
@@ -103,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role,
             business_id,
             is_superadmin,
+            permissions,
             business:businesses (
               name,
               features,
@@ -142,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role,
             business_id,
             is_superadmin,
+            permissions,
             business:businesses (
               name,
               features,

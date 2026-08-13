@@ -26,6 +26,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import {
+  defaultPermissionsForRole,
+  normalizePermissions,
+  summarizePermissions,
+  type Permissions,
+} from '@/lib/permissions';
+import { PermissionsEditor } from '@/components/settings/permissions-editor';
 
 interface ProfileRow {
   id: string;
@@ -34,6 +41,7 @@ interface ProfileRow {
   email: string;
   role: string | null;
   created_at: string;
+  permissions?: Permissions | null;
 }
 
 export function UserManagement() {
@@ -59,11 +67,17 @@ export function UserManagement() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'admin' | 'agent'>('agent');
+  const [permissions, setPermissions] = useState<Permissions>(() =>
+    defaultPermissionsForRole('agent')
+  );
 
   // Edit User fields
   const [editingUser, setEditingUser] = useState<ProfileRow | null>(null);
   const [editFullName, setEditFullName] = useState('');
   const [editRole, setEditRole] = useState<'admin' | 'agent'>('agent');
+  const [editPermissions, setEditPermissions] = useState<Permissions>(() =>
+    defaultPermissionsForRole('agent')
+  );
 
   // Delete target
   const [userToDelete, setUserToDelete] = useState<ProfileRow | null>(null);
@@ -121,6 +135,7 @@ export function UserManagement() {
           full_name: fullName.trim(),
           password,
           role,
+          permissions: normalizePermissions(permissions, role),
         }),
       });
 
@@ -138,6 +153,7 @@ export function UserManagement() {
       setEmail('');
       setPassword('');
       setRole('agent');
+      setPermissions(defaultPermissionsForRole('agent'));
       
       // Refresh list
       await fetchUsersAndLimits();
@@ -165,6 +181,7 @@ export function UserManagement() {
         body: JSON.stringify({
           full_name: editFullName.trim(),
           role: editRole,
+          permissions: normalizePermissions(editPermissions, editRole),
         }),
       });
 
@@ -314,6 +331,7 @@ export function UserManagement() {
                   <TableHead className="text-muted-foreground">Name</TableHead>
                   <TableHead className="text-muted-foreground">Email</TableHead>
                   <TableHead className="text-muted-foreground">Role</TableHead>
+                  <TableHead className="text-muted-foreground">Access</TableHead>
                   <TableHead className="text-muted-foreground">Joined</TableHead>
                   <TableHead className="text-muted-foreground text-right">Actions</TableHead>
                 </TableRow>
@@ -348,6 +366,11 @@ export function UserManagement() {
                           {row.role || 'agent'}
                         </Badge>
                       </TableCell>
+                      <TableCell className="text-muted-foreground/60 text-xs max-w-[180px]">
+                        <span className="line-clamp-2" title={summarizePermissions(row.permissions, row.role)}>
+                          {summarizePermissions(row.permissions, row.role)}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-muted-foreground/60 text-xs">
                         {row.created_at ? new Date(row.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
                       </TableCell>
@@ -361,6 +384,7 @@ export function UserManagement() {
                               setEditingUser(row);
                               setEditFullName(row.full_name || '');
                               setEditRole((row.role as 'admin' | 'agent') || 'agent');
+                              setEditPermissions(normalizePermissions(row.permissions, row.role));
                               setEditOpen(true);
                             }}
                             className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -386,7 +410,7 @@ export function UserManagement() {
                 })}
                 {users.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                       No team members found.
                     </TableCell>
                   </TableRow>
@@ -458,12 +482,27 @@ export function UserManagement() {
                 <select
                   id="add-role"
                   value={role}
-                  onChange={(e) => setRole(e.target.value as 'admin' | 'agent')}
+                  onChange={(e) => {
+                    const next = e.target.value as 'admin' | 'agent';
+                    setRole(next);
+                    setPermissions(defaultPermissionsForRole(next));
+                  }}
                   className="h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 >
                   <option value="agent">Agent (View, chat, and work on conversations)</option>
                   <option value="admin">Administrator (Full dashboard & settings access)</option>
                 </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-foreground flex items-center gap-1.5">
+                  Module Access
+                </Label>
+                <p className="text-xs text-muted-foreground/70">
+                  Choose which menu items this user can access. Business configuration
+                  (AI, Automations, Settings) is off by default for agents.
+                </p>
+                <PermissionsEditor value={permissions} onChange={setPermissions} />
               </div>
             </div>
 
@@ -524,12 +563,27 @@ export function UserManagement() {
                 <select
                   id="edit-role"
                   value={editRole}
-                  onChange={(e) => setEditRole(e.target.value as 'admin' | 'agent')}
+                  onChange={(e) => {
+                    const next = e.target.value as 'admin' | 'agent';
+                    setEditRole(next);
+                    setEditPermissions(defaultPermissionsForRole(next));
+                  }}
                   className="h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 >
                   <option value="agent">Agent (View, chat, and work on conversations)</option>
                   <option value="admin">Administrator (Full dashboard & settings access)</option>
                 </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-foreground flex items-center gap-1.5">
+                  Module Access
+                </Label>
+                <p className="text-xs text-muted-foreground/70">
+                  Choose which menu items this user can access. Owners always retain
+                  full access regardless of these settings.
+                </p>
+                <PermissionsEditor value={editPermissions} onChange={setEditPermissions} />
               </div>
             </div>
 
