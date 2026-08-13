@@ -10,6 +10,8 @@ import { MessageThread } from "@/components/inbox/message-thread";
 import { ContactSidebar } from "@/components/inbox/contact-sidebar";
 import { WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
+import { canAccess } from "@/lib/permissions";
 
 export default function InboxPage() {
   const router = useRouter();
@@ -20,6 +22,8 @@ export default function InboxPage() {
    * automatically instead of showing the empty center panel.
    */
   const deepLinkConvId = searchParams.get("c");
+
+  const { user, profile } = useAuth();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] =
@@ -36,30 +40,28 @@ export default function InboxPage() {
   // elsewhere.
   const autoSelectedForDeepLinkRef = useRef<string | null>(null);
 
-  // Check WhatsApp connection status on mount
+  // Check WhatsApp connection status on mount — scope to the user's
+  // BUSINESS, not their user_id, so agents (whose profile shares the
+  // owner's business_id) see the same connection state as the owner.
   useEffect(() => {
     const checkConnection = async () => {
+      if (!user || !profile?.business_id) return;
+
       const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const user = session?.user;
 
-      if (!user) return;
-
-      // Table is `whatsapp_config` (singular) — the previous "whatsapp_configs"
-      // query always returned no rows, so the banner always showed "not connected".
+      // RLS scopes whatsapp_config reads to the user's business, so this
+      // also works while a superadmin is impersonating a tenant.
       const { data } = await supabase
         .from("whatsapp_config")
         .select("status")
-        .eq("user_id", user.id)
+        .eq("business_id", profile.business_id)
         .maybeSingle();
 
       setWhatsappConnected(data?.status === "connected");
     };
 
     checkConnection();
-  }, []);
+  }, [user, profile?.business_id]);
 
   // Handle realtime message events
   const handleMessageEvent = useCallback(
@@ -306,7 +308,9 @@ export default function InboxPage() {
         <div className="flex shrink-0 items-center justify-center gap-2 border-b border-amber-500/20 bg-amber-500/10 px-4 py-2">
           <WifiOff className="h-4 w-4 text-amber-400" />
           <p className="text-xs text-amber-400">
-            WhatsApp® is not connected. Go to Settings to connect your account.
+            {canAccess(profile?.permissions, "settings", profile?.role)
+              ? "WhatsApp® is not connected. Go to Settings to connect your account."
+              : "WhatsApp® is not connected. Please contact your account administrator."}
           </p>
         </div>
       )}
