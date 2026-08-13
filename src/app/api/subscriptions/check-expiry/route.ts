@@ -90,6 +90,7 @@ export async function POST() {
       tierName: tier?.name || subscription.tier_id,
       expiresOn: subscription.expires_on,
       graceEndsOn: subscription.grace_ends_on,
+      businessId,
     });
 
     if (result.ok) {

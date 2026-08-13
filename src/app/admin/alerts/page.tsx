@@ -22,6 +22,7 @@ import {
   RefreshCw,
   Filter,
   Settings,
+  Mail,
 } from "lucide-react";
 import {
   Card,
@@ -78,6 +79,7 @@ const ALERT_TYPES = [
   { value: "payment_failed", label: "Payment Failed", icon: CreditCard, color: "text-red-500" },
   { value: "high_ai_usage", label: "High AI Usage", icon: BarChart3, color: "text-indigo-500" },
   { value: "quota_exceeded", label: "Quota Exceeded", icon: AlertTriangle, color: "text-orange-500" },
+  { value: "email_notification", label: "Email Notifications", icon: Mail, color: "text-blue-500" },
 ];
 
 const SEVERITY_CONFIG = {
@@ -199,10 +201,20 @@ export default function AlertsPage() {
     return () => clearInterval(interval);
   }, []);
 
-  function getAlertIcon(type: string) {
-    const config = ALERT_TYPES.find(t => t.value === type);
+  function isEmailAlert(alert: Alert): boolean {
+    return alert.alert_type === "custom" && alert.metadata?.type === "email_notification";
+  }
+
+  function getAlertIcon(alert: Alert) {
+    if (isEmailAlert(alert)) return <Mail className="h-4 w-4 text-blue-500" />;
+    const config = ALERT_TYPES.find(t => t.value === alert.alert_type);
     if (config) return <config.icon className={cn("h-4 w-4", config.color)} />;
     return <Bell className="h-4 w-4 text-muted-foreground" />;
+  }
+
+  function getAlertLabel(alert: Alert): string {
+    if (isEmailAlert(alert)) return "Email Notification";
+    return alert.alert_type.replace(/_/g, " ");
   }
 
   function getSeverityBadge(severity: string) {
@@ -344,8 +356,8 @@ export default function AlertsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {getAlertIcon(alert.alert_type)}
-                        <span className="text-xs text-muted-foreground capitalize">{alert.alert_type.replace(/_/g, ' ')}</span>
+                        {getAlertIcon(alert)}
+                        <span className="text-xs text-muted-foreground capitalize">{getAlertLabel(alert)}</span>
                       </div>
                     </TableCell>
                     <TableCell>

@@ -24,7 +24,11 @@ export async function GET(req: Request) {
       .limit(limit);
 
     if (unreadOnly) query = query.eq("is_read", false);
-    if (alertType) query = query.eq("alert_type", alertType);
+    if (alertType === "email_notification") {
+      query = query.eq("alert_type", "custom").eq("metadata->>type", "email_notification");
+    } else if (alertType) {
+      query = query.eq("alert_type", alertType);
+    }
 
     const { data, error } = await query;
     if (error) throw error;

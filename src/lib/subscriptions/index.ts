@@ -305,6 +305,7 @@ export async function applySuccessfulPayment(tx: SuccessfulPaymentTx): Promise<v
       months: tx.period_months,
       amountUgx: Number(tx.amount_ugx),
       expiresOn: sub?.expires_on || "",
+      businessId: tx.business_id,
     });
     return;
   }
@@ -315,6 +316,7 @@ export async function applySuccessfulPayment(tx: SuccessfulPaymentTx): Promise<v
       businessName,
       amountUgx: Number(tx.amount_ugx),
       creditsAdded: tx.credits_added,
+      businessId: tx.business_id,
     });
   }
 }

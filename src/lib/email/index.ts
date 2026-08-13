@@ -1,5 +1,6 @@
 import nodemailer, { type Transporter } from "nodemailer";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminAlert } from "@/lib/admin-alerts";
 
 /** Where demo / setup-service requests are delivered. */
 export const DEMO_REQUEST_RECIPIENT = "hopetechsolutionsltd@gmail.com";
@@ -55,6 +56,8 @@ export interface SendEmailInput {
   subject: string;
   text: string;
   html?: string;
+  /** Business the email relates to, for admin-alert attribution. */
+  businessId?: string | null;
 }
 
 /**
@@ -67,6 +70,7 @@ export async function sendEmail(input: SendEmailInput): Promise<{ ok: boolean; e
 
   if (!isEmailConfigured(settings)) {
     console.warn("[email] SMTP not configured — skipping email to", input.to, input.subject);
+    await logEmailAlert(input, false, "SMTP not configured", "critical");
     return { ok: false, error: "SMTP not configured" };
   }
 
@@ -79,12 +83,39 @@ export async function sendEmail(input: SendEmailInput): Promise<{ ok: boolean; e
       text: input.text,
       html: input.html,
     });
+    await logEmailAlert(input, true);
     return { ok: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[email] Failed to send email:", message);
+    await logEmailAlert(input, false, message, "critical");
     return { ok: false, error: message };
   }
+}
+
+/** Record every email send attempt in the admin alerts section. */
+async function logEmailAlert(
+  input: SendEmailInput,
+  ok: boolean,
+  error?: string,
+  severity: "info" | "warning" | "critical" = "info",
+): Promise<void> {
+  await createAdminAlert({
+    alertType: "custom",
+    businessId: input.businessId,
+    severity,
+    title: ok ? `Email sent — ${input.subject}` : `Email failed — ${input.subject}`,
+    message: ok
+      ? `Notification email sent to ${input.to}.`
+      : `Notification email to ${input.to} failed${error ? `: ${error}` : "."}`,
+    metadata: {
+      type: "email_notification",
+      to: input.to,
+      subject: input.subject,
+      ok,
+      error: error ?? null,
+    },
+  });
 }
 
 function layout(subject: string, bodyHtml: string): string {
@@ -131,8 +162,9 @@ export async function sendSubscriptionReceipt(input: {
   months: number;
   amountUgx: number;
   expiresOn: string;
+  businessId?: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
-  const { to, businessName, tierName, months, amountUgx, expiresOn } = input;
+  const { to, businessName, tierName, months, amountUgx, expiresOn, businessId } = input;
   const body = `
     <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
       Hi <strong>${escapeHtml(businessName)}</strong>,<br/>
@@ -146,7 +178,7 @@ export async function sendSubscriptionReceipt(input: {
     </table>
     <p style="margin:0;color:#3f3f46;font-size:14px;">Thank you for subscribing with HopeChat.</p>
   `;
-  return sendEmail({ to, subject: `Your ${tierName} subscription is active`, text: `Your ${tierName} subscription has been activated (${months} month(s), ${price(amountUgx)}). Valid until ${expiresOn}.`, html: layout(`Subscription activated`, body) });
+  return sendEmail({ to, subject: `Your ${tierName} subscription is active`, text: `Your ${tierName} subscription has been activated (${months} month(s), ${price(amountUgx)}). Valid until ${expiresOn}.`, html: layout(`Subscription activated`, body), businessId });
 }
 
 export async function sendCreditReceipt(input: {
@@ -154,8 +186,9 @@ export async function sendCreditReceipt(input: {
   businessName: string;
   amountUgx: number;
   creditsAdded: number;
+  businessId?: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
-  const { to, businessName, amountUgx, creditsAdded } = input;
+  const { to, businessName, amountUgx, creditsAdded, businessId } = input;
   const body = `
     <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
       Hi <strong>${escapeHtml(businessName)}</strong>,<br/>
@@ -166,7 +199,7 @@ export async function sendCreditReceipt(input: {
       <tr><td style="padding:10px 16px;font-size:13px;color:#71717a;">Credits added</td><td style="padding:10px 16px;font-size:13px;color:#18181b;font-weight:bold;">${creditsAdded.toLocaleString()}</td></tr>
     </table>
   `;
-  return sendEmail({ to, subject: "Credits added to your account", text: `${creditsAdded.toLocaleString()} credits (${price(amountUgx)}) were added to your account.`, html: layout("Credits added", body) });
+  return sendEmail({ to, subject: "Credits added to your account", text: `${creditsAdded.toLocaleString()} credits (${price(amountUgx)}) were added to your account.`, html: layout("Credits added", body), businessId });
 }
 
 export async function sendExpiryWarning(input: {
@@ -175,8 +208,9 @@ export async function sendExpiryWarning(input: {
   tierName: string;
   expiresOn: string;
   graceEndsOn: string;
+  businessId?: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
-  const { to, businessName, tierName, expiresOn, graceEndsOn } = input;
+  const { to, businessName, tierName, expiresOn, graceEndsOn, businessId } = input;
   const body = `
     <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
       Hi <strong>${escapeHtml(businessName)}</strong>,<br/>
@@ -188,7 +222,7 @@ export async function sendExpiryWarning(input: {
     </table>
     <p style="margin:0;color:#3f3f46;font-size:14px;">Renew in the Billing section of your dashboard to keep your service active. After the grace period, your account will be suspended until you renew.</p>
   `;
-  return sendEmail({ to, subject: "Your subscription is expiring", text: `Your ${tierName} subscription expires on ${expiresOn} (grace until ${graceEndsOn}). Please renew to avoid suspension.`, html: layout("Subscription expiring", body) });
+  return sendEmail({ to, subject: "Your subscription is expiring", text: `Your ${tierName} subscription expires on ${expiresOn} (grace until ${graceEndsOn}). Please renew to avoid suspension.`, html: layout("Subscription expiring", body), businessId });
 }
 
 export async function sendDemoRequestNotification(input: {
