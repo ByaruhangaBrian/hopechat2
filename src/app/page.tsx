@@ -31,6 +31,8 @@ import {
   Timer,
   MessageSquareText,
   Check,
+  Sparkles,
+  Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +60,7 @@ export default function LandingPage() {
     { label: "Pricing", href: "#pricing" },
     { label: "Integrations", href: "#integrations" },
     { label: "How It Works", href: "#how-it-works" },
+    { label: "Setup Service", href: "#setup-service" },
     { label: "FAQ", href: "#faq" },
   ];
 
@@ -89,6 +92,10 @@ export default function LandingPage() {
     {
       q: "How do I pay for my subscription?",
       a: "Pay securely through Pesapal using Mobile Money or credit card, right from your dashboard. You can also top up message credits any time, and your plan, billing period, and credit balance are all visible in the Billing section.",
+    },
+    {
+      q: "Do you offer setup or onboarding help?",
+      a: "Yes. Our concierge onboarding team can configure your Meta / WhatsApp API credentials, set up automations, and train your AI assistant for you. It's a one-time fee based on company size, starting at 300,000 UGX. Request a free demo and we'll send you a tailored quote.",
     },
     {
       q: "Can HopeChat send SMS as well as WhatsApp messages?",
@@ -167,7 +174,7 @@ export default function LandingPage() {
                     Start Free Trial
                     <ArrowRight className="ml-2 h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />
                   </Link>
-                  <Link href="#features" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full sm:w-auto h-12 px-8 text-base border-border bg-white text-foreground font-bold hover:scale-[1.02] active:scale-[0.98] transition-all rounded-xl")}>
+                  <Link href="/request-demo" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full sm:w-auto h-12 px-8 text-base border-border bg-white text-foreground font-bold hover:scale-[1.02] active:scale-[0.98] transition-all rounded-xl")}>
                     Book a Demo
                   </Link>
                 </div>
@@ -584,6 +591,101 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* ─── SETUP SERVICE ─── */}
+        <section id="setup-service" className="py-20 lg:py-28 bg-white border-t border-border overflow-hidden">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-12">
+            <motion.div className="text-center space-y-4 max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
+              <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Don&apos;t have time? We&apos;ll set it up for you.</motion.h2>
+              <motion.p variants={fadeUp} custom={0.1} className="text-base text-muted-foreground leading-relaxed font-medium">
+                Our concierge onboarding team handles your Meta / WhatsApp API configuration,
+                automation setup, and AI assistant training for you — a one-time setup fee based
+                on company size, starting at 300,000 UGX. You focus on your business.
+              </motion.p>
+            </motion.div>
+
+            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {[
+                {
+                  size: "1–5 staff",
+                  tag: "Small business",
+                  price: "300,000",
+                  features: ["Meta / WhatsApp API configuration", "AI assistant training on your business", "Welcome message & basic automations", "1-hour team onboarding session"],
+                },
+                {
+                  size: "6–20 staff",
+                  tag: "Growing business",
+                  price: "500,000",
+                  popular: true,
+                  features: ["Everything in Small", "Broadcast & SMS campaign setup", "Flow-builder automations & drip sequences", "Team training (up to 3 hours)"],
+                },
+                {
+                  size: "21+ staff",
+                  tag: "Large business",
+                  price: "800,000",
+                  features: ["Everything in Growing", "Full Meta Business configuration", "Custom integrations (CRM, Sheets, webhooks)", "Dedicated onboarding engineer"],
+                },
+              ].map((tier, i) => (
+                <motion.div
+                  key={i}
+                  className={cn(
+                    "relative flex flex-col rounded-2xl border p-6 lg:p-8",
+                    tier.popular
+                      ? "border-primary/40 bg-white shadow-xl shadow-primary/10 lg:scale-[1.03]"
+                      : "border-border bg-white shadow-sm",
+                  )}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                >
+                  {tier.popular && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-[10px] font-extrabold uppercase tracking-wider text-primary-foreground shadow-md">
+                      Most Popular
+                    </span>
+                  )}
+                  <div className="inline-flex items-center gap-2 text-xs font-bold text-primary bg-primary/5 px-3 py-1 rounded-full border border-primary/20 w-fit">
+                    {tier.tag}
+                  </div>
+                  <div className="mt-4 flex items-baseline gap-1.5">
+                    <span className="text-4xl font-extrabold tracking-tight text-foreground">UGX {tier.price}</span>
+                    <span className="text-sm font-bold text-muted-foreground">/ one-time</span>
+                  </div>
+                  <p className="mt-1 text-sm font-bold text-muted-foreground">{tier.size}</p>
+                  <ul className="mt-6 space-y-2.5 flex-1">
+                    {tier.features.map((f, j) => (
+                      <li key={j} className="flex items-start gap-2.5 text-sm font-medium text-foreground">
+                        <div className="h-4 w-4 rounded-full bg-primary/10 text-primary flex items-center justify-center mt-0.5 shrink-0">
+                          <Check className="h-2.5 w-2.5" />
+                        </div>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href="/request-demo"
+                    className={cn(
+                      buttonVariants(),
+                      "w-full mt-8 font-bold rounded-xl h-11",
+                      tier.popular
+                        ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 border-0"
+                        : "bg-white border border-primary/30 text-primary hover:bg-primary/5",
+                    )}
+                  >
+                    Request Setup & Demo
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+
+            <motion.div className="text-center" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
+              <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-5 py-3 text-sm font-medium text-foreground">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Not sure what you need? Book a free demo and we&apos;ll recommend the right setup for your business.
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
         {/* ─── PRICING ─── */}
         <section id="pricing" className="py-20 lg:py-28 bg-background border-t border-border overflow-hidden">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-12">
@@ -755,7 +857,7 @@ export default function LandingPage() {
                     Start Free Trial
                     <ArrowRight className="ml-2 h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />
                   </Link>
-                  <Link href="#" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full sm:w-auto h-12 px-8 text-base border-border bg-white text-foreground font-bold rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all")}>
+                  <Link href="/request-demo" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full sm:w-auto h-12 px-8 text-base border-border bg-white text-foreground font-bold rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all")}>
                     Schedule a Demo
                   </Link>
                 </div>
@@ -781,6 +883,14 @@ export default function LandingPage() {
                 The WhatsApp CRM and automation platform built for East African businesses. Automate conversations, run broadcast campaigns, build no-code chatbots, and connect your existing tools — all on the official WhatsApp Business API.
               </p>
               <p className="text-xs font-bold text-muted-foreground">Built by HopeTech Solutions Ltd · Kampala, Uganda</p>
+              <div className="space-y-2 pt-1">
+                <a href="tel:+256763149276" className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors">
+                  <Phone className="h-3.5 w-3.5 text-primary" /> +256 763 149 276
+                </a>
+                <a href="mailto:hopetechsolutionsltd@gmail.com" className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors">
+                  <Mail className="h-3.5 w-3.5 text-primary" /> hopetechsolutionsltd@gmail.com
+                </a>
+              </div>
             </div>
 
             <div>
@@ -819,10 +929,13 @@ export default function LandingPage() {
             <div>
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-foreground mb-4">Company</h4>
               <ul className="space-y-2.5 text-xs text-muted-foreground font-semibold">
+                <li><Link href="/request-demo" className="hover:text-primary transition-colors">Request a Demo</Link></li>
+                <li><Link href="#setup-service" className="hover:text-primary transition-colors">Setup Service</Link></li>
+                <li><a href="tel:+256763149276" className="hover:text-primary transition-colors">+256 763 149 276</a></li>
+                <li><a href="mailto:hopetechsolutionsltd@gmail.com" className="hover:text-primary transition-colors">Email Us</a></li>
                 <li><Link href="#" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
                 <li><Link href="#" className="hover:text-primary transition-colors">Terms of Service</Link></li>
                 <li><Link href="#" className="hover:text-primary transition-colors">Refund Policy</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Contact</Link></li>
               </ul>
             </div>
           </div>

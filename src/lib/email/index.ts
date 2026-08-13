@@ -1,6 +1,9 @@
 import nodemailer, { type Transporter } from "nodemailer";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+/** Where demo / setup-service requests are delivered. */
+export const DEMO_REQUEST_RECIPIENT = "hopetechsolutionsltd@gmail.com";
+
 export interface EmailSettings {
   host: string;
   port: number;
@@ -186,6 +189,65 @@ export async function sendExpiryWarning(input: {
     <p style="margin:0;color:#3f3f46;font-size:14px;">Renew in the Billing section of your dashboard to keep your service active. After the grace period, your account will be suspended until you renew.</p>
   `;
   return sendEmail({ to, subject: "Your subscription is expiring", text: `Your ${tierName} subscription expires on ${expiresOn} (grace until ${graceEndsOn}). Please renew to avoid suspension.`, html: layout("Subscription expiring", body) });
+}
+
+export async function sendDemoRequestNotification(input: {
+  name: string;
+  businessName: string;
+  companySize: string;
+  phone: string;
+  email: string;
+  services: string[];
+  message: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const { name, businessName, companySize, phone, email, services, message } = input;
+  const body = `
+    <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      A new demo / setup-service request was submitted on the HopeChat website.
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e4e4e7;border-radius:8px;margin-bottom:16px;">
+      <tr><td style="padding:10px 16px;font-size:13px;color:#71717a;">Name</td><td style="padding:10px 16px;font-size:13px;color:#18181b;font-weight:bold;">${escapeHtml(name)}</td></tr>
+      <tr><td style="padding:10px 16px;font-size:13px;color:#71717a;">Business</td><td style="padding:10px 16px;font-size:13px;color:#18181b;font-weight:bold;">${escapeHtml(businessName)}</td></tr>
+      <tr><td style="padding:10px 16px;font-size:13px;color:#71717a;">Company size</td><td style="padding:10px 16px;font-size:13px;color:#18181b;font-weight:bold;">${escapeHtml(companySize)}</td></tr>
+      <tr><td style="padding:10px 16px;font-size:13px;color:#71717a;">Phone / WhatsApp</td><td style="padding:10px 16px;font-size:13px;color:#18181b;font-weight:bold;">${escapeHtml(phone)}</td></tr>
+      <tr><td style="padding:10px 16px;font-size:13px;color:#71717a;">Email</td><td style="padding:10px 16px;font-size:13px;color:#18181b;font-weight:bold;">${escapeHtml(email)}</td></tr>
+      <tr><td style="padding:10px 16px;font-size:13px;color:#71717a;">Services</td><td style="padding:10px 16px;font-size:13px;color:#18181b;font-weight:bold;">${services.length ? services.map(escapeHtml).join(", ") : "—"}</td></tr>
+      <tr><td style="padding:10px 16px;font-size:13px;color:#71717a;">Message</td><td style="padding:10px 16px;font-size:13px;color:#18181b;font-weight:bold;">${escapeHtml(message) || "—"}</td></tr>
+    </table>
+    <p style="margin:0;color:#3f3f46;font-size:14px;">Reply directly to ${escapeHtml(email)} or call/WhatsApp ${escapeHtml(phone)}.</p>
+  `;
+  return sendEmail({
+    to: DEMO_REQUEST_RECIPIENT,
+    subject: `New demo / setup request — ${escapeHtml(businessName)}`,
+    text: `Demo / setup request: ${name} (${businessName}, ${companySize}). Phone: ${phone}. Email: ${email}. Services: ${services.join(", ") || "—"}. Message: ${message || "—"}`,
+    html: layout("New demo / setup request", body),
+  });
+}
+
+export async function sendDemoRequestConfirmation(input: {
+  to: string;
+  name: string;
+  businessName: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const { to, name, businessName } = input;
+  const body = `
+    <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      Hi <strong>${escapeHtml(name)}</strong>,<br/>
+      Thanks for requesting a demo of HopeChat for <strong>${escapeHtml(businessName)}</strong>.
+    </p>
+    <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      Our team will reach out within 1 business day to schedule your demo and, if you're interested, walk you through our concierge setup service.
+    </p>
+    <p style="margin:0;color:#3f3f46;font-size:14px;line-height:1.6;">
+      Need us sooner? Call or WhatsApp us on <strong>+256 763 149 276</strong> or email <strong>hopetechsolutionsltd@gmail.com</strong>.
+    </p>
+  `;
+  return sendEmail({
+    to,
+    subject: "We received your HopeChat demo request",
+    text: `Hi ${name}, thanks for requesting a demo of HopeChat for ${businessName}. Our team will reach out within 1 business day. Need us sooner? Call/WhatsApp +256 763 149 276 or email hopetechsolutionsltd@gmail.com.`,
+    html: layout("Demo request received", body),
+  });
 }
 
 function escapeHtml(value: string): string {
