@@ -48,7 +48,8 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
+:root,
+.landing-light {
   /* Forest Green Light Theme (Sage/Teal) */
   --background: oklch(0.98 0.01 170);
   --foreground: oklch(0.2 0.04 170);
@@ -78,6 +79,12 @@
   --sidebar-accent-foreground: oklch(0.2 0.05 170);
   --sidebar-border: oklch(0.9 0.02 170);
   --sidebar-ring: oklch(0.5 0.15 170);
+}
+
+/* Landing page is designed as light-only, so force light vars + color-scheme
+   even when the app is in dark mode (e.g. OS-level dark). */
+.landing-light {
+  color-scheme: light;
 }
 
 .dark {

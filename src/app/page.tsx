@@ -104,7 +104,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-white text-foreground antialiased font-sans selection:bg-primary/20">
+    <div className="landing-light flex min-h-screen flex-col bg-white text-foreground antialiased font-sans selection:bg-primary/20">
 
       {/* ─── HEADER ─── */}
       <header className="sticky top-0 z-50 w-full border-b border-border bg-white/90 backdrop-blur-md">
