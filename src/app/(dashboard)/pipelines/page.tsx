@@ -454,6 +454,15 @@ export default function PipelinesPage() {
             setSettingsOpen(false);
             setNewPipelineOpen(true);
           }}
+          onDeleted={(id) => {
+            // Optimistic removal — the pipeline disappears instantly; the
+            // selection effect reloads stages/deals for the next pipeline.
+            const rest = pipelines.filter((p) => p.id !== id);
+            setPipelines(rest);
+            if (selectedPipelineId === id || !rest.some((p) => p.id === selectedPipelineId)) {
+              setSelectedPipelineId(rest[0]?.id ?? "");
+            }
+          }}
         />
       )}
 
@@ -466,6 +475,7 @@ export default function PipelinesPage() {
         stages={stages}
         defaultStageId={defaultStageId}
         onSaved={refreshDeals}
+        onDeleted={(dealId) => setDeals((prev) => prev.filter((d) => d.id !== dealId))}
       />
     </div>
   );

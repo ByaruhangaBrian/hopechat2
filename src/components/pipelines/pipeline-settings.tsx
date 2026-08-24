@@ -58,6 +58,7 @@ interface PipelineSettingsProps {
   onPipelinesChanged: () => void;
   onStagesChanged: () => void;
   onCreateNewPipeline: () => void;
+  onDeleted?: (pipelineId: string) => void;
 }
 
 export function PipelineSettings({
@@ -68,6 +69,7 @@ export function PipelineSettings({
   onPipelinesChanged,
   onStagesChanged,
   onCreateNewPipeline,
+  onDeleted,
 }: PipelineSettingsProps) {
   const supabase = createClient();
 
@@ -196,7 +198,7 @@ export function PipelineSettings({
       return;
     }
     onOpenChange(false);
-    onPipelinesChanged();
+    onDeleted?.(pipeline.id);
     toast.success("Pipeline deleted");
   }
 

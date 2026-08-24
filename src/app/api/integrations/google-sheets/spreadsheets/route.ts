@@ -138,13 +138,23 @@ export async function DELETE(req: Request) {
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'Spreadsheet ID is required' }, { status: 400 });
 
-    const { error } = await supabase
+    // `.select('id')` returns the deleted rows — with RLS a missing/denied
+    // DELETE policy silently affects 0 rows, which must not read as success.
+    const { data, error } = await supabase
       .from('business_spreadsheets')
       .delete()
       .eq('id', id)
-      .eq('business_id', profile.business_id);
+      .eq('business_id', profile.business_id)
+      .select('id');
 
     if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return NextResponse.json(
+        { error: 'Spreadsheet could not be deleted. It may have already been removed — try refreshing.' },
+        { status: 404 },
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

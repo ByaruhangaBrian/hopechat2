@@ -60,7 +60,6 @@ export default function AutomationsPage() {
   const [automations, setAutomations] = useState<Automation[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<Automation | null>(null)
-  const [deleting, setDeleting] = useState(false)
 
   async function load() {
     try {
@@ -115,17 +114,19 @@ export default function AutomationsPage() {
 
   async function confirmDelete() {
     if (!pendingDelete) return
-    setDeleting(true)
-    const res = await fetch(`/api/automations/${pendingDelete.id}`, { method: "DELETE" })
-    setDeleting(false)
+    const target = pendingDelete
+    // Optimistic removal — the card disappears instantly; restored on failure.
+    setAutomations((prev) => prev?.filter((x) => x.id !== target.id) ?? prev)
+    setPendingDelete(null)
+    const res = await fetch(`/api/automations/${target.id}`, { method: "DELETE" })
     if (!res.ok) {
+      setAutomations((prev) => (prev?.some((x) => x.id === target.id) ? prev : [target, ...(prev ?? [])]))
+      setPendingDelete(target)
       const body = await res.json().catch(() => ({}))
       toast.error(body?.error ?? "Failed to delete")
       return
     }
     toast.success("Automation deleted")
-    setPendingDelete(null)
-    load()
   }
 
   async function startFromTemplate(slug: TemplateSlug) {
@@ -236,16 +237,14 @@ export default function AutomationsPage() {
             <Button
               variant="ghost"
               onClick={() => setPendingDelete(null)}
-              disabled={deleting}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={confirmDelete}
-              disabled={deleting}
             >
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              <Trash2 className="h-4 w-4" />
               Delete
             </Button>
           </DialogFooter>

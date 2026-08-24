@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { TableProperties, Plus, Pencil, Trash2, ExternalLink, Info, Copy, AlertCircle } from 'lucide-react';
 import { BusinessSpreadsheet } from '@/types';
+import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 
 export function SpreadsheetManager({ globalBotEmail }: { globalBotEmail?: string }) {
   const [spreadsheets, setSpreadsheets] = useState<BusinessSpreadsheet[]>([]);
@@ -17,6 +18,8 @@ export function SpreadsheetManager({ globalBotEmail }: { globalBotEmail?: string
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<BusinessSpreadsheet | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -124,15 +127,34 @@ export function SpreadsheetManager({ globalBotEmail }: { globalBotEmail?: string
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    const index = spreadsheets.findIndex((s) => s.id === target.id);
+
+    setDeleting(true);
+    // Optimistic removal — the card disappears instantly; restored on failure.
+    setSpreadsheets((prev) => prev.filter((s) => s.id !== target.id));
+    setDeleteTarget(null);
+
     try {
-      const res = await fetch(`/api/integrations/google-sheets/spreadsheets?id=${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Delete failed');
+      const res = await fetch(`/api/integrations/google-sheets/spreadsheets?id=${target.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Delete failed');
+      }
       toast.success('Spreadsheet removed');
-      fetchSpreadsheets();
     } catch (err: any) {
+      setSpreadsheets((prev) => {
+        if (prev.some((s) => s.id === target.id)) return prev;
+        const next = [...prev];
+        next.splice(index < 0 ? next.length : index, 0, target);
+        return next;
+      });
+      setDeleteTarget(target);
       toast.error(err.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -224,7 +246,7 @@ export function SpreadsheetManager({ globalBotEmail }: { globalBotEmail?: string
                   <Button variant="ghost" size="icon" className="size-8" onClick={() => openEdit(sheet)} title="Edit">
                     <Pencil className="size-3.5" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="size-8 text-red-400 hover:text-red-500" onClick={() => handleDelete(sheet.id, sheet.name)} title="Delete">
+                  <Button variant="ghost" size="icon" className="size-8 text-red-400 hover:text-red-500" onClick={() => setDeleteTarget(sheet)} title="Delete">
                     <Trash2 className="size-3.5" />
                   </Button>
                 </div>
@@ -390,6 +412,17 @@ export function SpreadsheetManager({ globalBotEmail }: { globalBotEmail?: string
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmationModal
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Spreadsheet"
+        description={`Are you sure you want to delete "${deleteTarget?.name}"? The AI will no longer be able to look up data in this spreadsheet. This cannot be undone.`}
+        confirmText="Delete"
+        onConfirm={handleDelete}
+        variant="destructive"
+        loading={deleting}
+      />
     </div>
   );
 }

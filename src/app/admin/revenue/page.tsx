@@ -54,6 +54,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 
 interface Transaction {
   id: string;
@@ -125,6 +126,10 @@ export default function RevenueDashboardPage() {
   });
   const [savingExpense, setSavingExpense] = useState(false);
 
+  // Expense delete
+  const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+  const [deletingExpense, setDeletingExpense] = useState(false);
+
   async function fetchData() {
     setLoading(true);
     try {
@@ -187,14 +192,31 @@ export default function RevenueDashboardPage() {
     }
   }
 
-  async function deleteExpense(id: string) {
+  async function deleteExpense() {
+    if (!expenseToDelete) return;
+    const target = expenseToDelete;
+    const index = expenses.findIndex((e) => e.id === target.id);
+
+    setDeletingExpense(true);
+    // Optimistic removal — the row disappears instantly; restored on failure.
+    setExpenses((prev) => prev.filter((e) => e.id !== target.id));
+    setExpenseToDelete(null);
+
     try {
-      const res = await fetch(`/api/admin/expenses?id=${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/expenses?id=${target.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
       toast.success("Expense deleted");
-      fetchData();
     } catch (err) {
+      setExpenses((prev) => {
+        if (prev.some((e) => e.id === target.id)) return prev;
+        const next = [...prev];
+        next.splice(index < 0 ? next.length : index, 0, target);
+        return next;
+      });
+      setExpenseToDelete(target);
       toast.error("Failed to delete expense");
+    } finally {
+      setDeletingExpense(false);
     }
   }
 
@@ -406,7 +428,7 @@ export default function RevenueDashboardPage() {
                     <TableCell className="text-sm font-bold text-red-500">UGX {Number(exp.amount_ugx).toLocaleString()}</TableCell>
                     <TableCell className="text-xs text-muted-foreground/60 font-mono">{exp.reference || "—"}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => deleteExpense(exp.id)} className="text-red-500 hover:text-red-600 hover:bg-red-500/10 h-7">
+                      <Button variant="ghost" size="sm" onClick={() => setExpenseToDelete(exp)} className="text-red-500 hover:text-red-600 hover:bg-red-500/10 h-7">
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </TableCell>
@@ -474,6 +496,17 @@ export default function RevenueDashboardPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmationModal
+        open={!!expenseToDelete}
+        onOpenChange={(open) => !open && setExpenseToDelete(null)}
+        title="Delete Expense"
+        description={`Are you sure you want to delete "${expenseToDelete?.description}"? This cannot be undone.`}
+        confirmText="Delete"
+        onConfirm={deleteExpense}
+        variant="destructive"
+        loading={deletingExpense}
+      />
     </div>
   );
 }

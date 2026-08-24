@@ -205,10 +205,17 @@ export function UserManagement() {
   // Handle delete
   async function handleDeleteUser() {
     if (!userToDelete) return;
+    const target = userToDelete;
+    const index = users.findIndex((u) => u.user_id === target.user_id);
+
+    // Optimistic removal — the row disappears instantly; restored on failure.
+    setUsers((prev) => prev.filter((u) => u.user_id !== target.user_id));
+    setDeleteOpen(false);
+    setUserToDelete(null);
 
     try {
       setDeleting(true);
-      const res = await fetch(`/api/tenant/users/${userToDelete.user_id}`, {
+      const res = await fetch(`/api/tenant/users/${target.user_id}`, {
         method: 'DELETE',
       });
 
@@ -219,10 +226,13 @@ export function UserManagement() {
       }
 
       toast.success('Team member removed successfully');
-      setDeleteOpen(false);
-      setUserToDelete(null);
-      await fetchUsersAndLimits();
     } catch (err: any) {
+      setUsers((prev) => {
+        if (prev.some((u) => u.user_id === target.user_id)) return prev;
+        const next = [...prev];
+        next.splice(index < 0 ? next.length : index, 0, target);
+        return next;
+      });
       toast.error(err.message || 'Failed to delete user');
     } finally {
       setDeleting(false);

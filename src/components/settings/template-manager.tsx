@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { MessageTemplate } from '@/types';
+import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 
 const CATEGORIES = ['Marketing', 'Utility', 'Authentication'] as const;
 const HEADER_TYPES = ['text', 'image', 'video', 'document'] as const;
@@ -101,6 +102,8 @@ export function TemplateManager() {
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [form, setForm] = useState<TemplateFormData>(emptyForm);
+  const [templateToDelete, setTemplateToDelete] = useState<MessageTemplate | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -228,19 +231,36 @@ export function TemplateManager() {
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete() {
+    if (!templateToDelete) return;
+    const target = templateToDelete;
+    const index = templates.findIndex((t) => t.id === target.id);
+
+    setDeleting(true);
+    // Optimistic removal — the card disappears instantly; restored on failure.
+    setTemplates((prev) => prev.filter((t) => t.id !== target.id));
+    setTemplateToDelete(null);
+
     try {
       const { error } = await supabase
         .from('message_templates')
         .delete()
-        .eq('id', id);
+        .eq('id', target.id);
 
       if (error) throw error;
       toast.success('Template deleted');
-      setTemplates((prev) => prev.filter((t) => t.id !== id));
     } catch (err) {
       console.error('Delete error:', err);
+      setTemplates((prev) => {
+        if (prev.some((t) => t.id === target.id)) return prev;
+        const next = [...prev];
+        next.splice(index < 0 ? next.length : index, 0, target);
+        return next;
+      });
+      setTemplateToDelete(target);
       toast.error('Failed to delete template');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -326,7 +346,7 @@ export function TemplateManager() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDelete(template.id)}
+                  onClick={() => setTemplateToDelete(template)}
                   className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0 ml-2"
                 >
                   <Trash2 className="size-4" />
@@ -471,6 +491,17 @@ export function TemplateManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmationModal
+        open={!!templateToDelete}
+        onOpenChange={(open) => !open && setTemplateToDelete(null)}
+        title="Delete Template"
+        description={`Are you sure you want to delete "${templateToDelete?.name}"? This cannot be undone.`}
+        confirmText="Delete"
+        onConfirm={handleDelete}
+        variant="destructive"
+        loading={deleting}
+      />
     </div>
   );
 }

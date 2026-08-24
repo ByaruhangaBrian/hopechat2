@@ -39,6 +39,7 @@ interface DealFormProps {
   stages: PipelineStage[];
   defaultStageId?: string;
   onSaved: () => void;
+  onDeleted?: (dealId: string) => void;
 }
 
 export function DealForm({
@@ -49,6 +50,7 @@ export function DealForm({
   stages,
   defaultStageId,
   onSaved,
+  onDeleted,
 }: DealFormProps) {
   const supabase = createClient();
 
@@ -231,8 +233,8 @@ export function DealForm({
     }
     toast.success("Deal deleted");
     setConfirmDelete(false);
+    onDeleted?.(deal.id);
     onOpenChange(false);
-    onSaved();
   }
 
   return (

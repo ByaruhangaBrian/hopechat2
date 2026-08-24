@@ -182,23 +182,35 @@ export default function ContactsPage() {
 
   async function handleDelete() {
     if (!deleteTarget) return;
+    const target = deleteTarget;
+    const index = contacts.findIndex((c) => c.id === target.id);
+
     setDeleting(true);
+    // Optimistic removal — the row disappears instantly; restored on failure.
+    setContacts((prev) => prev.filter((c) => c.id !== target.id));
+    setTotalCount((n) => Math.max(0, n - 1));
+    setDeleteConfirmOpen(false);
+    setDeleteTarget(null);
 
     const { error } = await supabase
       .from('contacts')
       .delete()
-      .eq('id', deleteTarget.id);
+      .eq('id', target.id);
+    setDeleting(false);
 
     if (error) {
+      setContacts((prev) => {
+        if (prev.some((c) => c.id === target.id)) return prev;
+        const next = [...prev];
+        next.splice(index < 0 ? next.length : index, 0, target);
+        return next;
+      });
+      setTotalCount((n) => n + 1);
       toast.error('Failed to delete contact');
-    } else {
-      toast.success('Contact deleted');
-      fetchContacts();
+      return;
     }
 
-    setDeleting(false);
-    setDeleteConfirmOpen(false);
-    setDeleteTarget(null);
+    toast.success('Contact deleted');
   }
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);

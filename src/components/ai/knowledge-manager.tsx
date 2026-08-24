@@ -146,17 +146,30 @@ export function KnowledgeManager() {
   };
 
   const handleDelete = async (id: string) => {
+    const index = items.findIndex((i) => i.id === id);
+    const target = index >= 0 ? items[index] : null;
+
     setIsDeleting(true);
+    // Optimistic removal — the card disappears instantly; restored on failure.
+    setItems((prev) => prev.filter((i) => i.id !== id));
+
     const { error } = await supabase
       .from('business_knowledge')
       .delete()
       .eq('id', id);
 
     if (error) {
+      if (target) {
+        setItems((prev) => {
+          if (prev.some((i) => i.id === id)) return prev;
+          const next = [...prev];
+          next.splice(index, 0, target);
+          return next;
+        });
+      }
       toast.error('Failed to delete item');
     } else {
       toast.success('Item deleted');
-      fetchItems();
     }
     setIsDeleting(false);
     setIsDeleteModalOpen(false);
