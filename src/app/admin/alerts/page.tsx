@@ -226,6 +226,8 @@ export default function AlertsPage() {
     );
   }
 
+  const isEmailView = filter === "email_notification";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -319,66 +321,111 @@ export default function AlertsPage() {
             <TableHeader className="bg-muted/50">
               <TableRow className="hover:bg-transparent border-border">
                 <TableHead className="text-muted-foreground w-8"></TableHead>
-                <TableHead className="text-muted-foreground">Type</TableHead>
-                <TableHead className="text-muted-foreground">Title</TableHead>
-                <TableHead className="text-muted-foreground">Severity</TableHead>
-                <TableHead className="text-muted-foreground">Time</TableHead>
+                {isEmailView ? (
+                  <>
+                    <TableHead className="text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-muted-foreground">Recipient</TableHead>
+                    <TableHead className="text-muted-foreground">Subject</TableHead>
+                    <TableHead className="text-muted-foreground">Details</TableHead>
+                    <TableHead className="text-muted-foreground">Time</TableHead>
+                  </>
+                ) : (
+                  <>
+                    <TableHead className="text-muted-foreground">Type</TableHead>
+                    <TableHead className="text-muted-foreground">Title</TableHead>
+                    <TableHead className="text-muted-foreground">Severity</TableHead>
+                    <TableHead className="text-muted-foreground">Time</TableHead>
+                  </>
+                )}
                 <TableHead className="text-muted-foreground text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={isEmailView ? 7 : 6} className="h-24 text-center text-muted-foreground">
                     <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" />
                     Loading alerts...
                   </TableCell>
                 </TableRow>
               ) : alerts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={isEmailView ? 7 : 6} className="h-24 text-center text-muted-foreground">
                     <BellOff className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
                     No alerts found.
                   </TableCell>
                 </TableRow>
               ) : (
-                alerts.map((alert) => (
-                  <TableRow 
-                    key={alert.id} 
-                    className={cn(
-                      "border-border hover:bg-muted/30 cursor-pointer",
-                      !alert.is_read && "bg-primary/5"
-                    )}
-                    onClick={() => !alert.is_read && markAsRead(alert.id)}
-                  >
-                    <TableCell>
-                      {!alert.is_read && <div className="h-2 w-2 rounded-full bg-primary" />}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {getAlertIcon(alert)}
-                        <span className="text-xs text-muted-foreground capitalize">{getAlertLabel(alert)}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <span className={cn("text-sm font-medium", !alert.is_read ? "text-foreground" : "text-muted-foreground")}>{alert.title}</span>
-                        <p className="text-xs text-muted-foreground/60 truncate max-w-[300px]">{alert.message}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getSeverityBadge(alert.severity)}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground/60 whitespace-nowrap">
-                      {format(new Date(alert.created_at), "MMM d, HH:mm")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {!alert.is_read && (
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); markAsRead(alert.id); }} className="text-xs text-muted-foreground">
-                          Mark Read
-                        </Button>
+                alerts.map((alert) => {
+                  const emailMeta = isEmailAlert(alert) ? alert.metadata : null;
+                  return (
+                    <TableRow
+                      key={alert.id}
+                      className={cn(
+                        "border-border hover:bg-muted/30 cursor-pointer",
+                        !alert.is_read && "bg-primary/5"
                       )}
-                    </TableCell>
-                  </TableRow>
-                ))
+                      onClick={() => !alert.is_read && markAsRead(alert.id)}
+                    >
+                      <TableCell>
+                        {!alert.is_read && <div className="h-2 w-2 rounded-full bg-primary" />}
+                      </TableCell>
+                      {isEmailView && emailMeta ? (
+                        <>
+                          <TableCell>
+                            {emailMeta.ok ? (
+                              <Badge className="text-[10px] bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Sent</Badge>
+                            ) : (
+                              <Badge className="text-[10px] bg-red-500/10 text-red-500 border-red-500/20">Failed</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-foreground font-mono">{emailMeta.to}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-foreground">{emailMeta.subject}</span>
+                          </TableCell>
+                          <TableCell>
+                            {emailMeta.error ? (
+                              <span className="text-xs text-red-500 truncate max-w-[200px] block" title={emailMeta.error}>{emailMeta.error}</span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground/60">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground/60 whitespace-nowrap">
+                            {format(new Date(alert.created_at), "MMM d, HH:mm")}
+                          </TableCell>
+                        </>
+                      ) : (
+                        <>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {getAlertIcon(alert)}
+                              <span className="text-xs text-muted-foreground capitalize">{getAlertLabel(alert)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <span className={cn("text-sm font-medium", !alert.is_read ? "text-foreground" : "text-muted-foreground")}>{alert.title}</span>
+                              <p className="text-xs text-muted-foreground/60 truncate max-w-[300px]">{alert.message}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>{getSeverityBadge(alert.severity)}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground/60 whitespace-nowrap">
+                            {format(new Date(alert.created_at), "MMM d, HH:mm")}
+                          </TableCell>
+                        </>
+                      )}
+                      <TableCell className="text-right">
+                        {!alert.is_read && (
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); markAsRead(alert.id); }} className="text-xs text-muted-foreground">
+                            Mark Read
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

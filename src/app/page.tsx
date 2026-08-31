@@ -101,6 +101,10 @@ export default function LandingPage() {
       q: "Can HopeChat send SMS as well as WhatsApp messages?",
       a: "Yes. In addition to WhatsApp broadcasts, HopeChat sends bulk SMS campaigns through the same dashboard, so you can reach contacts who aren't on WhatsApp. Both channels use credit-based pricing and report delivery status.",
     },
+    {
+      q: "What happens if I don't finish my signup or setup right away?",
+      a: "No pressure — you can pause and pick up where you left off anytime. If you start creating an account or setting up your workspace and stop before finishing, our team will follow up with a friendly reminder (by email, easily opt-outable) and offer a free guided setup session so you can get live without the guesswork.",
+    },
   ];
 
   return (

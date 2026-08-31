@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { GoogleIcon } from "@/components/ui/google-icon";
 import { logHttpEvent } from "@/lib/logs/http-logs";
+import { trackFunnelEvent } from "@/lib/onboarding-funnel-client";
 
 export default function SignupPage() {
   const [step, setStep] = useState(1);
@@ -50,6 +51,13 @@ export default function SignupPage() {
       setError("Password must be at least 6 characters");
       return;
     }
+
+    trackFunnelEvent({
+      email,
+      stage: "email_captured",
+      fullName,
+      businessName,
+    });
 
     setStep(2);
   };
@@ -93,6 +101,14 @@ export default function SignupPage() {
       payload: { email, businessName },
       statusCode: 201,
       note: 'signup_success'
+    });
+
+    trackFunnelEvent({
+      email,
+      stage: "signed_up",
+      fullName,
+      businessName,
+      userId: data.user?.id ?? null,
     });
 
     // Store WhatsApp config in sessionStorage so dashboard-shell can pick it up

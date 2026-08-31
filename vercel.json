@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/onboarding-funnel/cron",
+      "schedule": "0 * * * *"
+    }
+  ]
+}

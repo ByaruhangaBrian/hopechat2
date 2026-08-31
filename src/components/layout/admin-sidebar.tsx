@@ -25,6 +25,7 @@ import {
   TrendingUp,
   Radio,
   Wallet,
+  UserPlus,
 } from "lucide-react";
 import {
   Avatar,
@@ -47,6 +48,7 @@ const adminNavItems = [
   { href: "/admin/pricing-tiers", label: "Pricing Tiers", icon: Tag },
   { divider: true },
   { href: "/admin/alerts", label: "Alerts", icon: Bell },
+  { href: "/admin/leads", label: "Lead Recovery", icon: UserPlus },
   { href: "/admin/health", label: "System Health", icon: Activity },
   { href: "/admin/ai-usage", label: "AI Usage", icon: Cpu },
   { href: "/admin/credits", label: "Credit Usage", icon: Wallet },

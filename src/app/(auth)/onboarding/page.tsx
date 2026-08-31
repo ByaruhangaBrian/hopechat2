@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MessageSquare, ArrowRight, Sparkles, Loader2 } from "lucide-react";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { trackFunnelEvent } from "@/lib/onboarding-funnel-client";
 
 function OnboardingContent() {
-  const { profile, refreshProfile, loading: authLoading } = useAuth();
+  const { profile, refreshProfile, loading: authLoading, user } = useAuth();
   const [businessName, setBusinessName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -53,6 +54,15 @@ function OnboardingContent() {
         setLoading(false);
         return;
       }
+
+      trackFunnelEvent({
+        email: profile?.email ?? "",
+        stage: "onboarding_complete",
+        fullName: profile?.full_name ?? null,
+        businessName: businessName.trim(),
+        userId: user?.id ?? null,
+        businessId: profile?.business_id ?? null,
+      });
 
       await refreshProfile();
       router.push("/dashboard");

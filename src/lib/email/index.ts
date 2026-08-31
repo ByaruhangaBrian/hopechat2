@@ -284,6 +284,126 @@ export async function sendDemoRequestConfirmation(input: {
   });
 }
 
+function recoverySignupLink(): string {
+  return `${process.env.NEXT_PUBLIC_APP_URL || ""}/signup`;
+}
+
+function recoveryLoginLink(): string {
+  return `${process.env.NEXT_PUBLIC_APP_URL || ""}/login`;
+}
+
+/**
+ * Recovery email #1 — the visitor typed their email on the signup form
+ * but never created an account.
+ */
+export async function sendSignupReminder(input: {
+  to: string;
+  fullName?: string | null;
+  businessName?: string | null;
+  businessId?: string | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const { to, fullName, businessName, businessId } = input;
+  const name = fullName?.trim() || businessName?.trim() || "there";
+  const body = `
+    <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      Hi <strong>${escapeHtml(name)}</strong>,<br/>
+      You started creating a HopeChat account but didn't finish. We noticed your email was on our signup page.
+    </p>
+    <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      Picking up where you left off takes less than a minute — connect WhatsApp, train your AI assistant, and start automating replies.
+    </p>
+    <p style="margin:0 0 24px;">
+      <a href="${recoverySignupLink()}" style="background-color:#6d28d9;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">Complete your signup</a>
+    </p>
+    <p style="margin:0;color:#3f3f46;font-size:14px;">Questions? Reply to this email and our team will help you get set up.</p>
+  `;
+  return sendEmail({
+    to,
+    subject: "Finish creating your HopeChat account",
+    text: `Hi ${name}, you started creating a HopeChat account but didn't finish. Complete your signup here: ${recoverySignupLink()}`,
+    html: layout("Finish your signup", body),
+    businessId,
+  });
+}
+
+/**
+ * Recovery email #2 — the user created an account but never finished
+ * the onboarding step (business name / entering the dashboard).
+ */
+export async function sendSetupReminder(input: {
+  to: string;
+  fullName?: string | null;
+  businessName?: string | null;
+  businessId?: string | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const { to, fullName, businessName, businessId } = input;
+  const name = fullName?.trim() || businessName?.trim() || "there";
+  const body = `
+    <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      Hi <strong>${escapeHtml(name)}</strong>,<br/>
+      Your HopeChat account is ready, but your workspace setup isn't finished yet — so we can't fire up your automations just yet.
+    </p>
+    <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      Follow these three quick steps to go live:
+    </p>
+    <ol style="margin:0 0 24px;color:#3f3f46;font-size:14px;line-height:1.8;padding-left:20px;">
+      <li>Sign in and name your workspace</li>
+      <li>Connect your WhatsApp number</li>
+      <li>Let the AI assistant greet &amp; answer your customers</li>
+    </ol>
+    <p style="margin:0 0 24px;">
+      <a href="${recoveryLoginLink()}" style="background-color:#6d28d9;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">Finish setup</a>
+    </p>
+    <p style="margin:0;color:#3f3f46;font-size:14px;">Need a hand? We offer a concierge setup service — just reply to this email.</p>
+  `;
+  return sendEmail({
+    to,
+    subject: "Finish setting up your HopeChat workspace",
+    text: `Hi ${name}, your HopeChat account is ready but your workspace setup isn't finished. Sign in and continue here: ${recoveryLoginLink()}`,
+    html: layout("Finish your setup", body),
+    businessId,
+  });
+}
+
+/**
+ * Recovery email #3 — the user finished onboarding but hasn't engaged
+ * with the product yet (no WhatsApp, no automations, no messages).
+ */
+export async function sendEngagementReminder(input: {
+  to: string;
+  fullName?: string | null;
+  businessName?: string | null;
+  businessId?: string | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const { to, fullName, businessName, businessId } = input;
+  const name = fullName?.trim() || businessName?.trim() || "there";
+  const body = `
+    <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      Hi <strong>${escapeHtml(name)}</strong>,<br/>
+      Your HopeChat workspace is all set up — but we haven't seen any activity yet, and we'd love to help you get real value from it.
+    </p>
+    <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      Here's what our most successful businesses do first:
+    </p>
+    <ul style="margin:0 0 24px;color:#3f3f46;font-size:14px;line-height:1.8;padding-left:20px;">
+      <li>Connect WhatsApp and turn on the AI welcome message</li>
+      <li>Create one automation (e.g. auto-reply to common questions)</li>
+      <li>Import your contacts and send your first broadcast</li>
+    </ul>
+    <p style="margin:0 0 24px;">
+      <a href="${recoveryLoginLink()}" style="background-color:#6d28d9;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">Open your dashboard</a>
+    </p>
+    <p style="margin:0;color:#3f3f46;font-size:14px;">Want us to set it all up for you? Reply to this email to book a free setup session.</p>
+  `;
+  return sendEmail({
+    to,
+    subject: "Make HopeChat work for you",
+    text: `Hi ${name}, your HopeChat workspace is set up but we haven't seen any activity. Log in to connect WhatsApp, create an automation, or send a broadcast: ${recoveryLoginLink()}`,
+    html: layout("Get the most from HopeChat", body),
+    businessId,
+  });
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (c) => {
     switch (c) {
