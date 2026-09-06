@@ -13,6 +13,7 @@ import {
   GitBranch,
   Radio,
   Zap,
+  FolderTree,
   Cpu,
   Settings,
   LogOut,
@@ -53,6 +54,7 @@ const navItems = [
   { href: "/pipelines", label: "Pipelines", icon: GitBranch },
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
   { href: "/automations", label: "Automations", icon: Zap },
+  { href: "/dashboard/menus", label: "Interactive Menus", icon: FolderTree },
   { href: "/ai", label: "AI Hub", icon: Cpu },
 ];
 
@@ -63,8 +65,10 @@ const permissionByPath: Record<string, PermissionKey> = {
   "/pipelines": "pipelines",
   "/broadcasts": "broadcasts",
   "/automations": "automations",
+  "/dashboard/menus": "automations",
   "/ai": "ai",
 };
+
 
 interface SidebarProps {
   /** Controlled on mobile by the Header's hamburger button. Ignored on lg+. */

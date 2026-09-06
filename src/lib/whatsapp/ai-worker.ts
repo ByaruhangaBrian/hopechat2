@@ -6,6 +6,7 @@ import { generateGeminiResponse } from '@/lib/automations/gemini-client';
 import { getBusinessAiConfig } from './ai-config-cache';
 import { getOrSetCache, deleteCache } from './gemini-cache';
 import { runAutomationsForTrigger, resumeAutomationWithInteraction } from '@/lib/automations/engine';
+import { handleNodeInteraction } from '@/lib/workflow-nodes/runtime';
 import { decrypt } from './encryption';
 import { consumeCredits, checkCredits } from '@/lib/credits';
 // @google/genai used via gemini-client.ts
@@ -97,9 +98,17 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
         const contactName = contactInfo?.profile?.name || message.from;
         
         // Save message and resolve conversation
-        const conversationId = await handleIncomingMessageSaving(message, contactName, config.user_id, config.business_id);
-        if (!conversationId) {
+        const saveResult = await handleIncomingMessageSaving(message, contactName, config.user_id, config.business_id);
+        if (!saveResult) {
           console.error('[ai-worker] Failed to save message or resolve conversation');
+          continue;
+        }
+
+        const { conversationId, handledByWorkflowNode } = saveResult;
+
+        // If the interaction was already handled by the workflow node manager,
+        // do not schedule an AI chat response to talk over it.
+        if (handledByWorkflowNode) {
           continue;
         }
 
@@ -526,7 +535,12 @@ async function executeAiJob(job: any): Promise<void> {
   }
 }
 
-async function handleIncomingMessageSaving(message: WhatsAppMessage, contactName: string, userId: string, businessId: string): Promise<string | null> {
+async function handleIncomingMessageSaving(
+  message: WhatsAppMessage,
+  contactName: string,
+  userId: string,
+  businessId: string
+): Promise<{ conversationId: string; handledByWorkflowNode: boolean } | null> {
   const db = supabaseAdmin();
   const senderPhone = normalizePhone(message.from);
 
@@ -551,12 +565,21 @@ async function handleIncomingMessageSaving(message: WhatsAppMessage, contactName
   const interactiveData = (message as any).interactive;
   const replyContextId = message.context?.id;
 
-  if (isInteractive && interactiveData && replyContextId) {
+  let handledByWorkflowNode = false;
+  let selectedOptionTitle: string | null = null;
+
+  if (isInteractive && interactiveData) {
     let interactionValue: any = null;
+    let selectedOptionId: string | null = null;
+
     if (interactiveData.type === 'button_reply') {
       interactionValue = interactiveData.button_reply.id;
+      selectedOptionId = interactiveData.button_reply.id;
+      selectedOptionTitle = interactiveData.button_reply.title || null;
     } else if (interactiveData.type === 'list_reply') {
       interactionValue = interactiveData.list_reply.id;
+      selectedOptionId = interactiveData.list_reply.id;
+      selectedOptionTitle = interactiveData.list_reply.title || null;
     } else if (interactiveData.type === 'nfm_reply' && interactiveData.nfm_reply.name === 'flow') {
       // Flow response
       try {
@@ -567,16 +590,31 @@ async function handleIncomingMessageSaving(message: WhatsAppMessage, contactName
       }
     }
 
-    if (interactionValue) {
+    // 1. Workflow Node interaction resolution
+    if (selectedOptionId) {
+      try {
+        const nodeRes = await handleNodeInteraction(businessId, contact.id, selectedOptionId);
+        if (nodeRes.handled) {
+          handledByWorkflowNode = true;
+        }
+      } catch (nodeErr) {
+        console.error('[ai-worker] Workflow node interaction error:', nodeErr);
+      }
+    }
+
+    // 2. Automation resumption (if waiting on interactive message)
+    if (interactionValue && replyContextId) {
       await resumeAutomationWithInteraction(replyContextId, interactionValue);
     }
   }
+
+  const messageText = message.text?.body || selectedOptionTitle || (isInteractive ? '[Interaction Reply]' : '');
 
   // Save Message
   await db.from('messages').insert({
     conversation_id: conv.id,
     sender_type: 'customer',
-    content_text: message.text?.body || (isInteractive ? '[Interaction Reply]' : ''),
+    content_text: messageText,
     message_id: message.id,
     status: 'delivered',
     created_at: new Date(Number(message.timestamp) * 1000).toISOString()
@@ -584,7 +622,7 @@ async function handleIncomingMessageSaving(message: WhatsAppMessage, contactName
 
   // Update Conversation
   await db.from('conversations').update({
-    last_message_text: message.text?.body || '',
+    last_message_text: messageText,
     last_message_at: new Date().toISOString(),
     unread_count: 1 // In a real app, this would be an increment
   }).eq('id', conv.id);
@@ -598,7 +636,7 @@ async function handleIncomingMessageSaving(message: WhatsAppMessage, contactName
       triggerType: 'new_message_received',
       contactId: contact.id,
       context: {
-        message_text: message.text?.body || '',
+        message_text: messageText,
         conversation_id: conv.id,
       },
     });
@@ -606,5 +644,6 @@ async function handleIncomingMessageSaving(message: WhatsAppMessage, contactName
     console.error('[ai-worker] Automation trigger failed:', err);
   }
 
-  return conv.id;
+  return { conversationId: conv.id, handledByWorkflowNode };
 }
+

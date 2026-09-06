@@ -471,3 +471,51 @@ export interface Transaction {
   status: "pending" | "success" | "successful" | "failed";
   timestamp: string;
 }
+
+export type WorkflowNodeType = 'menu' | 'question' | 'form' | 'action';
+
+export interface NodeOption {
+  id: string;
+  node_id: string;
+  option_id: string;
+  label: string;
+  description?: string | null;
+  next_node_id?: string | null;
+  is_correct_answer: boolean;
+  points: number;
+  position: number;
+  created_at?: string;
+  next_node?: { id: string; title: string; node_key: string } | null;
+}
+
+export interface WorkflowNode {
+  id: string;
+  business_id: string;
+  parent_node_id?: string | null;
+  title: string;
+  node_key: string;
+  node_type: WorkflowNodeType;
+  header_text?: string | null;
+  body_text: string;
+  footer_text?: string | null;
+  metadata?: Record<string, unknown>;
+  level: number;
+  created_at: string;
+  updated_at: string;
+  options?: NodeOption[];
+  parent_node?: { id: string; title: string; node_key: string } | null;
+  children?: WorkflowNode[];
+}
+
+export interface WorkflowUserSession {
+  id: string;
+  business_id: string;
+  contact_id: string;
+  current_node_id?: string | null;
+  quiz_score: number;
+  session_data: Record<string, unknown>;
+  last_interaction_at: string;
+  created_at: string;
+  updated_at: string;
+}
+

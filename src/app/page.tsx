@@ -33,7 +33,9 @@ import {
   Check,
   Sparkles,
   Phone,
+  FolderTree,
 } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 const fadeUp = {
@@ -431,7 +433,37 @@ export default function LandingPage() {
                 ),
               },
               {
+                icon: FolderTree,
+                title: "Interactive Menus & Assessment Banks",
+                desc: "Visually create nested WhatsApp menus, multi-choice question banks, and branching subscreen flows with instant auto-routing and scoring.",
+                points: [
+                  "Hierarchical tree view: Root menus, sub-categories, and deep question banks",
+                  "Smart Meta API rendering: 1–3 quick reply buttons or 4–10 list menus",
+                  "Automated scoring for quizzes, tests, and customer surveys",
+                  "Live WhatsApp chat simulator with real-time bubble preview"
+                ],
+                reverse: true,
+                mock: (
+                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
+                    <div className="flex justify-between items-center border-b border-border pb-2">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5"><FolderTree className="h-4 w-4 text-primary" /> Bio Assessment: Q1</span>
+                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">Interactive</span>
+                    </div>
+                    <div className="bg-primary/5 rounded-lg p-2.5 text-xs text-foreground space-y-1">
+                      <p className="font-bold text-[11px] text-primary">QUESTION 1</p>
+                      <p className="text-muted-foreground">Which organelle produces cellular energy?</p>
+                    </div>
+                    <div className="space-y-1 text-xs">
+                      <div className="p-1.5 rounded border border-border flex items-center justify-between text-muted-foreground"><span>A. Nucleus</span><span className="text-[10px]">0 pts</span></div>
+                      <div className="p-1.5 rounded border border-emerald-500/40 bg-emerald-500/10 flex items-center justify-between text-emerald-700 font-semibold"><span>B. Mitochondria</span><span className="text-[10px] font-bold">+10 pts ✓</span></div>
+                      <div className="p-1.5 rounded border border-border flex items-center justify-between text-muted-foreground"><span>C. Ribosome</span><span className="text-[10px]">0 pts</span></div>
+                    </div>
+                  </div>
+                ),
+              },
+              {
                 icon: Users,
+
                 title: "Shared Team Inbox",
                 desc: "One WhatsApp number for your entire team with multi-agent routing, collision detection, custom tags, internal notes, and per-member access controls.",
                 points: ["Smart routing to the right agent", "Tags, notes, and full chat history", "Assign and collaborate on chats", "Granular permissions per menu, per member"],

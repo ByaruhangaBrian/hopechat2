@@ -143,6 +143,26 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
     case 'close_conversation':
       // No config required.
       break
+    case 'whatsapp_interaction':
+      if (!nonEmpty(c.body)) {
+        issues.push({ path: `${path}.body`, message: 'interaction body text is required' })
+      }
+      if (!Array.isArray(c.items) || c.items.length === 0) {
+        issues.push({ path: `${path}.items`, message: 'at least one button or list item is required' })
+      }
+      break
+    case 'whatsapp_flow':
+      if (!nonEmpty(c.flow_id)) {
+        issues.push({ path: `${path}.flow_id`, message: 'flow_id is required' })
+      }
+      if (!nonEmpty(c.screen_id)) {
+        issues.push({ path: `${path}.screen_id`, message: 'screen_id is required' })
+      }
+      break
+    case 'lookup_spreadsheet':
+    case 'trigger_automation':
+      break
+
     default:
       issues.push({ path, message: `unknown step type: ${step.step_type}` })
   }
