@@ -15,11 +15,21 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const admin = supabaseAdmin();
+    let { data: profile } = await supabase
       .from('profiles')
       .select('business_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
+
+    if (!profile?.business_id) {
+      const { data: adminProfile } = await admin
+        .from('profiles')
+        .select('business_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      profile = adminProfile;
+    }
 
     if (!profile?.business_id) {
       return NextResponse.json({ error: 'Business not found' }, { status: 400 });
@@ -33,8 +43,7 @@ export async function GET(request: Request) {
       .from('workflow_nodes')
       .select(`
         *,
-        options:node_options(*),
-        parent_node:workflow_nodes!workflow_nodes_parent_node_id_fkey(id, title, node_key)
+        options:node_options!node_options_node_id_fkey(*)
       `)
       .eq('business_id', profile.business_id)
       .order('level', { ascending: true })
@@ -83,11 +92,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const admin = supabaseAdmin();
+    let { data: profile } = await supabase
       .from('profiles')
       .select('business_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
+
+    if (!profile?.business_id) {
+      const { data: adminProfile } = await admin
+        .from('profiles')
+        .select('business_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      profile = adminProfile;
+    }
 
     if (!profile?.business_id) {
       return NextResponse.json({ error: 'Business not found' }, { status: 400 });
@@ -175,8 +194,6 @@ export async function POST(request: Request) {
     }
 
     // Use admin client for atomic insertion of node + options
-    const admin = supabaseAdmin();
-
     const { data: newNode, error: nodeError } = await admin
       .from('workflow_nodes')
       .insert({

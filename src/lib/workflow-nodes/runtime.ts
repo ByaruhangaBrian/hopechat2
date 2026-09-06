@@ -33,7 +33,7 @@ export async function dispatchWorkflowNode(args: DispatchNodeArgs): Promise<{ su
     // 1. Fetch Node and its options
     const { data: node, error: nodeError } = await db
       .from('workflow_nodes')
-      .select('*, options:node_options(*)')
+      .select('*, options:node_options!node_options_node_id_fkey(*)')
       .eq('id', nodeId)
       .eq('business_id', businessId)
       .single();
@@ -201,7 +201,7 @@ export async function handleNodeInteraction(
   if (session?.current_node_id) {
     const { data: node } = await db
       .from('workflow_nodes')
-      .select('*, options:node_options(*)')
+      .select('*, options:node_options!node_options_node_id_fkey(*)')
       .eq('id', session.current_node_id)
       .eq('business_id', businessId)
       .maybeSingle();
@@ -216,7 +216,7 @@ export async function handleNodeInteraction(
   if (!matchedOption) {
     const { data: opt } = await db
       .from('node_options')
-      .select('*, workflow_nodes!inner(*)')
+      .select('*, workflow_nodes!node_options_node_id_fkey!inner(*)')
       .eq('option_id', selectedOptionId)
       .eq('workflow_nodes.business_id', businessId)
       .maybeSingle();

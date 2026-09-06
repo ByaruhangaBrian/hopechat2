@@ -19,11 +19,21 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const admin = supabaseAdmin();
+    let { data: profile } = await supabase
       .from('profiles')
       .select('business_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
+
+    if (!profile?.business_id) {
+      const { data: adminProfile } = await admin
+        .from('profiles')
+        .select('business_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      profile = adminProfile;
+    }
 
     if (!profile?.business_id) {
       return NextResponse.json({ error: 'Business not found' }, { status: 400 });
@@ -33,8 +43,7 @@ export async function GET(
       .from('workflow_nodes')
       .select(`
         *,
-        options:node_options(*),
-        parent_node:workflow_nodes!workflow_nodes_parent_node_id_fkey(id, title, node_key)
+        options:node_options!node_options_node_id_fkey(*)
       `)
       .eq('id', id)
       .eq('business_id', profile.business_id)
@@ -72,11 +81,21 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const admin = supabaseAdmin();
+    let { data: profile } = await supabase
       .from('profiles')
       .select('business_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
+
+    if (!profile?.business_id) {
+      const { data: adminProfile } = await admin
+        .from('profiles')
+        .select('business_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      profile = adminProfile;
+    }
 
     if (!profile?.business_id) {
       return NextResponse.json({ error: 'Business not found' }, { status: 400 });
@@ -86,8 +105,6 @@ export async function PATCH(
     if (!body) {
       return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
     }
-
-    const admin = supabaseAdmin();
 
     // Verify ownership
     const { data: existing, error: findError } = await admin
@@ -215,17 +232,26 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const admin = supabaseAdmin();
+    let { data: profile } = await supabase
       .from('profiles')
       .select('business_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
+
+    if (!profile?.business_id) {
+      const { data: adminProfile } = await admin
+        .from('profiles')
+        .select('business_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      profile = adminProfile;
+    }
 
     if (!profile?.business_id) {
       return NextResponse.json({ error: 'Business not found' }, { status: 400 });
     }
 
-    const admin = supabaseAdmin();
     const { error } = await admin
       .from('workflow_nodes')
       .delete()

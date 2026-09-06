@@ -115,6 +115,9 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
           const fresh = loaded.find((n) => n.id === previewNode.id);
           if (fresh) setPreviewNode(fresh);
         }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        console.error("Failed to load workflow nodes:", res.status, errData);
       }
     } catch (err) {
       console.error("Failed to load workflow nodes:", err);
