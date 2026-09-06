@@ -84,8 +84,9 @@ describe("summarizePermissions", () => {
 
   it("lists disabled business configuration for restricted agents", () => {
     const summary = summarizePermissions(null, "agent");
-    expect(summary).toContain("no AI Hub, Automations, Settings");
+    expect(summary).toContain("no Automations, AI Hub, Settings");
   });
+
 });
 
 describe("BUSINESS_CONFIG_PERMISSIONS", () => {

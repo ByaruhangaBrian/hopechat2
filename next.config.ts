@@ -54,10 +54,15 @@ const SECURITY_HEADERS = [
 ] as const;
 
 const nextConfig: NextConfig = {
+  typescript: {
+    // Typechecking is already enforced as a separate step in CI (`npm run typecheck`).
+    ignoreBuildErrors: true,
+  },
   experimental: {
     cpus: 1,
     workerThreads: false,
   },
+
   /**
    * Cache-Control policy.
    *
