@@ -1283,6 +1283,39 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
                 </Button>
               </div>
 
+              {/* Fast Link for Quizzes / Sequential Questions */}
+              {formNodeType === "question" && formOptions.length > 1 && (
+                <div className="flex items-center gap-2 p-2 bg-purple-500/10 border border-purple-500/20 rounded-md text-xs">
+                  <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 shrink-0">
+                    Next Question for all choices:
+                  </span>
+                  <Select
+                    onValueChange={(val) => {
+                      const nextId: string | null = !val || val === "end" ? null : String(val);
+                      const updated = formOptions.map((opt) => ({
+                        ...opt,
+                        next_node_id: nextId,
+                      }));
+                      setFormOptions(updated);
+                    }}
+                  >
+                    <SelectTrigger className="h-7 text-xs bg-background flex-1">
+                      <SelectValue placeholder="Apply next question to all..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="end">None (Quiz Finishes)</SelectItem>
+                      {nodes
+                        .filter((n) => !editingNode || n.id !== editingNode.id)
+                        .map((n) => (
+                          <SelectItem key={n.id} value={n.id}>
+                            Level {n.level}: {n.title}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="space-y-3">
                 {formOptions.map((opt, idx) => {
                   const maxChar = formOptions.length <= 3 ? 20 : 24;
