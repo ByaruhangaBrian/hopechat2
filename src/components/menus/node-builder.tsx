@@ -108,9 +108,9 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
         const loaded: WorkflowNode[] = data.nodes || [];
         setNodes(loaded);
 
-        // Auto-expand all root nodes
-        const rootIds = new Set(loaded.filter((n) => !n.parent_node_id || n.level === 1).map((n) => n.id));
-        setExpandedNodeIds(rootIds);
+        // Auto-expand all nodes so children are always visible in tree view
+        const allIds = new Set(loaded.map((n) => n.id));
+        setExpandedNodeIds(allIds);
 
         // Set initial preview node if none selected
         if (!previewNode && loaded.length > 0) {
@@ -428,7 +428,12 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
       }
 
       toast.success(editingNode ? "Screen updated successfully" : "Screen created successfully");
+      const createdOrUpdatedNode = data.node;
       await fetchNodes();
+      if (createdOrUpdatedNode) {
+        setPreviewNode(createdOrUpdatedNode);
+        setSimulationTrail([{ node: createdOrUpdatedNode }]);
+      }
       setIsModalOpen(false);
     } catch (err: any) {
       console.error("Save error:", err);
