@@ -252,6 +252,27 @@ export async function DELETE(
       return NextResponse.json({ error: 'Business not found' }, { status: 400 });
     }
 
+    // 1. Unlink any parent options pointing to this node as their next destination
+    await admin
+      .from('node_options')
+      .update({ next_node_id: null })
+      .eq('next_node_id', id);
+
+    // 2. Unlink any child nodes having this node as parent
+    await admin
+      .from('workflow_nodes')
+      .update({ parent_node_id: null })
+      .eq('parent_node_id', id)
+      .eq('business_id', profile.business_id);
+
+    // 3. Clear active user sessions on this node
+    await admin
+      .from('user_sessions')
+      .update({ current_node_id: null })
+      .eq('current_node_id', id)
+      .eq('business_id', profile.business_id);
+
+    // 4. Delete the workflow node (cascades to delete its own options)
     const { error } = await admin
       .from('workflow_nodes')
       .delete()

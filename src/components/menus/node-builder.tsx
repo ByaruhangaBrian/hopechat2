@@ -41,6 +41,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ConfirmationModal } from "@/components/ui/confirmation-modal";
+import { toast } from "sonner";
 import { WorkflowNode, NodeOption, WorkflowNodeType } from "@/types";
 
 interface NodeBuilderProps {
@@ -59,6 +61,10 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"tree" | "flow">("tree");
+
+  // Deletion modal state (replaces browser confirm)
+  const [nodeToDelete, setNodeToDelete] = useState<WorkflowNode | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Editing / Creating Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -302,22 +308,28 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
     setIsModalOpen(true);
   };
 
-  // Delete node
-  const handleDeleteNode = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this node? All options and child links will be removed.")) {
-      return;
-    }
-
+  // Modern confirmation deletion handler
+  const handleConfirmDelete = async () => {
+    if (!nodeToDelete) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/workflow-nodes/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        setNodes((prev) => prev.filter((n) => n.id !== id));
-        if (previewNode?.id === id) {
-          setPreviewNode(null);
-        }
+      const res = await fetch(`/api/workflow-nodes/${nodeToDelete.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Failed to delete screen");
+        return;
       }
-    } catch (err) {
+      toast.success(`Screen "${nodeToDelete.title}" deleted successfully`);
+      if (previewNode?.id === nodeToDelete.id) {
+        setPreviewNode(null);
+      }
+      setNodeToDelete(null);
+      await fetchNodes();
+    } catch (err: any) {
       console.error("Failed to delete node:", err);
+      toast.error(err.message || "An error occurred while deleting");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -415,6 +427,7 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
         return;
       }
 
+      toast.success(editingNode ? "Screen updated successfully" : "Screen created successfully");
       await fetchNodes();
       setIsModalOpen(false);
     } catch (err: any) {
@@ -542,7 +555,7 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
                 size="icon"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDeleteNode(node.id);
+                  setNodeToDelete(node);
                 }}
                 className="h-7 w-7 text-muted-foreground hover:text-destructive"
                 title="Delete Node"
@@ -659,14 +672,25 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
                 <h3 className="font-bold text-foreground text-sm">{root.title}</h3>
                 <span className="text-xs text-muted-foreground font-mono">({root.node_key})</span>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleOpenEdit(root)}
-                className="h-7 text-xs"
-              >
-                Edit Root
-              </Button>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenEdit(root)}
+                  className="h-7 text-xs"
+                >
+                  Edit Root
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setNodeToDelete(root)}
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  title="Delete Root Menu"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
 
             {/* Branching Columns: Option A vs Option B */}
@@ -706,8 +730,34 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
                           className="p-2.5 rounded-lg border border-primary/30 bg-card hover:border-primary cursor-pointer transition-all space-y-1.5 shadow-sm"
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-foreground">{targetNode.title}</span>
-                            {getTypeBadge(targetNode.node_type)}
+                            <span className="text-xs font-bold text-foreground truncate">{targetNode.title}</span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {getTypeBadge(targetNode.node_type)}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEdit(targetNode);
+                                }}
+                                className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                title="Edit Screen"
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setNodeToDelete(targetNode);
+                                }}
+                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                title="Delete Screen"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                           <p className="text-[11px] text-muted-foreground line-clamp-2">
                             {targetNode.body_text}
@@ -1458,6 +1508,21 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modern Confirmation Modal for Node Deletion */}
+      <ConfirmationModal
+        open={Boolean(nodeToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setNodeToDelete(null);
+        }}
+        title="Delete Workflow Screen"
+        description={`Are you sure you want to delete "${nodeToDelete?.title || "this screen"}"? Any menu choices or child screens linked to it will be safely unlinked.`}
+        confirmText="Delete Screen"
+        cancelText="Cancel"
+        variant="destructive"
+        loading={isDeleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }
