@@ -225,7 +225,17 @@ export async function POST(request: Request) {
       }
     }
 
+    // If parent_option_id was specified, auto-link the parent's option to this new child node
+    if (parent_node_id && body.parent_option_id) {
+      await admin
+        .from('node_options')
+        .update({ next_node_id: newNode.id })
+        .eq('node_id', parent_node_id)
+        .or(`id.eq.${body.parent_option_id},option_id.eq.${body.parent_option_id}`);
+    }
+
     return NextResponse.json({
+
       node: {
         ...newNode,
         options: createdOptions,
