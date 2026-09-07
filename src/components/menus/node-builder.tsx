@@ -171,7 +171,7 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
   const filteredNodes = useMemo(() => {
     let result = nodes;
     if (selectedLevel !== null) {
-      result = result.filter((n) => n.level === selectedLevel);
+      result = result.filter((n) => (selectedLevel >= 4 ? n.level >= 4 : n.level === selectedLevel));
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -308,26 +308,42 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
     setIsModalOpen(true);
   };
 
-  // Modern confirmation deletion handler
+  // Modern confirmation deletion handler with instant optimistic update
   const handleConfirmDelete = async () => {
     if (!nodeToDelete) return;
+    const deletedId = nodeToDelete.id;
+    const deletedTitle = nodeToDelete.title;
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/workflow-nodes/${nodeToDelete.id}`, { method: "DELETE" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(data.error || "Failed to delete screen");
-        return;
-      }
-      toast.success(`Screen "${nodeToDelete.title}" deleted successfully`);
-      if (previewNode?.id === nodeToDelete.id) {
+      // Optimistically remove from state immediately
+      setNodes((prev) =>
+        prev
+          .filter((n) => n.id !== deletedId)
+          .map((n) => ({
+            ...n,
+            options: (n.options || []).map((o) =>
+              o.next_node_id === deletedId ? { ...o, next_node_id: null } : o
+            ),
+          }))
+      );
+      if (previewNode?.id === deletedId) {
         setPreviewNode(null);
       }
       setNodeToDelete(null);
+
+      const res = await fetch(`/api/workflow-nodes/${deletedId}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Failed to delete screen");
+        await fetchNodes(); // Re-sync on failure
+        return;
+      }
+      toast.success(`Screen "${deletedTitle}" deleted successfully`);
       await fetchNodes();
     } catch (err: any) {
       console.error("Failed to delete node:", err);
       toast.error(err.message || "An error occurred while deleting");
+      await fetchNodes();
     } finally {
       setIsDeleting(false);
     }
@@ -480,12 +496,11 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
               ? "bg-primary/5 border-primary shadow-sm ring-1 ring-primary/20"
               : "bg-card hover:bg-muted/40 border-border"
           }`}
-          style={{ marginLeft: `${depth * 20}px` }}
         >
           {/* Incoming trigger badge if this node was branched from an option */}
           {incomingTrigger && (
             <div className="mb-1.5 flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-              <CornerDownRight className="h-3.5 w-3.5" />
+              <CornerDownRight className="h-3.5 w-3.5 shrink-0" />
               <span>Triggered when user selects:</span>
               <span className="font-bold underline decoration-emerald-500/40">
                 &ldquo;{incomingTrigger.optionLabel}&rdquo;
@@ -495,7 +510,7 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
           )}
 
           <div className="flex items-center justify-between gap-2 min-w-0">
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               {hasChildren ? (
                 <button
                   type="button"
@@ -508,17 +523,17 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
                   {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 </button>
               ) : (
-                <div className="w-6 flex items-center justify-center shrink-0">
+                <div className="w-5 flex items-center justify-center shrink-0">
                   <CornerDownRight className="h-3.5 w-3.5 text-muted-foreground/40" />
                 </div>
               )}
 
               <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                <span className="font-bold text-sm text-foreground">{node.title}</span>
-                <span className="text-xs text-muted-foreground font-mono">({node.node_key})</span>
+                <span className="font-bold text-sm text-foreground truncate">{node.title}</span>
+                <span className="text-xs text-muted-foreground font-mono shrink-0">({node.node_key})</span>
               </div>
 
-              <div className="flex items-center gap-1.5 ml-1">
+              <div className="flex items-center gap-1.5 ml-1 shrink-0">
                 {getTypeBadge(node.node_type)}
                 <Badge variant="outline" className="text-[10px] text-muted-foreground font-normal">
                   Level {node.level}
@@ -529,7 +544,7 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
               </div>
             </div>
 
-            <div className="flex items-center gap-1 opacity-90 group-hover:opacity-100 transition-opacity shrink-0">
+            <div className="flex items-center gap-1 shrink-0">
               <Button
                 variant="outline"
                 size="sm"
@@ -646,7 +661,7 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
 
         {/* Render child nodes if expanded */}
         {hasChildren && isExpanded && (
-          <div className="border-l-2 border-border/60 ml-4 pl-1 space-y-2">
+          <div className="border-l-2 border-primary/30 ml-3 pl-2.5 space-y-2 mt-1.5">
             {node.children!.map((child) => renderTreeNode(child, depth + 1))}
           </div>
         )}
@@ -768,21 +783,82 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
                             {targetNode.body_text}
                           </p>
 
-                          {/* Subsequent sub-questions */}
+                          {/* Subsequent sub-questions / downstream Level 3/4 branches */}
                           {nextOptions.length > 0 && (
-                            <div className="pt-2 border-t border-border/50 space-y-1">
-                              <span className="text-[10px] font-semibold text-muted-foreground">
-                                Sub-choices ({nextOptions.length}):
+                            <div className="pt-2 border-t border-border/50 space-y-1.5">
+                              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                Sub-choices & Next Screens:
                               </span>
-                              <div className="flex flex-wrap gap-1">
-                                {nextOptions.map((subOpt) => (
-                                  <span
-                                    key={subOpt.id || subOpt.option_id}
-                                    className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground"
-                                  >
-                                    {subOpt.label}
-                                  </span>
-                                ))}
+                              <div className="space-y-1.5">
+                                {nextOptions.map((subOpt) => {
+                                  const deepTarget = subOpt.next_node_id ? nodeMap.get(subOpt.next_node_id) : null;
+                                  return (
+                                    <div
+                                      key={subOpt.id || subOpt.option_id}
+                                      className="p-1.5 rounded bg-background border border-border text-[11px] flex items-center justify-between gap-1"
+                                    >
+                                      <div className="flex items-center gap-1.5 min-w-0">
+                                        <span className="font-medium text-foreground truncate">{subOpt.label}</span>
+                                        <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                                        {deepTarget ? (
+                                          <span
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setPreviewNode(deepTarget);
+                                            }}
+                                            className="font-bold text-primary hover:underline truncate cursor-pointer"
+                                          >
+                                            {deepTarget.title} (Lvl {deepTarget.level})
+                                          </span>
+                                        ) : (
+                                          <span className="text-[10px] text-muted-foreground italic">Ends</span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        {deepTarget ? (
+                                          <>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleOpenEdit(deepTarget);
+                                              }}
+                                              className="h-5 w-5 text-muted-foreground hover:text-foreground"
+                                              title={`Edit Level ${deepTarget.level} Screen`}
+                                            >
+                                              <Edit2 className="h-2.5 w-2.5" />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setNodeToDelete(deepTarget);
+                                              }}
+                                              className="h-5 w-5 text-muted-foreground hover:text-destructive"
+                                              title={`Delete Level ${deepTarget.level} Screen`}
+                                            >
+                                              <Trash2 className="h-2.5 w-2.5" />
+                                            </Button>
+                                          </>
+                                        ) : (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleOpenCreate(targetNode.id, subOpt.id || subOpt.option_id);
+                                            }}
+                                            className="h-5 text-[9px] px-1 text-primary hover:bg-primary/10"
+                                          >
+                                            + Link Screen
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
@@ -898,7 +974,16 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
               className="h-7 text-xs rounded-full gap-1"
             >
               <FileQuestion className="h-3 w-3" />
-              Level 3+ ({nodes.filter((n) => n.level >= 3).length})
+              Level 3 ({nodes.filter((n) => n.level === 3).length})
+            </Button>
+            <Button
+              variant={selectedLevel === 4 ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedLevel(4)}
+              className="h-7 text-xs rounded-full gap-1"
+            >
+              <GitFork className="h-3 w-3" />
+              Level 4+ ({nodes.filter((n) => n.level >= 4).length})
             </Button>
           </div>
         </div>
