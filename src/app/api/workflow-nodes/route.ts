@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/automations/admin-client';
 import { WorkflowNodeType } from '@/types';
@@ -31,7 +32,11 @@ export async function GET(request: Request) {
       profile = adminProfile;
     }
 
-    if (!profile?.business_id) {
+    const cookieStore = await cookies();
+    const impersonatedId = cookieStore.get('impersonated_business_id')?.value;
+    const effectiveBusinessId = impersonatedId || profile?.business_id;
+
+    if (!effectiveBusinessId) {
       return NextResponse.json({ error: 'Business not found' }, { status: 400 });
     }
 
@@ -45,7 +50,7 @@ export async function GET(request: Request) {
         *,
         options:node_options!node_options_node_id_fkey(*)
       `)
-      .eq('business_id', profile.business_id)
+      .eq('business_id', effectiveBusinessId)
       .order('level', { ascending: true })
       .order('created_at', { ascending: false });
 
@@ -108,7 +113,11 @@ export async function POST(request: Request) {
       profile = adminProfile;
     }
 
-    if (!profile?.business_id) {
+    const cookieStore = await cookies();
+    const impersonatedId = cookieStore.get('impersonated_business_id')?.value;
+    const effectiveBusinessId = impersonatedId || profile?.business_id;
+
+    if (!effectiveBusinessId) {
       return NextResponse.json({ error: 'Business not found' }, { status: 400 });
     }
 
@@ -154,7 +163,7 @@ export async function POST(request: Request) {
         .from('workflow_nodes')
         .select('level')
         .eq('id', parent_node_id)
-        .eq('business_id', profile.business_id)
+        .eq('business_id', effectiveBusinessId)
         .single();
       if (parent) {
         calculatedLevel = Math.min(5, (parent.level || 1) + 1);
@@ -169,7 +178,7 @@ export async function POST(request: Request) {
     const { data: existingKey } = await supabase
       .from('workflow_nodes')
       .select('id')
-      .eq('business_id', profile.business_id)
+      .eq('business_id', effectiveBusinessId)
       .eq('node_key', nodeKey)
       .maybeSingle();
 
@@ -197,7 +206,7 @@ export async function POST(request: Request) {
     const { data: newNode, error: nodeError } = await admin
       .from('workflow_nodes')
       .insert({
-        business_id: profile.business_id,
+        business_id: effectiveBusinessId,
         parent_node_id,
         title: title.trim(),
         node_key: nodeKey,

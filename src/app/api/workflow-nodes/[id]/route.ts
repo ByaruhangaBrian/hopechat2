@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/automations/admin-client';
 import { WorkflowNodeType } from '@/types';
@@ -217,7 +218,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -235,56 +236,163 @@ export async function DELETE(
     const admin = supabaseAdmin();
     let { data: profile } = await supabase
       .from('profiles')
-      .select('business_id')
+      .select('business_id, is_superadmin, role')
       .eq('user_id', user.id)
       .maybeSingle();
 
     if (!profile?.business_id) {
       const { data: adminProfile } = await admin
         .from('profiles')
-        .select('business_id')
+        .select('business_id, is_superadmin, role')
         .eq('user_id', user.id)
         .maybeSingle();
       profile = adminProfile;
     }
 
-    if (!profile?.business_id) {
-      return NextResponse.json({ error: 'Business not found' }, { status: 400 });
+    const cookieStore = await cookies();
+    const impersonatedId = cookieStore.get('impersonated_business_id')?.value;
+    const effectiveBusinessId = impersonatedId || profile?.business_id;
+
+    // 1. Verify target node existence
+    const { data: targetNode, error: fetchErr } = await admin
+      .from('workflow_nodes')
+      .select('id, business_id, title, level, parent_node_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchErr) {
+      console.error('[workflow-nodes/[id]] Lookup error:', fetchErr);
+      return NextResponse.json({ error: fetchErr.message }, { status: 500 });
     }
 
-    // 1. Unlink any parent options pointing to this node as their next destination
+    if (!targetNode) {
+      return NextResponse.json({ error: 'Workflow screen not found' }, { status: 404 });
+    }
+
+    const isSuperAdmin = Boolean(profile?.is_superadmin);
+    const hasAccess =
+      isSuperAdmin ||
+      targetNode.business_id === effectiveBusinessId ||
+      targetNode.business_id === profile?.business_id;
+
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const shouldCascade = searchParams.get('cascade') !== 'false';
+
+    // 2. Gather all node IDs in the subtree to delete
+    const allNodeIdsToDelete = new Set<string>([id]);
+
+    if (shouldCascade) {
+      const queue = [id];
+      while (queue.length > 0) {
+        const currentParentId = queue.shift()!;
+
+        // Direct children via parent_node_id
+        const { data: children } = await admin
+          .from('workflow_nodes')
+          .select('id')
+          .eq('parent_node_id', currentParentId)
+          .eq('business_id', targetNode.business_id);
+
+        if (children) {
+          for (const c of children) {
+            if (!allNodeIdsToDelete.has(c.id)) {
+              allNodeIdsToDelete.add(c.id);
+              queue.push(c.id);
+            }
+          }
+        }
+
+        // Downstream screens referenced by this node's options
+        const { data: linkedOptions } = await admin
+          .from('node_options')
+          .select('next_node_id')
+          .eq('node_id', currentParentId)
+          .not('next_node_id', 'is', null);
+
+        if (linkedOptions) {
+          for (const opt of linkedOptions) {
+            if (opt.next_node_id && !allNodeIdsToDelete.has(opt.next_node_id)) {
+              const { data: nextScreen } = await admin
+                .from('workflow_nodes')
+                .select('id, parent_node_id, level')
+                .eq('id', opt.next_node_id)
+                .eq('business_id', targetNode.business_id)
+                .maybeSingle();
+
+              if (nextScreen) {
+                if (nextScreen.parent_node_id === currentParentId || nextScreen.level > targetNode.level) {
+                  allNodeIdsToDelete.add(nextScreen.id);
+                  queue.push(nextScreen.id);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const idsArray = Array.from(allNodeIdsToDelete);
+
+    // 3. Unlink any parent options from outside the delete set pointing to these nodes
     await admin
       .from('node_options')
       .update({ next_node_id: null })
-      .eq('next_node_id', id);
+      .in('next_node_id', idsArray);
 
-    // 2. Unlink any child nodes having this node as parent
-    await admin
-      .from('workflow_nodes')
-      .update({ parent_node_id: null })
-      .eq('parent_node_id', id)
-      .eq('business_id', profile.business_id);
-
-    // 3. Clear active user sessions on this node
+    // 4. Clear active user sessions on any of these nodes
     await admin
       .from('user_sessions')
       .update({ current_node_id: null })
-      .eq('current_node_id', id)
-      .eq('business_id', profile.business_id);
+      .in('current_node_id', idsArray);
 
-    // 4. Delete the workflow node (cascades to delete its own options)
-    const { error } = await admin
-      .from('workflow_nodes')
-      .delete()
-      .eq('id', id)
-      .eq('business_id', profile.business_id);
-
-    if (error) {
-      console.error('[workflow-nodes/[id]] DELETE error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    // 5. Handle parent-child relationships
+    if (!shouldCascade) {
+      await admin
+        .from('workflow_nodes')
+        .update({ parent_node_id: null })
+        .eq('parent_node_id', id)
+        .eq('business_id', targetNode.business_id);
+    } else {
+      // Nullify parent_node_id among deleting nodes to avoid self-referential FK locks
+      await admin
+        .from('workflow_nodes')
+        .update({ parent_node_id: null })
+        .in('id', idsArray);
     }
 
-    return NextResponse.json({ success: true });
+    // 6. Delete node options belonging to the deleting nodes
+    await admin
+      .from('node_options')
+      .delete()
+      .in('node_id', idsArray);
+
+    // 7. Delete the workflow nodes
+    const { error: deleteError } = await admin
+      .from('workflow_nodes')
+      .delete()
+      .in('id', idsArray);
+
+    if (deleteError) {
+      console.error('[workflow-nodes/[id]] DELETE error:', deleteError);
+      return NextResponse.json({ error: deleteError.message }, { status: 500 });
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        deletedCount: idsArray.length,
+        deletedIds: idsArray,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+      }
+    );
   } catch (err: any) {
     console.error('[workflow-nodes/[id]] DELETE error:', err);
     return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 });

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Plus,
   Trash2,
@@ -308,37 +308,80 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
     setIsModalOpen(true);
   };
 
-  // Modern confirmation deletion handler with instant optimistic update
+  // Recursively gather all descendant node IDs of a given node
+  const getDescendantIds = useCallback((rootId: string): Set<string> => {
+    const ids = new Set<string>([rootId]);
+    const queue = [rootId];
+    while (queue.length > 0) {
+      const currId = queue.shift()!;
+      nodes.forEach((n) => {
+        if (n.parent_node_id === currId && !ids.has(n.id)) {
+          ids.add(n.id);
+          queue.push(n.id);
+        }
+      });
+      const currNode = nodeMap.get(currId);
+      (currNode?.options || []).forEach((opt) => {
+        if (opt.next_node_id && !ids.has(opt.next_node_id)) {
+          const target = nodeMap.get(opt.next_node_id);
+          if (target && (target.parent_node_id === currId || target.level > (currNode?.level || 1))) {
+            ids.add(target.id);
+            queue.push(target.id);
+          }
+        }
+      });
+    }
+    return ids;
+  }, [nodes, nodeMap]);
+
+  // Modern confirmation deletion handler with recursive subtree cascade & instant optimistic update
   const handleConfirmDelete = async () => {
     if (!nodeToDelete) return;
     const deletedId = nodeToDelete.id;
     const deletedTitle = nodeToDelete.title;
+    const descendantIds = getDescendantIds(deletedId);
+    const subScreensCount = descendantIds.size - 1;
+
     setIsDeleting(true);
     try {
-      // Optimistically remove from state immediately
+      // Optimistically remove the node and ALL its descendants immediately
       setNodes((prev) =>
         prev
-          .filter((n) => n.id !== deletedId)
+          .filter((n) => !descendantIds.has(n.id))
           .map((n) => ({
             ...n,
             options: (n.options || []).map((o) =>
-              o.next_node_id === deletedId ? { ...o, next_node_id: null } : o
+              o.next_node_id && descendantIds.has(o.next_node_id)
+                ? { ...o, next_node_id: null }
+                : o
             ),
           }))
       );
-      if (previewNode?.id === deletedId) {
+
+      // If the currently previewed node was in the deleted subtree, reset simulator
+      if (previewNode && descendantIds.has(previewNode.id)) {
         setPreviewNode(null);
+        setSimulationTrail([]);
       }
+
       setNodeToDelete(null);
 
-      const res = await fetch(`/api/workflow-nodes/${deletedId}`, { method: "DELETE" });
+      const res = await fetch(`/api/workflow-nodes/${deletedId}`, {
+        method: "DELETE",
+        headers: { "Cache-Control": "no-cache" },
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         toast.error(data.error || "Failed to delete screen");
         await fetchNodes(); // Re-sync on failure
         return;
       }
-      toast.success(`Screen "${deletedTitle}" deleted successfully`);
+
+      if (subScreensCount > 0) {
+        toast.success(`Deleted "${deletedTitle}" and ${subScreensCount} linked sub-screen(s)`);
+      } else {
+        toast.success(`Screen "${deletedTitle}" deleted successfully`);
+      }
       await fetchNodes();
     } catch (err: any) {
       console.error("Failed to delete node:", err);
@@ -637,20 +680,49 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
                         )}
                       </div>
 
-                      {/* Shortcut to create next screen for this option if unlinked */}
-                      {!targetNode && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenCreate(node.id, opt.id || opt.option_id);
-                          }}
-                          className="h-5 text-[10px] px-1.5 text-primary hover:bg-primary/10"
-                        >
-                          + Create Screen
-                        </Button>
-                      )}
+                      {/* Actions for linked target screen or shortcut to create */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {targetNode ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEdit(targetNode);
+                              }}
+                              className="h-5 w-5 text-muted-foreground hover:text-foreground"
+                              title={`Edit Level ${targetNode.level} Screen`}
+                            >
+                              <Edit2 className="h-2.5 w-2.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setNodeToDelete(targetNode);
+                              }}
+                              className="h-5 w-5 text-muted-foreground hover:text-destructive"
+                              title={`Delete Level ${targetNode.level} Screen`}
+                            >
+                              <Trash2 className="h-2.5 w-2.5" />
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenCreate(node.id, opt.id || opt.option_id);
+                            }}
+                            className="h-5 text-[10px] px-1.5 text-primary hover:bg-primary/10"
+                          >
+                            + Create Screen
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -793,69 +865,143 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
                                 {nextOptions.map((subOpt) => {
                                   const deepTarget = subOpt.next_node_id ? nodeMap.get(subOpt.next_node_id) : null;
                                   return (
-                                    <div
-                                      key={subOpt.id || subOpt.option_id}
-                                      className="p-1.5 rounded bg-background border border-border text-[11px] flex items-center justify-between gap-1"
-                                    >
-                                      <div className="flex items-center gap-1.5 min-w-0">
-                                        <span className="font-medium text-foreground truncate">{subOpt.label}</span>
-                                        <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                                        {deepTarget ? (
-                                          <span
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setPreviewNode(deepTarget);
-                                            }}
-                                            className="font-bold text-primary hover:underline truncate cursor-pointer"
-                                          >
-                                            {deepTarget.title} (Lvl {deepTarget.level})
-                                          </span>
-                                        ) : (
-                                          <span className="text-[10px] text-muted-foreground italic">Ends</span>
-                                        )}
-                                      </div>
-                                      <div className="flex items-center gap-1 shrink-0">
-                                        {deepTarget ? (
-                                          <>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
+                                    <div key={subOpt.id || subOpt.option_id} className="space-y-1">
+                                      <div className="p-1.5 rounded bg-background border border-border text-[11px] flex items-center justify-between gap-1">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                          <span className="font-medium text-foreground truncate">{subOpt.label}</span>
+                                          <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                                          {deepTarget ? (
+                                            <span
                                               onClick={(e) => {
                                                 e.stopPropagation();
-                                                handleOpenEdit(deepTarget);
+                                                setPreviewNode(deepTarget);
                                               }}
-                                              className="h-5 w-5 text-muted-foreground hover:text-foreground"
-                                              title={`Edit Level ${deepTarget.level} Screen`}
+                                              className="font-bold text-primary hover:underline truncate cursor-pointer"
                                             >
-                                              <Edit2 className="h-2.5 w-2.5" />
-                                            </Button>
+                                              {deepTarget.title} (Lvl {deepTarget.level})
+                                            </span>
+                                          ) : (
+                                            <span className="text-[10px] text-muted-foreground italic">Ends</span>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          {deepTarget ? (
+                                            <>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleOpenEdit(deepTarget);
+                                                }}
+                                                className="h-5 w-5 text-muted-foreground hover:text-foreground"
+                                                title={`Edit Level ${deepTarget.level} Screen`}
+                                              >
+                                                <Edit2 className="h-2.5 w-2.5" />
+                                              </Button>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setNodeToDelete(deepTarget);
+                                                }}
+                                                className="h-5 w-5 text-muted-foreground hover:text-destructive"
+                                                title={`Delete Level ${deepTarget.level} Screen`}
+                                              >
+                                                <Trash2 className="h-2.5 w-2.5" />
+                                              </Button>
+                                            </>
+                                          ) : (
                                             <Button
                                               variant="ghost"
-                                              size="icon"
+                                              size="sm"
                                               onClick={(e) => {
                                                 e.stopPropagation();
-                                                setNodeToDelete(deepTarget);
+                                                handleOpenCreate(targetNode.id, subOpt.id || subOpt.option_id);
                                               }}
-                                              className="h-5 w-5 text-muted-foreground hover:text-destructive"
-                                              title={`Delete Level ${deepTarget.level} Screen`}
+                                              className="h-5 text-[9px] px-1 text-primary hover:bg-primary/10"
                                             >
-                                              <Trash2 className="h-2.5 w-2.5" />
+                                              + Link Screen
                                             </Button>
-                                          </>
-                                        ) : (
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleOpenCreate(targetNode.id, subOpt.id || subOpt.option_id);
-                                            }}
-                                            className="h-5 text-[9px] px-1 text-primary hover:bg-primary/10"
-                                          >
-                                            + Link Screen
-                                          </Button>
-                                        )}
+                                          )}
+                                        </div>
                                       </div>
+
+                                      {/* Level 4 sub-routes under deepTarget */}
+                                      {deepTarget && deepTarget.options && deepTarget.options.length > 0 && (
+                                        <div className="mt-1 pl-3 border-l-2 border-primary/30 space-y-1">
+                                          {deepTarget.options.map((lvl4Opt) => {
+                                            const lvl4Target = lvl4Opt.next_node_id ? nodeMap.get(lvl4Opt.next_node_id) : null;
+                                            return (
+                                              <div
+                                                key={lvl4Opt.id || lvl4Opt.option_id}
+                                                className="p-1 rounded bg-muted/40 border border-border/60 text-[10px] flex items-center justify-between gap-1"
+                                              >
+                                                <div className="flex items-center gap-1 truncate">
+                                                  <span className="font-medium text-foreground truncate">{lvl4Opt.label}</span>
+                                                  <ArrowRight className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
+                                                  {lvl4Target ? (
+                                                    <span
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setPreviewNode(lvl4Target);
+                                                      }}
+                                                      className="font-bold text-primary hover:underline truncate cursor-pointer"
+                                                    >
+                                                      {lvl4Target.title} (Lvl {lvl4Target.level})
+                                                    </span>
+                                                  ) : (
+                                                    <span className="text-[9px] text-muted-foreground italic">Ends</span>
+                                                  )}
+                                                </div>
+                                                <div className="flex items-center gap-0.5 shrink-0">
+                                                  {lvl4Target ? (
+                                                    <>
+                                                      <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          handleOpenEdit(lvl4Target);
+                                                        }}
+                                                        className="h-4 w-4 text-muted-foreground hover:text-foreground"
+                                                        title={`Edit Level ${lvl4Target.level} Screen`}
+                                                      >
+                                                        <Edit2 className="h-2 w-2" />
+                                                      </Button>
+                                                      <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          setNodeToDelete(lvl4Target);
+                                                        }}
+                                                        className="h-4 w-4 text-muted-foreground hover:text-destructive"
+                                                        title={`Delete Level ${lvl4Target.level} Screen`}
+                                                      >
+                                                        <Trash2 className="h-2 w-2" />
+                                                      </Button>
+                                                    </>
+                                                  ) : (
+                                                    <Button
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleOpenCreate(deepTarget.id, lvl4Opt.id || lvl4Opt.option_id);
+                                                      }}
+                                                      className="h-4 text-[8px] px-1 text-primary hover:bg-primary/10"
+                                                    >
+                                                      + Link L4
+                                                    </Button>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
                                     </div>
                                   );
                                 })}
@@ -1105,9 +1251,29 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
                   </div>
                 </div>
                 {previewNode && (
-                  <Badge variant="outline" className="text-[9px] border-neutral-700 text-neutral-300">
-                    Lvl {previewNode.level}
-                  </Badge>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenEdit(previewNode)}
+                      className="h-6 w-6 text-neutral-300 hover:text-white hover:bg-neutral-800"
+                      title="Edit Active Screen"
+                    >
+                      <Edit2 className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setNodeToDelete(previewNode)}
+                      className="h-6 w-6 text-neutral-300 hover:text-red-400 hover:bg-neutral-800"
+                      title="Delete Active Screen"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                    <Badge variant="outline" className="text-[9px] border-neutral-700 text-neutral-300">
+                      Lvl {previewNode.level}
+                    </Badge>
+                  </div>
                 )}
               </div>
 
@@ -1588,13 +1754,34 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
             </div>
           </div>
 
-          <DialogFooter className="border-t border-border pt-3">
-            <Button variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSaving} size="sm">
-              Cancel
-            </Button>
-            <Button onClick={handleSaveNode} disabled={isSaving} size="sm">
-              {isSaving ? "Saving..." : editingNode ? "Update Screen" : "Create Screen"}
-            </Button>
+          <DialogFooter className="border-t border-border pt-3 flex items-center justify-between sm:justify-between w-full">
+            {editingNode ? (
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  const toDelete = editingNode;
+                  setIsModalOpen(false);
+                  setNodeToDelete(toDelete);
+                }}
+                className="gap-1.5 text-xs"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete Screen
+              </Button>
+            ) : (
+              <div />
+            )}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSaving} size="sm">
+                Cancel
+              </Button>
+              <Button onClick={handleSaveNode} disabled={isSaving} size="sm" className="bg-primary text-primary-foreground gap-1.5">
+                <Check className="h-3.5 w-3.5" />
+                {isSaving ? "Saving..." : editingNode ? "Update Screen" : "Create Screen"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1606,7 +1793,16 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
           if (!open) setNodeToDelete(null);
         }}
         title="Delete Workflow Screen"
-        description={`Are you sure you want to delete "${nodeToDelete?.title || "this screen"}"? Any menu choices or child screens linked to it will be safely unlinked.`}
+        description={
+          nodeToDelete
+            ? (() => {
+                const count = getDescendantIds(nodeToDelete.id).size - 1;
+                return count > 0
+                  ? `Are you sure you want to delete "${nodeToDelete.title}" and its ${count} downstream sub-screen(s)? All screens branching downstream from it will be permanently removed.`
+                  : `Are you sure you want to delete "${nodeToDelete.title}"? Any choices or menus linking to it will be safely unlinked.`;
+              })()
+            : ""
+        }
         confirmText="Delete Screen"
         cancelText="Cancel"
         variant="destructive"
