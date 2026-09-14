@@ -584,7 +584,7 @@ function StepRenderer({
       ? { kind: "root", index }
       : { kind: "branch", parentCid: parentScope.parentCid, branch: parentScope.branch, index },
   ]
-  const meta = STEP_META[step.step_type]
+  const meta = STEP_META[step.step_type] ?? { label: "Unknown Step", icon: Zap, border: "border-l-muted-foreground/40" }
   const Icon = meta.icon
   const expanded = props.expandedId === step.cid
   const isCondition = step.step_type === "condition"

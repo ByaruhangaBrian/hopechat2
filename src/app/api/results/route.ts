@@ -76,100 +76,96 @@ export async function GET(request: Request) {
 
     // --- Per-test aggregates ---
     const testAgg = new Map<string, {
-      test_id: string; title: string; count: number; sumPct: number; passCount: number; sumCorrect: number; sumTotal: number;
+      id: string; title: string; count: number; sumPct: number; sumDuration: number; durationCount: number;
     }>()
     for (const a of rows) {
       const cur = testAgg.get(a.test_id) || {
-        test_id: a.test_id, title: a.tests?.title || 'Untitled', count: 0, sumPct: 0, passCount: 0, sumCorrect: 0, sumTotal: 0,
+        id: a.test_id, title: a.tests?.title || 'Untitled', count: 0, sumPct: 0, sumDuration: 0, durationCount: 0,
       }
       cur.count++
-      cur.sumPct += a.percentage
-      if (a.passed === true) cur.passCount++
-      cur.sumCorrect += a.correct_count
-      cur.sumTotal += a.total
+      cur.sumPct += a.percentage ?? 0
+      if (a.duration_ms) { cur.sumDuration += a.duration_ms; cur.durationCount++ }
       testAgg.set(a.test_id, cur)
     }
-    const testStats = [...testAgg.values()].map((t) => ({
-      test_id: t.test_id,
+    const tests = [...testAgg.values()].map((t) => ({
+      id: t.id,
       title: t.title,
-      attempts: t.count,
-      avg_percentage: t.count ? Math.round(t.sumPct / t.count) : 0,
-      pass_rate: t.count ? Math.round((t.passCount / t.count) * 100) : 0,
-      avg_correct: t.count ? t.sumCorrect / t.count : 0,
-      avg_total: t.count ? Math.round(t.sumTotal / t.count) : 0,
+      attemptCount: t.count,
+      avgScore: t.count ? t.sumPct / 100 : 0,
+      avgDuration: t.durationCount ? Math.round(t.sumDuration / t.durationCount) : 0,
     }))
 
-    // --- Per-question difficulty ---
-    const qAgg = new Map<string, {
-      question_id: string | null; test_id: string; question_text: string; count: number; correctCount: number;
-    }>()
+    // --- Per-question difficulty (grouped by question text, with per-test breakdown) ---
+    type QAgg = { questionId: string | null; text: string; total: number; correct: number; testMap: Map<string, { testId: string; testTitle: string; answered: number; correct: number }> }
+    const qMap = new Map<string, QAgg>()
     for (const r of questionRows) {
       if (!r.question_text) continue
       const key = r.question_id || `$${r.question_text}`
-      const cur = qAgg.get(key) || {
-        question_id: r.question_id ?? null, test_id: r.test_id, question_text: r.question_text, count: 0, correctCount: 0,
+      let agg = qMap.get(key)
+      if (!agg) {
+        agg = { questionId: r.question_id ?? null, text: r.question_text, total: 0, correct: 0, testMap: new Map() }
+        qMap.set(key, agg)
       }
-      cur.count++
-      if (r.correct) cur.correctCount++
-      qAgg.set(key, cur)
+      agg.total++
+      if (r.correct) agg.correct++
+      const tKey = r.test_id
+      const tAgg = agg.testMap.get(tKey) || { testId: r.test_id, testTitle: 'Untitled', answered: 0, correct: 0 }
+      tAgg.answered++
+      if (r.correct) tAgg.correct++
+      agg.testMap.set(tKey, tAgg)
     }
-    const questionStats = [...qAgg.values()]
+    // Resolve test titles
+    for (const agg of qMap.values()) {
+      for (const [tKey, tAgg] of agg.testMap) {
+        const testMeta = testAgg.get(tKey)
+        if (testMeta) tAgg.testTitle = testMeta.title
+      }
+    }
+    const questions = [...qMap.values()]
       .map((q) => ({
-        question_id: q.question_id,
-        test_id: q.test_id,
-        question_text: q.question_text,
-        attempts: q.count,
-        correct_count: q.correctCount,
-        accuracy: q.count ? Math.round((q.correctCount / q.count) * 100) : 0,
+        questionId: q.questionId || q.text,
+        text: q.text,
+        totalAnswered: q.total,
+        totalCorrect: q.correct,
+        accuracy: q.total ? q.correct / q.total : 0,
+        stats: [...q.testMap.values()],
       }))
       .sort((a, b) => a.accuracy - b.accuracy)
 
     // --- Summary ---
     const totalCount = rows.length
     const summary = {
-      attempts: totalCount,
-      avg_percentage: totalCount ? Math.round(rows.reduce((s, a) => s + a.percentage, 0) / totalCount) : 0,
-      pass_rate: totalCount ? Math.round((rows.filter((a) => a.passed === true).length / totalCount) * 100) : 0,
-      avg_correct: totalCount
-        ? Number((rows.reduce((s, a) => s + a.correct_count, 0) / totalCount).toFixed(2))
-        : 0,
+      totalAttempts: totalCount,
+      avgScore: totalCount ? rows.reduce((s, a) => s + (a.percentage ?? 0), 0) / totalCount / 100 : null,
     }
 
-    // --- Distinct routing keys present in the results (for filters) ---
+    // --- Distinct routing keys ---
     const routingKeys: string[] = []
     const seen = new Set<string>()
     for (const a of rows) {
       for (const k of Object.keys(a.routing_answers || {})) {
-        if (!seen.has(k)) {
-          seen.add(k)
-          routingKeys.push(k)
-        }
+        if (!seen.has(k)) { seen.add(k); routingKeys.push(k) }
       }
     }
 
     return NextResponse.json({
-      attempts: rows.map((a) => ({
-        id: a.id,
-        test_id: a.test_id,
-        test_title: a.tests?.title || 'Untitled',
-        contact_id: a.contact_id,
-        contact_name: a.contacts?.name || null,
-        contact_phone: a.contacts?.phone || null,
-        mode: a.mode,
-        routing_answers: a.routing_answers || {},
-        score: a.score,
-        total: a.total,
-        percentage: a.percentage,
-        correct_count: a.correct_count,
-        passed: a.passed,
-        timed_out: a.timed_out,
-        started_at: a.started_at,
-        finished_at: a.finished_at,
-      })),
-      testStats,
-      questionStats,
+      tests,
+      questions,
       summary,
       routingKeys: routingKeys.slice(0, 20),
+      attempts: rows.map((a) => ({
+        id: a.id,
+        testId: a.test_id,
+        testTitle: a.tests?.title || 'Untitled',
+        contactId: a.contact_id,
+        contactName: a.contacts?.name || null,
+        score: a.score ?? 0,
+        totalQuestions: a.total ?? 0,
+        startedAt: a.started_at || null,
+        completedAt: a.finished_at || null,
+        durationMs: a.duration_ms ?? null,
+        routingAnswers: a.routing_answers || {},
+      })),
     }, { headers: NO_CACHE })
   } catch (err: any) {
     console.error('[results] GET route error:', err)
