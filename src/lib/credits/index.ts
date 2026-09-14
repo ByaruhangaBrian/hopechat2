@@ -19,6 +19,7 @@ export type CreditAction =
   | 'interactive_form'
   | 'bulk_broadcast'
   | 'sms'
+  | 'test_attempt'
 
 export interface CreditCostEntry {
   credits: number
@@ -31,6 +32,8 @@ export interface CreditCosts {
   bulk_broadcast: CreditCostEntry
   /** Cost per SMS message sent in a bulk SMS broadcast. */
   sms_per_message: CreditCostEntry
+  /** Cost per completed test / practice attempt. */
+  test_attempt: CreditCostEntry
   credit_ugx_rate: number
 }
 
@@ -39,6 +42,7 @@ const DEFAULT_COSTS: CreditCosts = {
   interactive_form: { credits: 1, label: 'Interactive Form / Flow' },
   bulk_broadcast: { credits: 15, label: 'Bulk Broadcast' },
   sms_per_message: { credits: 1, label: 'SMS Message' },
+  test_attempt: { credits: 1, label: 'Test Attempt' },
   credit_ugx_rate: 40,
 }
 
@@ -62,6 +66,7 @@ export async function getCreditCosts(): Promise<CreditCosts> {
     interactive_form: v.interactive_form ?? DEFAULT_COSTS.interactive_form,
     bulk_broadcast: v.bulk_broadcast ?? DEFAULT_COSTS.bulk_broadcast,
     sms_per_message: v.sms_per_message ?? DEFAULT_COSTS.sms_per_message,
+    test_attempt: v.test_attempt ?? DEFAULT_COSTS.test_attempt,
     credit_ugx_rate: v.credit_ugx_rate ?? DEFAULT_COSTS.credit_ugx_rate,
   }
 }

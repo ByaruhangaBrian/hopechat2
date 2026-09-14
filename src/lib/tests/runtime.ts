@@ -1,5 +1,7 @@
 import { supabaseAdmin } from '@/lib/automations/admin-client'
 import { engineSendText, engineSendInteractive } from '@/lib/automations/meta-send'
+import { consumeCredits } from '@/lib/credits'
+import { getSessionTimeoutHours } from '@/lib/tests/settings'
 
 interface TestIntroField {
   key: string
@@ -68,6 +70,22 @@ function sortQuestions(rows: TestQuestionRow[]): TestQuestionRow[] {
 
 function introFieldsOf(test: { intro_fields?: unknown }): TestIntroField[] {
   return Array.isArray(test.intro_fields) ? (test.intro_fields as TestIntroField[]) : []
+}
+
+/**
+ * True when an active session has gone quiet for longer than the business's
+ * configured inactivity window. Timed tests are exempt — their own duration
+ * deadline governs them (see the per-reply deadline check in handleTestReply).
+ */
+async function isInactiveExpired(
+  businessId: string,
+  lastActivityAt: string | null | undefined,
+  test: { mode?: string; duration_minutes?: number | null } | null,
+): Promise<boolean> {
+  if (test?.mode === 'test' && test.duration_minutes) return false
+  const timeoutHours = await getSessionTimeoutHours(businessId)
+  const last = lastActivityAt ? new Date(lastActivityAt).getTime() : Date.now()
+  return Date.now() - last > timeoutHours * 60 * 60 * 1000
 }
 
 /** Send an interactive buttons/list payload scoped to a conversation. */
@@ -142,15 +160,24 @@ export async function startTest(contactId: string, testId: string): Promise<void
     .single()
   if (testErr || !test) throw new Error('Test not found or inactive')
 
-  // Idempotency guard — never reset a session that is mid-flow.
+// Idempotency guard — never reset a session that is mid-flow. A stale
+  // *inactive* session is treated as done so a hung session never blocks a
+  // fresh dispatch from ever starting.
   const { data: existing } = await db
     .from('user_sessions')
-    .select('session_data')
+    .select('session_data, last_interaction_at')
     .eq('business_id', test.business_id)
     .eq('contact_id', contactId)
     .maybeSingle()
   const esd = existing?.session_data as TestSessionState | null | undefined
-  if (esd?.module === 'test' && esd?.status === 'active') return
+  if (esd?.module === 'test' && esd?.status === 'active') {
+    const expired = await isInactiveExpired(
+      test.business_id,
+      (existing as { last_interaction_at?: string } | null)?.last_interaction_at ?? esd.started_at,
+      test,
+    )
+    if (!expired) return
+  }
 
   await beginSession(contactId, test)
 }
@@ -229,13 +256,14 @@ async function beginSession(
     business_id: test.business_id,
   }
 
-  await db.from('user_sessions').upsert(
+await db.from('user_sessions').upsert(
     {
       business_id: test.business_id,
       contact_id: contactId,
       current_node_id: null,
       quiz_score: 0,
       session_data: state,
+      last_interaction_at: new Date().toISOString(),
     },
     { onConflict: 'business_id,contact_id' },
   )
@@ -284,12 +312,17 @@ export async function handleTestReply(
   const state = session?.session_data as TestSessionState | null | undefined
   if (!state || state.module !== 'test') return { handled: false }
 
-  // A completed session only accepts the "Start over" button (re-runs the
-  // screening it came through — routing flow, entry test, or nothing).
+// A completed session only accepts two buttons: "Start over" (re-runs the
+  // screening it came through — routing flow, entry test, or nothing) and
+  // "Done" (permanently closes the session so nothing can restart it).
   if (state.status === 'completed') {
     if (selectedOptionKey === 'test:restart') {
       if (state.flow_id) await startFlow(contactId, state.flow_id)
       else await startTest(contactId, state.entry_test_id || state.test_id)
+      return { handled: true }
+    }
+    if (selectedOptionKey === 'test:done') {
+      await db.from('user_sessions').delete().eq('contact_id', contactId)
       return { handled: true }
     }
     return { handled: false }
@@ -301,6 +334,23 @@ export async function handleTestReply(
     .eq('id', state.test_id)
     .single()
   if (!test) return { handled: false }
+
+  // Inactivity timeout: discard a session idle longer than the business's
+  // configured window (timed tests use their own deadline instead), so a hung
+  // session never blocks a fresh dispatch forever.
+  if (await isInactiveExpired(state.business_id, session?.last_interaction_at ?? state.started_at, test)) {
+    await db.from('user_sessions').delete().eq('contact_id', contactId)
+    await engineSendText({
+      userId: state.user_id,
+      conversationId: state.conversation_id,
+      contactId,
+      text: 'This session has been closed because it was idle for too long. Send a message to start a new one.',
+    })
+    return { handled: true }
+  }
+
+  // Reset the inactivity clock — the student just interacted.
+  await db.from('user_sessions').update({ last_interaction_at: new Date().toISOString() }).eq('contact_id', contactId)
 
   const questions = sortQuestions(test.test_questions as TestQuestionRow[])
   const introFields = introFieldsOf(test)
@@ -552,9 +602,22 @@ async function persistAttempt(
     .select('id')
     .single()
 
-  if (error || !attempt) {
+if (error || !attempt) {
     console.error('[tests/runtime] persist attempt error:', error?.message || 'no attempt id')
     return
+  }
+
+  // Credit usage: a completed attempt costs the business 1 credit (the amount
+  // is configured in the super admin Credit System Configuration).
+  const credit = await consumeCredits(state.business_id, 'test_attempt', {
+    userId: state.user_id,
+    contactId,
+    referenceId: `test_attempt:${attempt.id}`,
+    description: `Test attempt: ${test.title}`,
+    metadata: { test_id: test.id, mode: test.mode },
+  })
+  if (!credit.ok) {
+    console.warn(`[tests/runtime] credit deduction failed for business ${state.business_id}:`, credit.reason)
   }
 
   const rows = state.answered.map((a, i) => {
@@ -619,14 +682,21 @@ export async function startFlow(contactId: string, flowId: string): Promise<void
   const entry = steps.find((s) => s.id === flow.entry_step_id)
   if (!entry) throw new Error('Routing flow has no entry step')
 
-  const { data: existing } = await db
+const { data: existing } = await db
     .from('user_sessions')
-    .select('session_data')
+    .select('session_data, last_interaction_at')
     .eq('business_id', flow.business_id)
     .eq('contact_id', contactId)
     .maybeSingle()
   const esd = existing?.session_data as FlowState | TestSessionState | null | undefined
-  if (esd?.module && esd.status === 'active') return
+  if (esd?.module && esd.status === 'active') {
+    const expired = await isInactiveExpired(
+      flow.business_id,
+      (existing as { last_interaction_at?: string } | null)?.last_interaction_at ?? esd.started_at,
+      null,
+    )
+    if (!expired) return
+  }
 
   const { userId, conversationId } = await resolveUserAndConversation(flow.business_id, contactId)
 
@@ -642,13 +712,14 @@ export async function startFlow(contactId: string, flowId: string): Promise<void
     started_at: new Date().toISOString(),
   }
 
-  await db.from('user_sessions').upsert(
+await db.from('user_sessions').upsert(
     {
       business_id: flow.business_id,
       contact_id: contactId,
       current_node_id: null,
       quiz_score: 0,
       session_data: state,
+      last_interaction_at: new Date().toISOString(),
     },
     { onConflict: 'business_id,contact_id' },
   )
@@ -775,8 +846,22 @@ export async function handleFlowReply(
     .select('*')
     .eq('contact_id', contactId)
     .maybeSingle()
-  const state = session?.session_data as FlowState | null | undefined
+const state = session?.session_data as FlowState | null | undefined
   if (!state || state.module !== 'flow' || state.status !== 'active') return { handled: false }
+
+  // Inactivity timeout — same window as tests (flows are always untimed).
+  if (await isInactiveExpired(state.business_id, session?.last_interaction_at ?? state.started_at, null)) {
+    await db.from('user_sessions').delete().eq('contact_id', contactId)
+    await engineSendText({
+      userId: state.user_id,
+      conversationId: state.conversation_id,
+      contactId,
+      text: 'This session has been closed because it was idle for too long. Send a message to start a new one.',
+    })
+    return { handled: true }
+  }
+
+  await db.from('user_sessions').update({ last_interaction_at: new Date().toISOString() }).eq('contact_id', contactId)
 
   let flow: any
   let steps: FlowStepRow[]

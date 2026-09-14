@@ -70,6 +70,7 @@ export default function AdminSettingsPage() {
     interactive_form: { credits: 1, label: "Interactive Form / Flow" },
     bulk_broadcast: { credits: 15, label: "Bulk Broadcast" },
     sms_per_message: { credits: 1, label: "SMS Message" },
+    test_attempt: { credits: 1, label: "Test Attempt" },
     credit_ugx_rate: 40,
   });
   const [smsSettings, setSmsSettings] = useState({
@@ -143,6 +144,7 @@ export default function AdminSettingsPage() {
           interactive_form: cc.value.interactive_form ?? { credits: 1, label: "Interactive Form / Flow" },
           bulk_broadcast: cc.value.bulk_broadcast ?? { credits: 15, label: "Bulk Broadcast" },
           sms_per_message: cc.value.sms_per_message ?? { credits: 1, label: "SMS Message" },
+          test_attempt: cc.value.test_attempt ?? { credits: 1, label: "Test Attempt" },
           credit_ugx_rate: cc.value.credit_ugx_rate ?? 40,
         });
       }
@@ -992,6 +994,7 @@ export default function AdminSettingsPage() {
                     <li>Each <strong>Interactive Form / Flow</strong> sent via automation costs credits.</li>
                     <li>Each <strong>Bulk Broadcast</strong> action costs credits (per broadcast, not per recipient).</li>
                     <li>Each <strong>SMS Message</strong> sent in an SMS broadcast costs credits (per recipient).</li>
+                    <li>Each completed <strong>Test Attempt</strong> costs credits (per finished attempt).</li>
                     <li>The UGX rate determines how much each credit costs when displayed to businesses.</li>
                   </ul>
                 </div>
@@ -1093,6 +1096,34 @@ export default function AdminSettingsPage() {
                     </div>
                     <p className="text-[11px] text-muted-foreground/60">
                       per SMS message
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-4 border-t border-border pt-4">
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs">
+                      {creditCosts.test_attempt.label}
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={creditCosts.test_attempt.credits}
+                        onChange={(e) =>
+                          setCreditCosts((prev) => ({
+                            ...prev,
+                            test_attempt: { ...prev.test_attempt, credits: Number(e.target.value) },
+                          }))
+                        }
+                        className="bg-muted border-border text-foreground font-semibold text-lg pr-12"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        credits
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground/60">
+                      per finished test or practice attempt
                     </p>
                   </div>
                 </div>

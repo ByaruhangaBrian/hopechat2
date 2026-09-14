@@ -82,11 +82,11 @@ export default function LandingPage() {
     },
     {
       q: "Can I automatically send a practice drill or timed test when a customer texts me?",
-      a: "Yes. Create practice drills and timed tests, then attach any test to your automation triggers. When a customer sends a keyword or matches a rule, HopeChat dispatches the test instantly — questions are delivered one at a time via WhatsApp buttons, with answers and scoring handled automatically.",
+      a: "Yes. Create practice drills and timed tests, then attach any test to your automation triggers. When a customer sends a keyword or matches a rule, HopeChat dispatches the test instantly — questions are delivered one at a time via WhatsApp buttons, with answers and scoring handled automatically. Each completed attempt uses one credit, which you can top up any time from the Billing section.",
     },
     {
       q: "Can HopeChat route a customer to the right test based on their answers?",
-      a: "Yes. Create an entry screening test that asks two intro questions (for example: which class? → which subject?). Each regular test then declares routing rules, so the moment a student answers the last question they are routed straight into the matching test automatically. The Results dashboard shows accuracy per subject and per question so you know exactly what each class needs to revise.",
+      a: "Yes. Create an entry screening test that asks two intro questions (for example: which class? → which subject?). Each regular test then declares routing rules, so the moment a student answers the last question they are routed straight into the matching test automatically. Idle sessions close automatically after your configured timeout so they never block the next student, and every completed test attempt uses one credit from your plan.",
     },
     {
       q: "How does the AI train on my business data?",
@@ -478,8 +478,8 @@ export default function LandingPage() {
                 points: [
                   "Entry test asks the intro questions (class, subject)",
                   "Routing rules send each student to the matching test automatically",
-                  "Every intro answer is recorded and reusable for routing",
-                  "Results dashboard with per-test, per-question, and per-attempt analytics"
+                  "Idle sessions close automatically so they never block the next student",
+                  "Every completed test attempt costs one credit — billable only when a student finishes"
                 ],
                 reverse: true,
                 mock: (

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Settings, MessageSquare, Tag, User, Cpu, Blocks, Coins, Users } from 'lucide-react';
+import { Settings, MessageSquare, Tag, User, Cpu, Blocks, Coins, Users, ClipboardList } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { WhatsAppConfig } from '@/components/settings/whatsapp-config';
 import { TemplateManager } from '@/components/settings/template-manager';
@@ -12,10 +12,11 @@ import { SessionsCard } from '@/components/settings/sessions-card';
 import { IntegrationsHub } from '@/components/settings/integrations-hub';
 import { BillingPlan } from '@/components/settings/billing-plan';
 import { UserManagement } from '@/components/settings/user-management';
+import { TestSettings } from '@/components/settings/test-settings';
 import { useAuth } from '@/hooks/use-auth';
 import { canAccess } from '@/lib/permissions';
 
-const TAB_VALUES = ['profile', 'whatsapp', 'templates', 'tags', 'integrations', 'billing', 'users'] as const;
+const TAB_VALUES = ['profile', 'whatsapp', 'templates', 'tags', 'integrations', 'billing', 'users', 'tests'] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
 function isTabValue(v: string | null): v is TabValue {
@@ -103,6 +104,13 @@ export default function SettingsPage() {
                 <Coins className="size-4" />
                 Plan & Billing
               </TabsTrigger>
+              <TabsTrigger
+                value="tests"
+                className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+              >
+                <ClipboardList className="size-4" />
+                Tests
+              </TabsTrigger>
             </>
           )}
           {showUserManagement && (
@@ -140,6 +148,10 @@ export default function SettingsPage() {
 
         <TabsContent value="billing">
           <BillingPlan />
+        </TabsContent>
+
+        <TabsContent value="tests">
+          <TestSettings />
         </TabsContent>
 
         {showUserManagement && (
