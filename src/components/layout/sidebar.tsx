@@ -14,8 +14,6 @@ import {
   Radio,
   Zap,
   FolderTree,
-  Route,
-  BarChart3,
   Cpu,
   Settings,
   LogOut,
@@ -57,8 +55,6 @@ const navItems = [
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
   { href: "/automations", label: "Automations", icon: Zap },
   { href: "/dashboard/menus", label: "Tests & Practice", icon: FolderTree },
-  { href: "/dashboard/routing", label: "Routing Flows", icon: Route },
-  { href: "/dashboard/results", label: "Results & Insights", icon: BarChart3 },
   { href: "/ai", label: "AI Hub", icon: Cpu },
 ];
 
@@ -70,8 +66,6 @@ const permissionByPath: Record<string, PermissionKey> = {
   "/broadcasts": "broadcasts",
   "/automations": "automations",
   "/dashboard/menus": "automations",
-  "/dashboard/routing": "automations",
-  "/dashboard/results": "automations",
   "/ai": "ai",
 };
 
