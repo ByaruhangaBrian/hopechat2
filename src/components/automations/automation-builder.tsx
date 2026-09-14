@@ -197,7 +197,9 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [availableAutomations, setAvailableAutomations] = useState<Automation[]>([])
-  const [availableWorkflowNodes, setAvailableWorkflowNodes] = useState<Array<{ id: string; title: string; node_key: string; level: number; node_type: string }>>([])
+  const [availableWorkflowNodes, setAvailableWorkflowNodes] = useState<
+    Array<{ id: string; title: string; node_key: string; level: number; node_type: string; parent_node_id: string | null }>
+  >([])
 
   useEffect(() => {
     fetch("/api/automations")
@@ -219,6 +221,7 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
               node_key: n.node_key,
               level: n.level,
               node_type: n.node_type,
+              parent_node_id: n.parent_node_id ?? null,
             }))
           )
         }
@@ -528,6 +531,7 @@ availableAutomations: Automation[]
     node_key: string
     level: number
     node_type: string
+    parent_node_id: string | null
   }>
 }
 
@@ -919,28 +923,35 @@ function StepEditor({
         </FieldBlock>
       )
     case "dispatch_workflow_node":
-      return (
-        <>
-          <FieldBlock label="Interactive Menu / Quiz Screen">
-            <select
-              value={(cfg.node_id as string) ?? ""}
-              onChange={(e) => set({ node_id: e.target.value })}
-              className="w-full rounded-md border border-input bg-muted px-2 py-1.5 text-sm text-foreground"
-            >
-              <option value="">Select a screen...</option>
-              {availableWorkflowNodes.map((n) => (
-                <option key={n.id} value={n.id}>
-                  L{n.level} · {n.title} ({n.node_key})
+      return (() => {
+        const rootMenus = availableWorkflowNodes.filter((n) => !n.parent_node_id)
+        return (
+          <>
+            <FieldBlock label="Root Menu">
+              <select
+                value={(cfg.node_id as string) ?? ""}
+                onChange={(e) => set({ node_id: e.target.value })}
+                disabled={rootMenus.length === 0}
+                className="w-full rounded-md border border-input bg-muted px-2 py-1.5 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <option value="">
+                  {rootMenus.length === 0 ? "No root menus yet — create one in Interactive Menus" : "Select a root menu..."}
                 </option>
-              ))}
-            </select>
-          </FieldBlock>
-          <p className="text-[10px] text-muted-foreground/60 leading-tight -mt-1">
-            Sends the screen as a WhatsApp interactive message. The customer can
-            then branch through linked sub-screens, questions, and quizzes.
-          </p>
-        </>
-      )
+                {rootMenus.map((n) => (
+                  <option key={n.id} value={n.id}>
+                    {n.title}
+                  </option>
+                ))}
+              </select>
+            </FieldBlock>
+            <p className="text-[10px] text-muted-foreground/60 leading-tight -mt-1">
+              Sends the selected root menu as a WhatsApp interactive message. The
+              customer then branches through its linked sub-screens, questions, and
+              quizzes.
+            </p>
+          </>
+        )
+      })()
     case "add_tag":
     case "remove_tag":
       return (
