@@ -159,6 +159,11 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
         issues.push({ path: `${path}.screen_id`, message: 'screen_id is required' })
       }
       break
+    case 'dispatch_workflow_node':
+      if (!nonEmpty(c.node_id)) {
+        issues.push({ path: `${path}.node_id`, message: 'a menu/quiz screen must be selected' })
+      }
+      break
     case 'lookup_spreadsheet':
     case 'trigger_automation':
       break

@@ -1,9 +1,10 @@
 import { supabaseAdmin } from '@/lib/automations/admin-client';
 import { decrypt } from '@/lib/whatsapp/encryption';
-import { sendInteractiveMessage, sendTextMessage } from '@/lib/whatsapp/meta-api';
+import { sendTextMessage } from '@/lib/whatsapp/meta-api';
 import { sanitizePhoneForMeta } from '@/lib/whatsapp/phone-utils';
 import { logHttpEvent } from '@/lib/logs/http-logs';
-import { WorkflowNode, NodeOption } from '@/types';
+import { consumeCredits } from '@/lib/credits';
+import { WorkflowNode, NodeOption, WorkflowUserSession } from '@/types';
 
 export interface DispatchNodeArgs {
   businessId: string;
@@ -22,6 +23,54 @@ export interface NodeInteractionResult {
   message?: string;
 }
 
+interface WorkflowNodeRow extends WorkflowNode {
+  options?: NodeOption[];
+}
+
+/**
+ * Loads a full node (with sorted options) for a business. Returns null when
+ * missing or not scoped to the business.
+ */
+async function fetchNodeWithOptions(
+  db: ReturnType<typeof supabaseAdmin>,
+  nodeId: string,
+  businessId: string
+): Promise<WorkflowNodeRow | null> {
+  const { data: node, error } = await db
+    .from('workflow_nodes')
+    .select('*, options:node_options!node_options_node_id_fkey(*)')
+    .eq('id', nodeId)
+    .eq('business_id', businessId)
+    .maybeSingle();
+
+  if (error || !node) {
+    if (error) console.error('[workflow-runtime] Node fetch error:', nodeId, error);
+    return null;
+  }
+
+  return {
+    ...(node as WorkflowNodeRow),
+    options: ((node as WorkflowNodeRow).options || []).sort(
+      (a: NodeOption, b: NodeOption) => (a.position ?? 0) - (b.position ?? 0)
+    ),
+  };
+}
+
+/**
+ * Credits are consumed once per dispatched interactive message, whether the
+ * dispatch originates from an automation step or the auto-advance after a
+ * customer button/list reply. Mirrors the engine's `whatsapp_interaction`
+ * gating so businesses cannot rack up free interactive sends.
+ */
+async function chargeForDispatch(businessId: string): Promise<boolean> {
+  const result = await consumeCredits(businessId, 'interactive_form');
+  if (!result.ok) {
+    console.error(`[workflow-runtime] Insufficient credits for interactive_form on business ${businessId}: ${result.reason}`);
+    return false;
+  }
+  return true;
+}
+
 /**
  * Dispatches a Workflow Node as a WhatsApp Interactive Message (Button or List)
  */
@@ -31,28 +80,21 @@ export async function dispatchWorkflowNode(args: DispatchNodeArgs): Promise<{ su
 
   try {
     // 1. Fetch Node and its options
-    const { data: node, error: nodeError } = await db
-      .from('workflow_nodes')
-      .select('*, options:node_options!node_options_node_id_fkey(*)')
-      .eq('id', nodeId)
-      .eq('business_id', businessId)
-      .single();
-
-    if (nodeError || !node) {
-      console.error('[workflow-runtime] Node not found:', nodeId, nodeError);
+    const node = await fetchNodeWithOptions(db, nodeId, businessId);
+    if (!node) {
+      console.error('[workflow-runtime] Node not found:', nodeId);
       return { success: false, error: 'Workflow node not found' };
     }
 
-    const options: NodeOption[] = (node.options || []).sort(
-      (a: any, b: any) => (a.position ?? 0) - (b.position ?? 0)
-    );
+    const options: NodeOption[] = node.options || [];
 
     // 2. Fetch Contact
     const { data: contact, error: contactError } = await db
       .from('contacts')
-      .select('id, phone, name')
+      .select('id, phone')
       .eq('id', contactId)
-      .single();
+      .eq('business_id', businessId)
+      .maybeSingle();
 
     if (contactError || !contact?.phone) {
       console.error('[workflow-runtime] Contact not found:', contactId);
@@ -71,10 +113,12 @@ export async function dispatchWorkflowNode(args: DispatchNodeArgs): Promise<{ su
       return { success: false, error: 'WhatsApp not configured' };
     }
 
-    const accessToken = decrypt(config.access_token);
-    const sanitizedPhone = sanitizePhoneForMeta(contact.phone);
+    // 4. Credit gate — charge per interactive dispatch (once, single source of truth)
+    if (!(await chargeForDispatch(businessId))) {
+      return { success: false, error: 'Insufficient credits to send this interactive menu' };
+    }
 
-    // 4. Resolve or create conversation
+    // 5. Resolve or upsert conversation
     let { data: conv } = await db
       .from('conversations')
       .select('id')
@@ -98,50 +142,44 @@ export async function dispatchWorkflowNode(args: DispatchNodeArgs): Promise<{ su
 
     const conversationId = conv?.id;
 
-    // 5. Send via Meta
+    // 6. Send via the engine-grade path (phone-variant retry + message recording).
+    // Imported lazily to keep the auto-dispatch path aligned with automations.
+    const { engineSendInteractive, engineSendText } = await import('@/lib/automations/meta-send');
     let whatsappMessageId = '';
-    const isButtons = options.length <= 3;
-    const maxChars = isButtons ? 20 : 24;
 
     if (options.length === 0) {
       // Fallback to text message if node has no interactive options
-      const sendRes = await sendTextMessage({
-        phoneNumberId: config.phone_number_id,
-        accessToken,
-        to: sanitizedPhone,
+      const { whatsapp_message_id } = await engineSendText({
+        userId: config.user_id,
+        conversationId,
+        contactId,
         text: node.body_text,
       });
-      whatsappMessageId = sendRes.messageId;
+      whatsappMessageId = whatsapp_message_id;
     } else {
-      // Format items with Meta character limit compliance
+      const isButtons = options.length <= 3;
+      const maxChars = isButtons ? 20 : 24;
+
       const items = options.slice(0, 10).map((opt) => ({
         id: opt.option_id,
         label: opt.label.slice(0, maxChars),
+        description: isButtons ? undefined : opt.description || undefined,
       }));
 
-      const sendRes = await sendInteractiveMessage({
-        phoneNumberId: config.phone_number_id,
-        accessToken,
-        to: sanitizedPhone,
+      const { whatsapp_message_id } = await engineSendInteractive({
+        userId: config.user_id,
+        conversationId,
+        contactId,
         header: node.header_text || undefined,
         body: node.body_text,
         footer: node.footer_text || undefined,
         items,
       });
-      whatsappMessageId = sendRes.messageId;
+      whatsappMessageId = whatsapp_message_id;
     }
 
-    // 6. Record sent message in messages table
+    // Record a conversation-level trace for the workflow manager
     if (conversationId) {
-      await db.from('messages').insert({
-        conversation_id: conversationId,
-        sender_type: 'bot',
-        content_type: options.length > 0 ? 'interactive' : 'text',
-        content_text: node.body_text,
-        message_id: whatsappMessageId,
-        status: 'sent',
-      });
-
       await db.from('conversations').update({
         last_message_text: `[Menu: ${node.title}]`,
         last_message_at: new Date().toISOString(),
@@ -188,42 +226,71 @@ export async function handleNodeInteraction(
   const db = supabaseAdmin();
 
   // 1. Fetch current user session
-  const { data: session } = await db
+  const { data: sessionRow, error: sessionError } = await db
     .from('user_sessions')
     .select('*')
     .eq('business_id', businessId)
     .eq('contact_id', contactId)
     .maybeSingle();
 
-  let currentNode: WorkflowNode | null = null;
+  const session = (sessionRow as WorkflowUserSession | null) ?? null;
+  if (sessionError && sessionError.code !== 'PGRST116') {
+    console.error('[workflow-runtime] Session lookup failed:', sessionError);
+  }
+
+  let currentNode: WorkflowNodeRow | null = null;
   let matchedOption: NodeOption | null = null;
 
+  // 2. Primary path: the selected option must belong to the node the session
+  //    is currently parked on. This scoping avoids option_id collisions that
+  //    are legal per schema (unique only inside a single node).
   if (session?.current_node_id) {
-    const { data: node } = await db
-      .from('workflow_nodes')
-      .select('*, options:node_options!node_options_node_id_fkey(*)')
-      .eq('id', session.current_node_id)
-      .eq('business_id', businessId)
-      .maybeSingle();
-
+    const node = await fetchNodeWithOptions(db, session.current_node_id, businessId);
     if (node) {
-      currentNode = node;
-      matchedOption = (node.options || []).find((opt: NodeOption) => opt.option_id === selectedOptionId) || null;
+      matchedOption = (node.options || []).find(
+        (opt: NodeOption) => opt.option_id === selectedOptionId
+      ) || null;
+      if (matchedOption) currentNode = node;
     }
   }
 
-  // Fallback: If not in active node session, lookup any node option matching selectedOptionId
+  // 2b. Fallback: no active session/mismatch. Do a GLOBAL lookup among the
+  //     business's options, but only accept it when the option_id resolves
+  //     to exactly one node. Duplicated option_ids across nodes are ambiguous
+  //     and must NOT silently match the wrong menu.
   if (!matchedOption) {
-    const { data: opt } = await db
+    const { data: hits, error: optError } = await db
       .from('node_options')
-      .select('*, workflow_nodes!node_options_node_id_fkey!inner(*)')
+      .select('*, owner:workflow_nodes!node_options_node_id_fkey(id, node_type, title, node_key)')
       .eq('option_id', selectedOptionId)
-      .eq('workflow_nodes.business_id', businessId)
-      .maybeSingle();
+      .eq('owner.business_id', businessId)
+      .limit(10);
 
-    if (opt) {
-      matchedOption = opt;
-      currentNode = (opt as any).workflow_nodes;
+    if (optError) {
+      console.error('[workflow-runtime] Option lookup failed:', optError);
+    } else if (hits && hits.length === 1) {
+      const hit = hits[0] as NodeOption & { owner?: Pick<WorkflowNode, 'id' | 'node_type' | 'title' | 'node_key'> };
+      const owner = hit.owner;
+      if (owner) {
+        matchedOption = { ...hit };
+        currentNode = {
+          id: owner.id,
+          business_id: businessId,
+          parent_node_id: null,
+          title: owner.title,
+          node_key: owner.node_key,
+          node_type: owner.node_type,
+          body_text: '',
+          level: 1,
+          created_at: '',
+          updated_at: '',
+          options: [matchedOption],
+        };
+      }
+    } else if (hits && hits.length > 1) {
+      // Ambiguous — report instead of guessing. Common cause: every node
+      // defaults its first option to `opt_1`.
+      console.warn(`[workflow-runtime] Ambiguous option_id "${selectedOptionId}" matched ${hits.length} nodes; refusing to route blindly`);
     }
   }
 
@@ -232,7 +299,7 @@ export async function handleNodeInteraction(
     return { handled: false };
   }
 
-  // 2. Question / Assessment scoring
+  // 3. Question / Assessment scoring
   let newScore = session?.quiz_score ?? 0;
   const isQuestion = currentNode.node_type === 'question';
   const isCorrect = Boolean(matchedOption.is_correct_answer);
@@ -243,7 +310,7 @@ export async function handleNodeInteraction(
   }
 
   const sessionData = (session?.session_data as Record<string, unknown>) || {};
-  const answers = Array.isArray(sessionData.answers) ? [...sessionData.answers] : [];
+  const answers = Array.isArray(sessionData.answers) ? [...(sessionData.answers as unknown[])] : [];
   answers.push({
     node_id: currentNode.id,
     node_key: currentNode.node_key,
@@ -255,7 +322,7 @@ export async function handleNodeInteraction(
   });
   sessionData.answers = answers;
 
-  // 3. Transition to next node if specified
+  // 4. Transition to next node if specified
   const nextNodeId = matchedOption.next_node_id;
 
   if (nextNodeId) {
@@ -316,11 +383,12 @@ export async function handleNodeInteraction(
         .from('contacts')
         .select('phone')
         .eq('id', contactId)
+        .eq('business_id', businessId)
         .maybeSingle();
 
       if (config && contact) {
         const accessToken = decrypt(config.access_token);
-        const completionText = `🎉 *Assessment Complete!*\n\n` +
+        const completionText = `\u{1F389} *Assessment Complete!*\n\n` +
           `Your final score is *${newScore} points*.\n` +
           `Thank you for completing this assessment!`;
 

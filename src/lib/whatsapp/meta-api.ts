@@ -190,7 +190,7 @@ export interface SendInteractiveMessageArgs {
   body: string;
   footer?: string;
   /** List of (id, label) pairs. If <= 3, sent as buttons; if > 3 (up to 10), sent as a list. */
-  items: Array<{ id: string; label: string }>;
+  items: Array<{ id: string; label: string; description?: string }>;
 }
 
 /**
@@ -231,6 +231,7 @@ export async function sendInteractiveMessage(
           rows: items.slice(0, 10).map((item) => ({
             id: item.id,
             title: item.label.slice(0, 24), // Meta limit: 24 chars
+            ...(item.description ? { description: item.description.slice(0, 72) } : {}), // Meta limit: 72 chars
           })),
         },
       ],

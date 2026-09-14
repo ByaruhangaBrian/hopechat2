@@ -18,9 +18,11 @@ import type {
   WhatsAppInteractionStepConfig,
   WhatsAppFlowStepConfig,
   TriggerAutomationStepConfig,
+  DispatchWorkflowNodeStepConfig,
 } from '@/types'
 import { supabaseAdmin } from './admin-client'
 import { engineSendText, engineSendTemplate, engineSendInteractive, engineSendFlow } from './meta-send'
+import { dispatchWorkflowNode } from '@/lib/workflow-nodes/runtime'
 import { generateGeminiResponse } from './gemini-client'
 import { getOrSetCache } from '@/lib/whatsapp/gemini-cache'
 import { logHttpEvent } from '@/lib/logs/http-logs'
@@ -298,7 +300,7 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
 
   for (const step of steps as AutomationStep[]) {
     // suspension points: `wait`, `whatsapp_interaction`, `whatsapp_flow`
-    if (step.step_type === 'wait' || step.step_type === 'whatsapp_interaction' || step.step_type === 'whatsapp_flow') {
+    if (step.step_type === 'wait' || step.step_type === 'whatsapp_interaction' || step.step_type === 'whatsapp_flow' || step.step_type === 'dispatch_workflow_node') {
       try {
         const detail = await runStep(step, args)
         results.push({
@@ -537,6 +539,22 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       })
 
       return `triggered child automation ${cfg.automation_id}`
+    }
+
+    case 'dispatch_workflow_node': {
+      const cfg = step.step_config as DispatchWorkflowNodeStepConfig
+      if (!cfg.node_id) throw new Error('dispatch_workflow_node needs node_id')
+      if (!args.contactId) throw new Error('dispatch_workflow_node needs a contact')
+
+      const dispatchRes = await dispatchWorkflowNode({
+        businessId: args.businessId,
+        contactId: args.contactId,
+        nodeId: cfg.node_id,
+      })
+      if (!dispatchRes.success) {
+        throw new Error(dispatchRes.error || 'workflow node dispatch failed')
+      }
+      return `workflow node dispatched (${dispatchRes.whatsapp_message_id})`
     }
 
     case 'wait': {

@@ -29,6 +29,7 @@ import {
   MousePointerClick,
   LayoutList,
   Workflow,
+  FolderTree,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -98,6 +99,7 @@ const STEP_META: Record<AutomationStepType, StepMeta> = {
   lookup_spreadsheet: { label: "Lookup Spreadsheet", icon: TableProperties, border: "border-l-emerald-500" },
   whatsapp_interaction: { label: "WhatsApp Interaction", icon: MousePointerClick, border: "border-l-indigo-500" },
   whatsapp_flow: { label: "WhatsApp Flow", icon: LayoutList, border: "border-l-violet-500" },
+  dispatch_workflow_node: { label: "Dispatch Menu / Quiz", icon: FolderTree, border: "border-l-emerald-500" },
   trigger_automation: { label: "Trigger Automation", icon: Workflow, border: "border-l-orange-500" },
 }
 
@@ -106,6 +108,7 @@ const ADDABLE_STEPS: AutomationStepType[] = [
   "send_template",
   "whatsapp_interaction",
   "whatsapp_flow",
+  "dispatch_workflow_node",
   "trigger_automation",
   "lookup_spreadsheet",
   "add_tag",
@@ -172,6 +175,8 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
       return { body: "", items: [{ id: "1", label: "Option 1" }] }
     case "whatsapp_flow":
       return { flow_id: "", screen_id: "", initial_data: {} }
+    case "dispatch_workflow_node":
+      return { node_id: "" }
     case "trigger_automation":
       return { automation_id: "" }
     case "close_conversation":
@@ -192,6 +197,7 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [availableAutomations, setAvailableAutomations] = useState<Automation[]>([])
+  const [availableWorkflowNodes, setAvailableWorkflowNodes] = useState<Array<{ id: string; title: string; node_key: string; level: number; node_type: string }>>([])
 
   useEffect(() => {
     fetch("/api/automations")
@@ -199,6 +205,22 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
       .then((data) => {
         if (Array.isArray(data.automations)) {
           setAvailableAutomations(data.automations.filter((a: any) => a.id !== initial.id))
+        }
+      })
+      .catch(console.error)
+    fetch("/api/workflow-nodes")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.nodes)) {
+          setAvailableWorkflowNodes(
+            (data.nodes as any[]).map((n) => ({
+              id: n.id,
+              title: n.title,
+              node_key: n.node_key,
+              level: n.level,
+              node_type: n.node_type,
+            }))
+          )
         }
       })
       .catch(console.error)
@@ -333,6 +355,7 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
             deleteStepAt={deleteStepAt}
             moveStepAt={moveStepAt}
             availableAutomations={availableAutomations}
+            availableWorkflowNodes={availableWorkflowNodes}
           />
         </div>
       </div>
@@ -498,7 +521,14 @@ interface StepListProps {
   addStepAt: (parent: ParentScope, index: number, type: AutomationStepType) => void
   deleteStepAt: (path: StepPath) => void
   moveStepAt: (path: StepPath, direction: -1 | 1) => void
-  availableAutomations: Automation[]
+availableAutomations: Automation[]
+  availableWorkflowNodes: Array<{
+    id: string
+    title: string
+    node_key: string
+    level: number
+    node_type: string
+  }>
 }
 
 function StepList(props: StepListProps) {
@@ -593,6 +623,7 @@ function StepRenderer({
                 step={step}
                 onChange={(next) => props.updateStep(path, () => next)}
                 availableAutomations={props.availableAutomations}
+                availableWorkflowNodes={props.availableWorkflowNodes}
               />
               <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
                 <div className="flex gap-1">
@@ -726,10 +757,12 @@ function StepEditor({
   step,
   onChange,
   availableAutomations,
+  availableWorkflowNodes,
 }: {
   step: BuilderStep
   onChange: (s: BuilderStep) => void
   availableAutomations: Automation[]
+  availableWorkflowNodes: StepListProps["availableWorkflowNodes"]
 }) {
   const cfg = step.step_config
   const set = (patch: Record<string, unknown>) =>
@@ -884,6 +917,29 @@ function StepEditor({
             ))}
           </select>
         </FieldBlock>
+      )
+    case "dispatch_workflow_node":
+      return (
+        <>
+          <FieldBlock label="Interactive Menu / Quiz Screen">
+            <select
+              value={(cfg.node_id as string) ?? ""}
+              onChange={(e) => set({ node_id: e.target.value })}
+              className="w-full rounded-md border border-input bg-muted px-2 py-1.5 text-sm text-foreground"
+            >
+              <option value="">Select a screen...</option>
+              {availableWorkflowNodes.map((n) => (
+                <option key={n.id} value={n.id}>
+                  L{n.level} · {n.title} ({n.node_key})
+                </option>
+              ))}
+            </select>
+          </FieldBlock>
+          <p className="text-[10px] text-muted-foreground/60 leading-tight -mt-1">
+            Sends the screen as a WhatsApp interactive message. The customer can
+            then branch through linked sub-screens, questions, and quizzes.
+          </p>
+        </>
       )
     case "add_tag":
     case "remove_tag":
@@ -1197,6 +1253,8 @@ function previewFor(step: BuilderStep): string {
       return (step.step_config.body as string) || "no interaction body"
     case "whatsapp_flow":
       return `flow: ${step.step_config.flow_id ?? "?"}`
+    case "dispatch_workflow_node":
+      return "send an interactive menu / quiz"
     case "trigger_automation":
       return "start another automation"
     case "assign_to_ai":

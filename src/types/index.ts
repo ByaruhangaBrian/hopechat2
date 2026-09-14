@@ -254,6 +254,7 @@ export type AutomationStepType =
   | 'lookup_spreadsheet'
   | 'whatsapp_interaction'
   | 'whatsapp_flow'
+  | 'dispatch_workflow_node'
   | 'trigger_automation';
 
 export type AutomationLogStatus = 'success' | 'partial' | 'failed';
@@ -307,6 +308,11 @@ export interface WhatsAppFlowStepConfig {
   flow_id: string;
   screen_id: string;
   initial_data?: Record<string, unknown>;
+}
+
+export interface DispatchWorkflowNodeStepConfig {
+  /** id of a workflow_nodes row to dispatch as a WhatsApp interactive message */
+  node_id: string;
 }
 
 export interface TriggerAutomationStepConfig {
@@ -402,6 +408,7 @@ export type AutomationStepConfig =
   | SendWebhookStepConfig
   | AssignToAiStepConfig
   | LookupSpreadsheetStepConfig
+  | DispatchWorkflowNodeStepConfig
   | Record<string, never>
   | Record<string, unknown>;
 

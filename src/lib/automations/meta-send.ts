@@ -53,7 +53,7 @@ interface SendInteractiveArgs {
   header?: string;
   body: string;
   footer?: string;
-  items: Array<{ id: string; label: string }>;
+  items: Array<{ id: string; label: string; description?: string }>;
 }
 
 export async function engineSendInteractive(

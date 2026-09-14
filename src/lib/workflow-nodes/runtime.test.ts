@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { consumeCredits } from '@/lib/credits';
 import { handleNodeInteraction, dispatchWorkflowNode } from './runtime';
 
 // Mock Supabase admin client
@@ -50,6 +51,7 @@ vi.mock('@/lib/automations/admin-client', () => ({
             eq: () => ({
               eq: () => ({
                 maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+                limit: vi.fn().mockResolvedValue({ data: [], error: null }),
               }),
             }),
           }),
@@ -59,8 +61,10 @@ vi.mock('@/lib/automations/admin-client', () => ({
         return {
           select: () => ({
             eq: () => ({
-              single: vi.fn().mockResolvedValue({ data: mockContactData, error: null }),
-              maybeSingle: vi.fn().mockResolvedValue({ data: mockContactData, error: null }),
+              eq: () => ({
+                single: vi.fn().mockResolvedValue({ data: mockContactData, error: null }),
+                maybeSingle: vi.fn().mockResolvedValue({ data: mockContactData, error: null }),
+              }),
             }),
           }),
         };
@@ -70,6 +74,7 @@ vi.mock('@/lib/automations/admin-client', () => ({
           select: () => ({
             eq: () => ({
               maybeSingle: vi.fn().mockResolvedValue({ data: mockConfigData, error: null }),
+              single: vi.fn().mockResolvedValue({ data: mockConfigData, error: null }),
             }),
           }),
         };
@@ -107,6 +112,13 @@ vi.mock('@/lib/whatsapp/meta-api', () => ({
 vi.mock('@/lib/whatsapp/encryption', () => ({
   decrypt: (val: string) => val,
 }));
+
+vi.mock('@/lib/credits', () => ({
+  consumeCredits: vi.fn().mockResolvedValue({ ok: true, newBalance: 90, usageId: 'usage_1' }),
+  checkCredits: vi.fn().mockResolvedValue({ ok: true, remaining: 90 }),
+}));
+
+const consumeCreditsMock = consumeCredits as unknown as ReturnType<typeof vi.fn>;
 
 describe('Workflow Nodes Runtime', () => {
   beforeEach(() => {
@@ -283,12 +295,13 @@ describe('Workflow Nodes Runtime', () => {
       expect(sendInteractiveMessage).toHaveBeenCalledWith(
         expect.objectContaining({
           body: 'Please choose an option:',
-          items: [
-            { id: 'opt_1', label: 'Catalog' },
-            { id: 'opt_2', label: 'Take Quiz' },
-          ],
+          items: expect.arrayContaining([
+            expect.objectContaining({ id: 'opt_1', label: 'Catalog' }),
+            expect.objectContaining({ id: 'opt_2', label: 'Take Quiz' }),
+          ]),
         })
       );
+      expect(consumeCreditsMock).toHaveBeenCalledWith('biz_1', 'interactive_form');
     });
   });
 });
