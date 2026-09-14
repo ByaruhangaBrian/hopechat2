@@ -366,9 +366,6 @@ export function FlowBuilderScreen() {
           toast.error(`Step "${s.key}" has an option without a label`);
           return;
         }
-      } else if (!s.target) {
-        toast.error(`Step "${s.key}" needs a continuation target`);
-        return;
       }
     }
     setSaving(true);
@@ -836,7 +833,7 @@ function StepCard(props: {
               <Plus className="mr-1 h-4 w-4" /> Add option
             </Button>
             <p className="text-xs text-muted-foreground">
-              WhatsApp shows a button for each option. Picking one continues the flow or launches the test.
+              WhatsApp shows a button for each option. Picking one continues the flow, launches the test, or ends the flow.
             </p>
           </div>
         ) : (
@@ -852,7 +849,7 @@ function StepCard(props: {
               excludeStepId={step.id}
             />
             <p className="mt-1 text-xs text-muted-foreground">
-              The typed reply is recorded under the step&apos;s key (/class), useable for routing. A target of the same step is not allowed.
+              The typed reply is recorded under the step&apos;s key (/class), useable for routing. Leave the target on &quot;End flow — hand to human&quot; to finish the flow.
             </p>
           </div>
         )}

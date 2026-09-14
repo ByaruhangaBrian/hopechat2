@@ -108,18 +108,12 @@ export async function PATCH(
           if (!opt.label || String(opt.label).trim() === '') {
             return NextResponse.json({ error: `Step "${s.key}" has an option with no label` }, { status: 400 })
           }
-          if (!opt.next_step_id && !opt.test_id) {
-            return NextResponse.json({ error: `Step "${s.key}" option "${opt.label}" has no target` }, { status: 400 })
-          }
           if (opt.next_step_id && !payloadIds.has(opt.next_step_id)) {
             return NextResponse.json({ error: `Step "${s.key}" targets a step that is not in the list` }, { status: 400 })
           }
         }
       } else {
-        // text step: single continuation
-        if (!s.next_step_id && !s.test_id) {
-          return NextResponse.json({ error: `Text step "${s.key}" needs a continuation target` }, { status: 400 })
-        }
+        // text step: continuation is optional (empty target = end flow)
         if (s.next_step_id && !payloadIds.has(s.next_step_id)) {
           return NextResponse.json({ error: `Text step "${s.key}" targets a step that is not in the list` }, { status: 400 })
         }
