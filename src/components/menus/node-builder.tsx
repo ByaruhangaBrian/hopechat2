@@ -308,7 +308,10 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
     setIsModalOpen(true);
   };
 
-  // Recursively gather all descendant node IDs of a given node
+  // Recursively gather the true descendant node IDs of a node: its parent-chain
+  // subtree only. Option links (next_node_id) that merely point at a screen from
+  // another branch are NOT descendants — they are unlinked instead of deleted, so
+  // deleting one tile never wipes tiles that live under a different parent.
   const getDescendantIds = useCallback((rootId: string): Set<string> => {
     const ids = new Set<string>([rootId]);
     const queue = [rootId];
@@ -320,19 +323,9 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
           queue.push(n.id);
         }
       });
-      const currNode = nodeMap.get(currId);
-      (currNode?.options || []).forEach((opt) => {
-        if (opt.next_node_id && !ids.has(opt.next_node_id)) {
-          const target = nodeMap.get(opt.next_node_id);
-          if (target && (target.parent_node_id === currId || target.level > (currNode?.level || 1))) {
-            ids.add(target.id);
-            queue.push(target.id);
-          }
-        }
-      });
     }
     return ids;
-  }, [nodes, nodeMap]);
+  }, [nodes]);
 
   // Modern confirmation deletion handler with recursive subtree cascade & instant optimistic update
   const handleConfirmDelete = async () => {

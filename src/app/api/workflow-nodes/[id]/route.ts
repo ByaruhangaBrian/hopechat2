@@ -282,7 +282,12 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const shouldCascade = searchParams.get('cascade') !== 'false';
 
-    // 2. Gather all node IDs in the subtree to delete
+    // 2. Gather all node IDs in the subtree to delete. The subtree is defined by
+    // the parent_node_id chain (the tree/flow-map "tiles" built under a screen).
+    // A node reached only via an option link (next_node_id) to a screen that
+    // lives under a different parent is NOT a descendant — it gets unlinked at
+    // step 3 but never deleted, so deleting one tile cannot rip out screens
+    // that belong to another branch or level.
     const allNodeIdsToDelete = new Set<string>([id]);
 
     if (shouldCascade) {
@@ -302,33 +307,6 @@ export async function DELETE(
             if (!allNodeIdsToDelete.has(c.id)) {
               allNodeIdsToDelete.add(c.id);
               queue.push(c.id);
-            }
-          }
-        }
-
-        // Downstream screens referenced by this node's options
-        const { data: linkedOptions } = await admin
-          .from('node_options')
-          .select('next_node_id')
-          .eq('node_id', currentParentId)
-          .not('next_node_id', 'is', null);
-
-        if (linkedOptions) {
-          for (const opt of linkedOptions) {
-            if (opt.next_node_id && !allNodeIdsToDelete.has(opt.next_node_id)) {
-              const { data: nextScreen } = await admin
-                .from('workflow_nodes')
-                .select('id, parent_node_id, level')
-                .eq('id', opt.next_node_id)
-                .eq('business_id', targetNode.business_id)
-                .maybeSingle();
-
-              if (nextScreen) {
-                if (nextScreen.parent_node_id === currentParentId || nextScreen.level > targetNode.level) {
-                  allNodeIdsToDelete.add(nextScreen.id);
-                  queue.push(nextScreen.id);
-                }
-              }
             }
           }
         }
