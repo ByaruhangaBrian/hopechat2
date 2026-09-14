@@ -26,18 +26,18 @@ describe("validateStepsForActivation", () => {
       { step_type: "add_tag", step_config: { tag_id: "tag-uuid" } },
       { step_type: "close_conversation", step_config: {} },
       {
-        step_type: "dispatch_workflow_node",
-        step_config: { node_id: "node-uuid" },
+        step_type: "dispatch_test",
+        step_config: { test_id: "test-uuid" },
       },
     ]);
     expect(issues).toEqual([]);
   });
 
-  it("flags a missing node_id on dispatch_workflow_node", () => {
+  it("flags a missing test_id on dispatch_test", () => {
     const issues = validateStepsForActivation([
-      { step_type: "dispatch_workflow_node", step_config: {} },
+      { step_type: "dispatch_test", step_config: {} },
     ]);
-    expect(issues.map((i) => i.path)).toEqual(["steps[0].node_id"]);
+    expect(issues.map((i) => i.path)).toEqual(["steps[0].test_id"]);
   });
 
   it("flags every required field that is missing", () => {

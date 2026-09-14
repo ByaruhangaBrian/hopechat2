@@ -6,7 +6,7 @@ import { generateGeminiResponse } from '@/lib/automations/gemini-client';
 import { getBusinessAiConfig } from './ai-config-cache';
 import { getOrSetCache, deleteCache } from './gemini-cache';
 import { runAutomationsForTrigger, resumeAutomationWithInteraction } from '@/lib/automations/engine';
-import { handleNodeInteraction } from '@/lib/workflow-nodes/runtime';
+import { handleTestReply } from '@/lib/tests/runtime';
 import { decrypt } from './encryption';
 import { consumeCredits, checkCredits } from '@/lib/credits';
 // @google/genai used via gemini-client.ts
@@ -104,11 +104,11 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
           continue;
         }
 
-        const { conversationId, handledByWorkflowNode } = saveResult;
+        const { conversationId, handledByTest } = saveResult;
 
         // If the interaction was already handled by the workflow node manager,
         // do not schedule an AI chat response to talk over it.
-        if (handledByWorkflowNode) {
+        if (handledByTest) {
           continue;
         }
 
@@ -540,7 +540,7 @@ async function handleIncomingMessageSaving(
   contactName: string,
   userId: string,
   businessId: string
-): Promise<{ conversationId: string; handledByWorkflowNode: boolean } | null> {
+): Promise<{ conversationId: string; handledByTest: boolean } | null> {
   const db = supabaseAdmin();
   const senderPhone = normalizePhone(message.from);
 
@@ -565,7 +565,7 @@ async function handleIncomingMessageSaving(
   const interactiveData = (message as any).interactive;
   const replyContextId = message.context?.id;
 
-  let handledByWorkflowNode = false;
+  let handledByTest = false;
   let selectedOptionTitle: string | null = null;
 
   if (isInteractive && interactiveData) {
@@ -590,21 +590,33 @@ async function handleIncomingMessageSaving(
       }
     }
 
-    // 1. Workflow Node interaction resolution
+    // 1. Test/Practice session resolution. Any interactive reply (or plain
+    //    text while an intro prompt is pending) is consumed by the active
+    //    test session when one exists.
     if (selectedOptionId) {
       try {
-        const nodeRes = await handleNodeInteraction(businessId, contact.id, selectedOptionId);
-        if (nodeRes.handled) {
-          handledByWorkflowNode = true;
+        const testRes = await handleTestReply(contact.id, selectedOptionId, '');
+        if (testRes.handled) {
+          handledByTest = true;
         }
-      } catch (nodeErr) {
-        console.error('[ai-worker] Workflow node interaction error:', nodeErr);
+      } catch (testErr) {
+        console.error('[ai-worker] Test session interaction error:', testErr);
       }
     }
 
     // 2. Automation resumption (if waiting on interactive message)
     if (interactionValue && replyContextId) {
       await resumeAutomationWithInteraction(replyContextId, interactionValue);
+    }
+  } else if (message.text?.body) {
+    // 1a. Plain text: route to test intro fields when a session is waiting.
+    try {
+      const testRes = await handleTestReply(contact.id, null, message.text.body);
+      if (testRes.handled) {
+        handledByTest = true;
+      }
+    } catch (testErr) {
+      console.error('[ai-worker] Test session text error:', testErr);
     }
   }
 
@@ -644,6 +656,6 @@ async function handleIncomingMessageSaving(
     console.error('[ai-worker] Automation trigger failed:', err);
   }
 
-  return { conversationId: conv.id, handledByWorkflowNode };
+  return { conversationId: conv.id, handledByTest };
 }
 

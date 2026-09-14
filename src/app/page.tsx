@@ -80,8 +80,8 @@ export default function LandingPage() {
       a: "Yes. Connect the same WhatsApp number you already use — no new SIM, no lost history. Keep using the WhatsApp Business app on your phone while HopeChat runs automations alongside it. Official Meta-approved coexistence.",
     },
     {
-      q: "Can I automatically send a menu or quiz when a customer texts me?",
-      a: "Yes. Build unlimited interactive menus, question banks, and subscreen flows, then attach any screen to your automation triggers. When a customer sends a keyword or matches a rule, HopeChat dispatches the menu instantly — and resumes exactly where they left off after each button or list tap.",
+      q: "Can I automatically send a practice drill or timed test when a customer texts me?",
+      a: "Yes. Create practice drills and timed tests, then attach any test to your automation triggers. When a customer sends a keyword or matches a rule, HopeChat dispatches the test instantly — questions are delivered one at a time via WhatsApp buttons, with answers and scoring handled automatically.",
     },
     {
       q: "How does the AI train on my business data?",
@@ -438,14 +438,14 @@ export default function LandingPage() {
               },
               {
                 icon: FolderTree,
-                title: "Interactive Menus & Assessment Banks",
-                desc: "Visually create nested WhatsApp menus, multi-choice question banks, and branching subscreen flows with instant auto-routing and scoring.",
+                title: "Tests & Practice",
+                desc: "Create practice drills or timed tests for your customers via WhatsApp interactive buttons — one question at a time, with automatic scoring and pass/fail results.",
                 points: [
-                  "Hierarchical tree view: Root menus, sub-categories, and deep question banks",
-                  "Smart Meta API rendering: 1–3 quick reply buttons or 4–10 list menus",
-                  "Automated scoring for quizzes, tests, and customer surveys",
-                  "Auto-dispatch any screen from automations — keyword triggers and drip sequences launch menus on demand",
-                  "Live WhatsApp chat simulator with real-time bubble preview"
+                  "Practice mode reveals correct/incorrect after each answer",
+                  "Timed test mode enforces a deadline and reports time used",
+                  "Configurable intro questions (class, subject, etc.) before the test starts",
+                  "Auto-dispatch any test from automations — keyword triggers launch tests on demand",
+                  "Bulk import questions from CSV"
                 ],
                 reverse: true,
                 mock: (
@@ -471,7 +471,7 @@ export default function LandingPage() {
 
                 title: "Shared Team Inbox",
                 desc: "One WhatsApp number for your entire team with multi-agent routing, collision detection, custom tags, internal notes, and per-member access controls.",
-                points: ["Smart routing to the right agent", "Tags, notes, and full chat history", "Assign and collaborate on chats", "Granular permissions per menu, per member"],
+                points: ["Smart routing to the right agent", "Tags, notes, and full chat history", "Assign and collaborate on chats", "Granular permissions per test, per member"],
                 reverse: true,
                 mock: (
                   <div className="bg-white border border-border rounded-xl p-4 space-y-3">

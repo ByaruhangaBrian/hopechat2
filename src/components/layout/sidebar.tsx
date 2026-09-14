@@ -54,7 +54,7 @@ const navItems = [
   { href: "/pipelines", label: "Pipelines", icon: GitBranch },
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
   { href: "/automations", label: "Automations", icon: Zap },
-  { href: "/dashboard/menus", label: "Interactive Menus", icon: FolderTree },
+  { href: "/dashboard/menus", label: "Tests & Practice", icon: FolderTree },
   { href: "/ai", label: "AI Hub", icon: Cpu },
 ];
 

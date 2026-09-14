@@ -254,7 +254,7 @@ export type AutomationStepType =
   | 'lookup_spreadsheet'
   | 'whatsapp_interaction'
   | 'whatsapp_flow'
-  | 'dispatch_workflow_node'
+  | 'dispatch_test'
   | 'trigger_automation';
 
 export type AutomationLogStatus = 'success' | 'partial' | 'failed';
@@ -310,9 +310,9 @@ export interface WhatsAppFlowStepConfig {
   initial_data?: Record<string, unknown>;
 }
 
-export interface DispatchWorkflowNodeStepConfig {
-  /** id of a workflow_nodes row to dispatch as a WhatsApp interactive message */
-  node_id: string;
+export interface DispatchTestStepConfig {
+  /** id of a tests row (test/practice module) to start for the contact */
+  test_id: string;
 }
 
 export interface TriggerAutomationStepConfig {
@@ -393,6 +393,52 @@ export interface LookupSpreadsheetStepConfig {
   mapping: Record<string, string>;
 }
 
+export type TestMode = 'practice' | 'test';
+
+export interface TestIntroField {
+  /** stable key, e.g. "class", "subject" */
+  key: string;
+  label: string;
+  type: 'choice' | 'text';
+  /** for choice fields: the options the student picks from */
+  options?: string[];
+}
+
+export interface TestQuestionOption {
+  key: string;
+  label: string;
+}
+
+export interface TestQuestion {
+  id: string;
+  test_id: string;
+  question: string;
+  options: TestQuestionOption[];
+  /** option key of the correct answer (or null for ungraded rows) */
+  correct_answer?: string | null;
+  points: number;
+  position: number;
+  created_at?: string;
+}
+
+export interface Test {
+  id: string;
+  business_id: string;
+  title: string;
+  description?: string | null;
+  start_message?: string | null;
+  intro_fields: TestIntroField[];
+  mode: TestMode;
+  duration_minutes?: number | null;
+  pass_mark: number;
+  shuffle: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  questions?: TestQuestion[];
+  question_count?: number;
+}
+
 export type AutomationStepConfig =
   | SendMessageStepConfig
   | SendTemplateStepConfig
@@ -408,7 +454,7 @@ export type AutomationStepConfig =
   | SendWebhookStepConfig
   | AssignToAiStepConfig
   | LookupSpreadsheetStepConfig
-  | DispatchWorkflowNodeStepConfig
+  | DispatchTestStepConfig
   | Record<string, never>
   | Record<string, unknown>;
 

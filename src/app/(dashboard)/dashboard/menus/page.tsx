@@ -1,15 +1,15 @@
 import { Metadata } from "next";
-import { NodeBuilderScreen } from "@/components/menus/node-builder";
+import { TestBuilderScreen } from "@/components/tests/test-builder";
 
 export const metadata: Metadata = {
-  title: "Interactive Menus & Assessments | HopeChat",
-  description: "Build nested WhatsApp interactive menus, quiz question banks, and subscreen flows for your customers.",
+  title: "Tests & Practice | HopeChat",
+  description: "Create practice drills or timed tests for your customers via WhatsApp.",
 };
 
 export default function MenusPage() {
   return (
     <div className="flex-1 space-y-6 p-6 md:p-8 max-w-7xl mx-auto">
-      <NodeBuilderScreen />
+      <TestBuilderScreen />
     </div>
   );
 }

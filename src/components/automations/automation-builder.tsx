@@ -99,7 +99,7 @@ const STEP_META: Record<AutomationStepType, StepMeta> = {
   lookup_spreadsheet: { label: "Lookup Spreadsheet", icon: TableProperties, border: "border-l-emerald-500" },
   whatsapp_interaction: { label: "WhatsApp Interaction", icon: MousePointerClick, border: "border-l-indigo-500" },
   whatsapp_flow: { label: "WhatsApp Flow", icon: LayoutList, border: "border-l-violet-500" },
-  dispatch_workflow_node: { label: "Dispatch Menu / Quiz", icon: FolderTree, border: "border-l-emerald-500" },
+  dispatch_test: { label: "Dispatch Test / Practice", icon: FolderTree, border: "border-l-emerald-500" },
   trigger_automation: { label: "Trigger Automation", icon: Workflow, border: "border-l-orange-500" },
 }
 
@@ -108,7 +108,7 @@ const ADDABLE_STEPS: AutomationStepType[] = [
   "send_template",
   "whatsapp_interaction",
   "whatsapp_flow",
-  "dispatch_workflow_node",
+  "dispatch_test",
   "trigger_automation",
   "lookup_spreadsheet",
   "add_tag",
@@ -175,8 +175,8 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
       return { body: "", items: [{ id: "1", label: "Option 1" }] }
     case "whatsapp_flow":
       return { flow_id: "", screen_id: "", initial_data: {} }
-    case "dispatch_workflow_node":
-      return { node_id: "" }
+    case "dispatch_test":
+      return { test_id: "" }
     case "trigger_automation":
       return { automation_id: "" }
     case "close_conversation":
@@ -197,8 +197,8 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [availableAutomations, setAvailableAutomations] = useState<Automation[]>([])
-  const [availableWorkflowNodes, setAvailableWorkflowNodes] = useState<
-    Array<{ id: string; title: string; node_key: string; level: number; node_type: string; parent_node_id: string | null }>
+  const [availableTests, setAvailableTests] = useState<
+    Array<{ id: string; title: string }>
   >([])
 
   useEffect(() => {
@@ -210,31 +210,25 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
         }
       })
       .catch(console.error)
-    function loadRoots() {
-      fetch("/api/workflow-nodes", { cache: "no-store" })
+    function loadTests() {
+      fetch("/api/tests", { cache: "no-store" })
         .then((res) => res.json())
         .then((data) => {
-          if (Array.isArray(data.nodes)) {
-            setAvailableWorkflowNodes(
-              (data.nodes as any[]).map((n) => ({
-                id: n.id,
-                title: n.title,
-                node_key: n.node_key,
-                level: n.level,
-                node_type: n.node_type,
-                parent_node_id: n.parent_node_id ?? null,
+          if (Array.isArray(data.tests)) {
+            setAvailableTests(
+              (data.tests as any[]).map((t) => ({
+                id: t.id,
+                title: t.title,
               }))
             )
           }
         })
         .catch(console.error)
     }
-    loadRoots()
+    loadTests()
 
-    // Re-load root menus when the tab regains focus so menus created or deleted
-    // in another tab appear in the dropdown immediately.
-    window.addEventListener("focus", loadRoots)
-    return () => window.removeEventListener("focus", loadRoots)
+    window.addEventListener("focus", loadTests)
+    return () => window.removeEventListener("focus", loadTests)
   }, [initial.id])
 
   function patchTop<K extends keyof BuilderInitial>(key: K, value: BuilderInitial[K]) {
@@ -366,7 +360,7 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
             deleteStepAt={deleteStepAt}
             moveStepAt={moveStepAt}
             availableAutomations={availableAutomations}
-            availableWorkflowNodes={availableWorkflowNodes}
+            availableTests={availableTests}
           />
         </div>
       </div>
@@ -533,13 +527,9 @@ interface StepListProps {
   deleteStepAt: (path: StepPath) => void
   moveStepAt: (path: StepPath, direction: -1 | 1) => void
 availableAutomations: Automation[]
-  availableWorkflowNodes: Array<{
+  availableTests: Array<{
     id: string
     title: string
-    node_key: string
-    level: number
-    node_type: string
-    parent_node_id: string | null
   }>
 }
 
@@ -635,7 +625,7 @@ function StepRenderer({
                 step={step}
                 onChange={(next) => props.updateStep(path, () => next)}
                 availableAutomations={props.availableAutomations}
-                availableWorkflowNodes={props.availableWorkflowNodes}
+                availableTests={props.availableTests}
               />
               <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
                 <div className="flex gap-1">
@@ -769,12 +759,12 @@ function StepEditor({
   step,
   onChange,
   availableAutomations,
-  availableWorkflowNodes,
+  availableTests,
 }: {
   step: BuilderStep
   onChange: (s: BuilderStep) => void
   availableAutomations: Automation[]
-  availableWorkflowNodes: StepListProps["availableWorkflowNodes"]
+  availableTests: StepListProps["availableTests"]
 }) {
   const cfg = step.step_config
   const set = (patch: Record<string, unknown>) =>
@@ -930,36 +920,33 @@ function StepEditor({
           </select>
         </FieldBlock>
       )
-    case "dispatch_workflow_node":
-      return (() => {
-        const rootMenus = availableWorkflowNodes.filter((n) => !n.parent_node_id)
-        return (
-          <>
-            <FieldBlock label="Root Menu">
-              <select
-                value={(cfg.node_id as string) ?? ""}
-                onChange={(e) => set({ node_id: e.target.value })}
-                disabled={rootMenus.length === 0}
-                className="w-full rounded-md border border-input bg-muted px-2 py-1.5 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <option value="">
-                  {rootMenus.length === 0 ? "No root menus yet — create one in Interactive Menus" : "Select a root menu..."}
+    case "dispatch_test":
+      return (
+        <>
+          <FieldBlock label="Test / Practice">
+            <select
+              value={(cfg.test_id as string) ?? ""}
+              onChange={(e) => set({ test_id: e.target.value })}
+              disabled={availableTests.length === 0}
+              className="w-full rounded-md border border-input bg-muted px-2 py-1.5 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <option value="">
+                {availableTests.length === 0 ? "No tests yet — create one in Tests & Practice" : "Select a test..."}
+              </option>
+              {availableTests.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title}
                 </option>
-                {rootMenus.map((n) => (
-                  <option key={n.id} value={n.id}>
-                    {n.title}
-                  </option>
-                ))}
-              </select>
-            </FieldBlock>
-            <p className="text-[10px] text-muted-foreground/60 leading-tight -mt-1">
-              Sends the selected root menu as a WhatsApp interactive message. The
-              customer then branches through its linked sub-screens, questions, and
-              quizzes.
-            </p>
-          </>
-        )
-      })()
+              ))}
+            </select>
+          </FieldBlock>
+          <p className="text-[10px] text-muted-foreground/60 leading-tight -mt-1">
+            Sends the selected test/practice to the customer via WhatsApp
+            interactive buttons: intro fields first, then one question at a
+            time, ending with a score.
+          </p>
+        </>
+      )
     case "add_tag":
     case "remove_tag":
       return (
@@ -1272,8 +1259,8 @@ function previewFor(step: BuilderStep): string {
       return (step.step_config.body as string) || "no interaction body"
     case "whatsapp_flow":
       return `flow: ${step.step_config.flow_id ?? "?"}`
-    case "dispatch_workflow_node":
-      return "send an interactive menu / quiz"
+    case "dispatch_test":
+      return "dispatch a test / practice"
     case "trigger_automation":
       return "start another automation"
     case "assign_to_ai":
