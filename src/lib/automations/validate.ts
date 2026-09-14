@@ -164,6 +164,11 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
         issues.push({ path: `${path}.test_id`, message: 'a test/practice module must be selected' })
       }
       break
+    case 'dispatch_routing_flow':
+      if (!nonEmpty(c.flow_id)) {
+        issues.push({ path: `${path}.flow_id`, message: 'a routing flow must be selected' })
+      }
+      break
     case 'lookup_spreadsheet':
     case 'trigger_automation':
       break

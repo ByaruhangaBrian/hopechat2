@@ -255,6 +255,7 @@ export type AutomationStepType =
   | 'whatsapp_interaction'
   | 'whatsapp_flow'
   | 'dispatch_test'
+  | 'dispatch_routing_flow'
   | 'trigger_automation';
 
 export type AutomationLogStatus = 'success' | 'partial' | 'failed';
@@ -313,6 +314,11 @@ export interface WhatsAppFlowStepConfig {
 export interface DispatchTestStepConfig {
   /** id of a tests row (test/practice module) to start for the contact */
   test_id: string;
+}
+
+export interface DispatchFlowStepConfig {
+  /** id of a routing_flows row (branching screening) to start for the contact */
+  flow_id: string;
 }
 
 export interface TriggerAutomationStepConfig {
@@ -443,6 +449,73 @@ export interface Test {
   question_count?: number;
 }
 
+export type RoutingStepType = 'choice' | 'text';
+
+export interface RoutingStepOption {
+  label: string;
+  /** jump to another step in the same flow */
+  next_step_id?: string | null;
+  /** ...or dispatch a test/practice paper directly */
+  test_id?: string | null;
+}
+
+export interface RoutingFlowStep {
+  id: string;
+  flow_id: string;
+  /** stable routing key, e.g. "class", "subject", "paper" */
+  key: string;
+  /** the question sent to the student, e.g. "Which class are you in?" */
+  prompt: string;
+  step_type: RoutingStepType;
+  /** for choice steps: each option branches to a step or a test */
+  options: RoutingStepOption[];
+  /** for text steps: where to continue after the free-text answer */
+  next_step_id?: string | null;
+  /** for text steps: the test/practice to dispatch straight after the answer */
+  test_id?: string | null;
+  position: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface RoutingFlow {
+  id: string;
+  business_id: string;
+  name: string;
+  description?: string | null;
+  /** id of the first step asked when the flow starts */
+  entry_step_id?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  steps?: RoutingFlowStep[];
+  step_count?: number;
+}
+
+export interface TestAttempt {
+  id: string;
+  business_id: string;
+  user_id: string;
+  contact_id: string;
+  conversation_id?: string | null;
+  test_id: string;
+  mode: TestMode;
+  routing_answers: Record<string, string>;
+  score: number;
+  total: number;
+  percentage: number;
+  correct_count: number;
+  passed?: boolean | null;
+  timed_out: boolean;
+  started_at: string;
+  finished_at: string;
+  created_at: string;
+  /** joined test title when listed */
+  test_title?: string;
+  contact_name?: string | null;
+  contact_phone?: string | null;
+}
+
 export type AutomationStepConfig =
   | SendMessageStepConfig
   | SendTemplateStepConfig
@@ -459,6 +532,7 @@ export type AutomationStepConfig =
   | AssignToAiStepConfig
   | LookupSpreadsheetStepConfig
   | DispatchTestStepConfig
+  | DispatchFlowStepConfig
   | Record<string, never>
   | Record<string, unknown>;
 

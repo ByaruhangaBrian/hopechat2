@@ -23,15 +23,43 @@ interface TestSessionState {
   test_id: string
   /** present when the session arrived here via entry-test routing */
   entry_test_id?: string | null
+  /** present when the session arrived here via a routing flow */
+  flow_id?: string | null
+  /** routing answers collected by the flow that led here */
+  flow_answers?: Record<string, string>
   stage: 'intro' | 'question'
   index: number
   intro_answers: Record<string, string>[]
   current_score: number
-  answered: Array<{ question_id: string; correct: boolean; points: number }>
+  answered: Array<{ question_id: string; selected: string; correct: boolean; points: number }>
   started_at: string
   conversation_id: string
   user_id: string
   business_id: string
+}
+
+interface FlowStepRow {
+  id: string
+  flow_id: string
+  key: string
+  prompt: string
+  step_type: 'choice' | 'text'
+  options: Array<{ label: string; next_step_id?: string | null; test_id?: string | null }>
+  next_step_id?: string | null
+  test_id?: string | null
+  position?: number
+}
+
+interface FlowState {
+  module: 'flow'
+  status: 'active'
+  flow_id: string
+  step_id: string
+  answers: Record<string, string>
+  conversation_id: string
+  user_id: string
+  business_id: string
+  started_at: string
 }
 
 function sortQuestions(rows: TestQuestionRow[]): TestQuestionRow[] {
@@ -127,34 +155,19 @@ export async function startTest(contactId: string, testId: string): Promise<void
   await beginSession(contactId, test)
 }
 
-/**
- * Seed a fresh session for `test` and send its first prompt (a start message,
- * then intro fields one-by-one, then questions one-by-one).
- */
-async function beginSession(
-  contactId: string,
-  test: { id: string; business_id: string; title: string; start_message?: string | null; intro_fields?: unknown },
-  opts: { entry_test_id?: string | null; intro_answers?: Record<string, string>[] } = {},
-): Promise<void> {
+async function resolveUserAndConversation(businessId: string, contactId: string): Promise<{ userId: string; conversationId: string }> {
   const db = supabaseAdmin()
-  const questions = sortQuestions((test as any).test_questions as TestQuestionRow[] | undefined ?? [])
-  const introFields = introFieldsOf(test)
-
-  if (introFields.length === 0 && questions.length === 0) {
-    throw new Error('Test has no questions or intro fields')
-  }
-
   const { data: config } = await db
     .from('whatsapp_config')
     .select('user_id')
-    .eq('business_id', test.business_id)
+    .eq('business_id', businessId)
     .single()
   if (!config?.user_id) throw new Error('WhatsApp not configured')
 
   let { data: conv } = await db
     .from('conversations')
     .select('id')
-    .eq('business_id', test.business_id)
+    .eq('business_id', businessId)
     .eq('contact_id', contactId)
     .maybeSingle()
   if (!conv) {
@@ -162,7 +175,7 @@ async function beginSession(
       .from('conversations')
       .insert({
         user_id: config.user_id,
-        business_id: test.business_id,
+        business_id: businessId,
         contact_id: contactId,
         ai_enabled: true,
       })
@@ -170,14 +183,41 @@ async function beginSession(
       .single()
     conv = newConv
   }
-  const conversationId = conv?.id
-  if (!conversationId) throw new Error('could not resolve conversation')
+  if (!conv?.id) throw new Error('could not resolve conversation')
+  return { userId: config.user_id, conversationId: conv.id }
+}
+
+/**
+ * Seed a fresh session for `test` and send its first prompt (a start message,
+ * then intro fields one-by-one, then questions one-by-one).
+ */
+async function beginSession(
+  contactId: string,
+  test: { id: string; business_id: string; title: string; start_message?: string | null; intro_fields?: unknown; test_questions?: unknown },
+  opts: {
+    entry_test_id?: string | null
+    intro_answers?: Record<string, string>[]
+    flow_id?: string | null
+    flow_answers?: Record<string, string>
+  } = {},
+): Promise<void> {
+  const db = supabaseAdmin()
+  const questions = sortQuestions((test.test_questions ?? []) as TestQuestionRow[])
+  const introFields = introFieldsOf(test)
+
+  if (introFields.length === 0 && questions.length === 0) {
+    throw new Error('Test has no questions or intro fields')
+  }
+
+  const { userId, conversationId } = await resolveUserAndConversation(test.business_id, contactId)
 
   const state: TestSessionState = {
     module: 'test',
     status: 'active',
     test_id: test.id,
     entry_test_id: opts.entry_test_id ?? null,
+    flow_id: opts.flow_id ?? null,
+    flow_answers: opts.flow_answers ?? {},
     stage: introFields.length > 0 ? 'intro' : 'question',
     index: 0,
     intro_answers: opts.intro_answers ?? [],
@@ -185,7 +225,7 @@ async function beginSession(
     answered: [],
     started_at: new Date().toISOString(),
     conversation_id: conversationId,
-    user_id: config.user_id,
+    user_id: userId,
     business_id: test.business_id,
   }
 
@@ -202,7 +242,7 @@ async function beginSession(
 
   if (test.start_message) {
     await engineSendText({
-      userId: config.user_id,
+      userId,
       conversationId,
       contactId,
       text: test.start_message,
@@ -210,9 +250,9 @@ async function beginSession(
   }
 
   if (introFields.length > 0) {
-    await sendIntroQuestion(config.user_id, conversationId, contactId, introFields[0])
+    await sendIntroQuestion(userId, conversationId, contactId, introFields[0])
   } else if (questions.length > 0) {
-    await sendTestQuestion(config.user_id, conversationId, contactId, questions[0])
+    await sendTestQuestion(userId, conversationId, contactId, questions[0])
   }
 }
 
@@ -245,10 +285,11 @@ export async function handleTestReply(
   if (!state || state.module !== 'test') return { handled: false }
 
   // A completed session only accepts the "Start over" button (re-runs the
-  // entry screening when the session was reached via routing).
+  // screening it came through — routing flow, entry test, or nothing).
   if (state.status === 'completed') {
     if (selectedOptionKey === 'test:restart') {
-      await startTest(contactId, state.entry_test_id || state.test_id)
+      if (state.flow_id) await startFlow(contactId, state.flow_id)
+      else await startTest(contactId, state.entry_test_id || state.test_id)
       return { handled: true }
     }
     return { handled: false }
@@ -318,7 +359,7 @@ export async function handleTestReply(
   const earned = correct ? (current.points && current.points > 0 ? current.points : 1) : 0
 
   state.current_score += earned
-  state.answered = [...state.answered, { question_id: current.id, correct, points: earned }]
+  state.answered = [...state.answered, { question_id: current.id, selected: answerValue, correct, points: earned }]
   state.index++
 
   await db
@@ -457,6 +498,8 @@ async function finishTest(
     { id: 'test:done', label: 'Done' },
   ])
 
+  await persistAttempt(contactId, state, test, questions, percentage, passed, correctCount, totalPossible, timedOut)
+
   await db
     .from('user_sessions')
     .update({
@@ -465,4 +508,314 @@ async function finishTest(
       session_data: { ...state, status: 'completed' },
     })
     .eq('contact_id', contactId)
+}
+
+/** Write the finished attempt + per-question results for the admin dashboard. */
+async function persistAttempt(
+  contactId: string,
+  state: TestSessionState,
+  test: any,
+  questions: TestQuestionRow[],
+  percentage: number,
+  passed: boolean,
+  correctCount: number,
+  totalPossible: number,
+  timedOut: boolean,
+): Promise<void> {
+  const db = supabaseAdmin()
+
+  const routingAnswers: Record<string, string> = {}
+  if (state.flow_answers) Object.assign(routingAnswers, state.flow_answers)
+  for (const item of state.intro_answers || []) {
+    for (const [k, v] of Object.entries(item)) if (!routingAnswers[k]) routingAnswers[k] = v
+  }
+
+  const { data: attempt, error } = await db
+    .from('test_attempts')
+    .insert({
+      business_id: state.business_id,
+      user_id: state.user_id,
+      contact_id: contactId,
+      conversation_id: state.conversation_id,
+      test_id: test.id,
+      mode: test.mode,
+      routing_answers: routingAnswers,
+      score: state.current_score,
+      total: totalPossible,
+      percentage,
+      correct_count: correctCount,
+      passed: Number(test.pass_mark || 0) > 0 ? passed : null,
+      timed_out: timedOut,
+      started_at: state.started_at,
+      finished_at: new Date().toISOString(),
+    })
+    .select('id')
+    .single()
+
+  if (error || !attempt) {
+    console.error('[tests/runtime] persist attempt error:', error?.message || 'no attempt id')
+    return
+  }
+
+  const rows = state.answered.map((a, i) => {
+    const q = questions.find((qq) => qq.id === a.question_id)
+    return {
+      attempt_id: attempt.id,
+      test_id: test.id,
+      contact_id: contactId,
+      question_id: a.question_id,
+      question_text: q?.question ?? `#${i + 1}`,
+      selected: a.selected || null,
+      correct: a.correct,
+      points: a.points,
+    }
+  })
+  if (rows.length > 0) {
+    const { error: qErr } = await db.from('test_question_results').insert(rows)
+    if (qErr) console.error('[tests/runtime] persist question results error:', qErr.message)
+  }
+}
+/* ------------------------------------------------------------------ */
+/*  Routing flows (decision-tree screening: class -> subject -> paper)  */
+/* ------------------------------------------------------------------ */
+
+function sortFlowSteps(rows: FlowStepRow[]): FlowStepRow[] {
+  return [...(rows || [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+}
+
+async function loadFlow(flowId: string, activeOnly: boolean): Promise<{ flow: any; steps: FlowStepRow[] }> {
+  const db = supabaseAdmin()
+  const { data: flow, error } = activeOnly
+    ? await db
+        .from('routing_flows')
+        .select('*, routing_steps(*)')
+        .eq('id', flowId)
+        .eq('is_active', true)
+        .single()
+    : await db
+        .from('routing_flows')
+        .select('*, routing_steps(*)')
+        .eq('id', flowId)
+        .single()
+  if (error || !flow) throw new Error('Routing flow not found or inactive')
+  const steps = sortFlowSteps((flow.routing_steps ?? []) as FlowStepRow[])
+  return { flow, steps }
+}
+
+/**
+ * Start a routing flow for a contact. Idempotent — like startTest, it never
+ * resets a session that is already mid-flow (stops dispatch_routing_flow
+ * automation steps from re-firing on every inbound reply).
+ */
+export async function startFlow(contactId: string, flowId: string): Promise<void> {
+  const db = supabaseAdmin()
+  const { flow, steps } = await loadFlow(flowId, true)
+  const entry = steps.find((s) => s.id === flow.entry_step_id)
+  if (!entry) throw new Error('Routing flow has no entry step')
+
+  const { data: existing } = await db
+    .from('user_sessions')
+    .select('session_data')
+    .eq('business_id', flow.business_id)
+    .eq('contact_id', contactId)
+    .maybeSingle()
+  const esd = existing?.session_data as FlowState | TestSessionState | null | undefined
+  if (esd?.module && esd.status === 'active') return
+
+  const { userId, conversationId } = await resolveUserAndConversation(flow.business_id, contactId)
+
+  const state: FlowState = {
+    module: 'flow',
+    status: 'active',
+    flow_id: flow.id,
+    step_id: entry.id,
+    answers: {},
+    conversation_id: conversationId,
+    user_id: userId,
+    business_id: flow.business_id,
+    started_at: new Date().toISOString(),
+  }
+
+  await db.from('user_sessions').upsert(
+    {
+      business_id: flow.business_id,
+      contact_id: contactId,
+      current_node_id: null,
+      quiz_score: 0,
+      session_data: state,
+    },
+    { onConflict: 'business_id,contact_id' },
+  )
+
+  await askStepOrAdvance(contactId, state, flow, steps, entry.id)
+}
+
+/**
+ * Ask the given step's question, auto-advancing through choice steps that
+ * only have a single option (a level that isn't needed on this branch).
+ */
+async function askStepOrAdvance(
+  contactId: string,
+  state: FlowState,
+  flow: any,
+  steps: FlowStepRow[],
+  stepId: string,
+): Promise<void> {
+  const db = supabaseAdmin()
+  const step = steps.find((s) => s.id === stepId)
+  if (!step) {
+    await engineSendText({
+      userId: state.user_id,
+      conversationId: state.conversation_id,
+      contactId,
+      text: 'Sorry, this screening is incomplete. Please try again later.',
+    })
+    return
+  }
+
+  state.step_id = step.id
+  await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
+
+  if (step.step_type === 'text') {
+    await engineSendText({ userId: state.user_id, conversationId: state.conversation_id, contactId, text: step.prompt })
+    return
+  }
+
+  const options = step.options || []
+  if (options.length === 0) {
+    await engineSendText({
+      userId: state.user_id,
+      conversationId: state.conversation_id,
+      contactId,
+      text: 'Sorry, this screening has no options. Please try again later.',
+    })
+    return
+  }
+  if (options.length === 1) {
+    // auto-skip: only one path exists, so the level is unnecessary
+    state.answers[step.key] = options[0].label
+    await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
+    await followFlowTarget(contactId, state, flow, steps, options[0])
+    return
+  }
+
+  await sendInteractive(
+    state.user_id,
+    state.conversation_id,
+    contactId,
+    step.prompt,
+    options.map((o, i) => ({ id: `${step.id}:${i}`, label: o.label })),
+  )
+}
+
+/** Follow an option's target (a next step or a test) reached by a flow. */
+async function followFlowTarget(
+  contactId: string,
+  state: FlowState,
+  flow: any,
+  steps: FlowStepRow[],
+  target: { next_step_id?: string | null; test_id?: string | null },
+): Promise<void> {
+  if (target.test_id) {
+    const db = supabaseAdmin()
+    const { data: test } = await db
+      .from('tests')
+      .select('*, test_questions(*)')
+      .eq('id', target.test_id)
+      .eq('is_active', true)
+      .single()
+    if (!test) {
+      await engineSendText({
+        userId: state.user_id,
+        conversationId: state.conversation_id,
+        contactId,
+        text: 'Sorry, that paper is not available right now. Please try again later.',
+      })
+      return
+    }
+    await engineSendText({
+      userId: state.user_id,
+      conversationId: state.conversation_id,
+      contactId,
+      text: `Starting ${test.title}…`,
+    })
+    await beginSession(contactId, test, { flow_id: flow.id, flow_answers: state.answers })
+    return
+  }
+  if (target.next_step_id) {
+    await askStepOrAdvance(contactId, state, flow, steps, target.next_step_id)
+    return
+  }
+  await engineSendText({
+    userId: state.user_id,
+    conversationId: state.conversation_id,
+    contactId,
+    text: 'Sorry, this screening is incomplete. Please try again later.',
+  })
+}
+
+/**
+ * Handle a contact's reply to an active routing-flow session.
+ */
+export async function handleFlowReply(
+  contactId: string,
+  selectedOptionKey: string | null,
+  messageText: string,
+): Promise<TestReplyResult> {
+  const db = supabaseAdmin()
+
+  const { data: session } = await db
+    .from('user_sessions')
+    .select('*')
+    .eq('contact_id', contactId)
+    .maybeSingle()
+  const state = session?.session_data as FlowState | null | undefined
+  if (!state || state.module !== 'flow' || state.status !== 'active') return { handled: false }
+
+  let flow: any
+  let steps: FlowStepRow[]
+  try {
+    const loaded = await loadFlow(state.flow_id, false)
+    flow = loaded.flow
+    steps = loaded.steps
+  } catch {
+    return { handled: false }
+  }
+
+  const step = steps.find((s) => s.id === state.step_id)
+  if (!step) return { handled: false }
+
+  if (step.step_type === 'text') {
+    const value =
+      (selectedOptionKey ? selectedOptionKey.split(':').slice(1).join(':') : (messageText || '')).trim()
+    if (!value) {
+      await engineSendText({
+        userId: state.user_id,
+        conversationId: state.conversation_id,
+        contactId,
+        text: step.prompt,
+      })
+      return { handled: true }
+    }
+    state.answers[step.key] = value
+    await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
+    await followFlowTarget(contactId, state, flow, steps, {
+      next_step_id: step.next_step_id,
+      test_id: step.test_id,
+    })
+    return { handled: true }
+  }
+
+  // choice: option buttons are id `${stepId}:${index}`
+  const parts = (selectedOptionKey || '').split(':')
+  const idx = parts.length >= 2 ? Number(parts[parts.length - 1]) : NaN
+  const option = !Number.isNaN(idx) ? (step.options || [])[idx] : undefined
+  if (!option) {
+    await askStepOrAdvance(contactId, state, flow, steps, step.id)
+    return { handled: true }
+  }
+  state.answers[step.key] = option.label
+  await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
+  await followFlowTarget(contactId, state, flow, steps, option)
+  return { handled: true }
 }

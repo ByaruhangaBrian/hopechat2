@@ -30,6 +30,7 @@ import {
   LayoutList,
   Workflow,
   FolderTree,
+  Route,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -100,6 +101,7 @@ const STEP_META: Record<AutomationStepType, StepMeta> = {
   whatsapp_interaction: { label: "WhatsApp Interaction", icon: MousePointerClick, border: "border-l-indigo-500" },
   whatsapp_flow: { label: "WhatsApp Flow", icon: LayoutList, border: "border-l-violet-500" },
   dispatch_test: { label: "Dispatch Test / Practice", icon: FolderTree, border: "border-l-emerald-500" },
+  dispatch_routing_flow: { label: "Dispatch Routing Flow", icon: Route, border: "border-l-emerald-500" },
   trigger_automation: { label: "Trigger Automation", icon: Workflow, border: "border-l-orange-500" },
 }
 
@@ -109,6 +111,7 @@ const ADDABLE_STEPS: AutomationStepType[] = [
   "whatsapp_interaction",
   "whatsapp_flow",
   "dispatch_test",
+  "dispatch_routing_flow",
   "trigger_automation",
   "lookup_spreadsheet",
   "add_tag",
@@ -177,6 +180,8 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
       return { flow_id: "", screen_id: "", initial_data: {} }
     case "dispatch_test":
       return { test_id: "" }
+    case "dispatch_routing_flow":
+      return { flow_id: "" }
     case "trigger_automation":
       return { automation_id: "" }
     case "close_conversation":
@@ -199,6 +204,9 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
   const [availableAutomations, setAvailableAutomations] = useState<Automation[]>([])
   const [availableTests, setAvailableTests] = useState<
     Array<{ id: string; title: string }>
+  >([])
+  const [availableFlows, setAvailableFlows] = useState<
+    Array<{ id: string; name: string }>
   >([])
 
   useEffect(() => {
@@ -225,10 +233,30 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
         })
         .catch(console.error)
     }
+    function loadFlows() {
+      fetch("/api/routing-flows", { cache: "no-store" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data.flows)) {
+            setAvailableFlows(
+              (data.flows as any[]).map((f) => ({
+                id: f.id,
+                name: f.name,
+              }))
+            )
+          }
+        })
+        .catch(console.error)
+    }
     loadTests()
+    loadFlows()
 
     window.addEventListener("focus", loadTests)
-    return () => window.removeEventListener("focus", loadTests)
+    window.addEventListener("focus", loadFlows)
+    return () => {
+      window.removeEventListener("focus", loadTests)
+      window.removeEventListener("focus", loadFlows)
+    }
   }, [initial.id])
 
   function patchTop<K extends keyof BuilderInitial>(key: K, value: BuilderInitial[K]) {
@@ -361,6 +389,7 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
             moveStepAt={moveStepAt}
             availableAutomations={availableAutomations}
             availableTests={availableTests}
+            availableFlows={availableFlows}
           />
         </div>
       </div>
@@ -531,6 +560,10 @@ availableAutomations: Automation[]
     id: string
     title: string
   }>
+  availableFlows: Array<{
+    id: string
+    name: string
+  }>
 }
 
 function StepList(props: StepListProps) {
@@ -626,6 +659,7 @@ function StepRenderer({
                 onChange={(next) => props.updateStep(path, () => next)}
                 availableAutomations={props.availableAutomations}
                 availableTests={props.availableTests}
+                availableFlows={props.availableFlows}
               />
               <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
                 <div className="flex gap-1">
@@ -760,11 +794,13 @@ function StepEditor({
   onChange,
   availableAutomations,
   availableTests,
+  availableFlows,
 }: {
   step: BuilderStep
   onChange: (s: BuilderStep) => void
   availableAutomations: Automation[]
   availableTests: StepListProps["availableTests"]
+  availableFlows: StepListProps["availableFlows"]
 }) {
   const cfg = step.step_config
   const set = (patch: Record<string, unknown>) =>
@@ -944,6 +980,32 @@ function StepEditor({
             Sends the selected test/practice to the customer via WhatsApp
             interactive buttons: intro fields first, then one question at a
             time, ending with a score.
+          </p>
+        </>
+      )
+    case "dispatch_routing_flow":
+      return (
+        <>
+          <FieldBlock label="Routing Flow">
+            <select
+              value={(cfg.flow_id as string) ?? ""}
+              onChange={(e) => set({ flow_id: e.target.value })}
+              disabled={availableFlows.length === 0}
+              className="w-full rounded-md border border-input bg-muted px-2 py-1.5 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <option value="">
+                {availableFlows.length === 0 ? "No routing flows yet — create one in Routing Flows" : "Select a flow..."}
+              </option>
+              {availableFlows.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </FieldBlock>
+          <p className="text-[10px] text-muted-foreground/60 leading-tight -mt-1">
+            Runs the branching screening (e.g. class → subject → paper) and
+            routes the customer to the matching test on WhatsApp.
           </p>
         </>
       )
@@ -1261,6 +1323,8 @@ function previewFor(step: BuilderStep): string {
       return `flow: ${step.step_config.flow_id ?? "?"}`
     case "dispatch_test":
       return "dispatch a test / practice"
+    case "dispatch_routing_flow":
+      return "dispatch a routing flow (screening)"
     case "trigger_automation":
       return "start another automation"
     case "assign_to_ai":

@@ -6,7 +6,7 @@ import { generateGeminiResponse } from '@/lib/automations/gemini-client';
 import { getBusinessAiConfig } from './ai-config-cache';
 import { getOrSetCache, deleteCache } from './gemini-cache';
 import { runAutomationsForTrigger, resumeAutomationWithInteraction } from '@/lib/automations/engine';
-import { handleTestReply } from '@/lib/tests/runtime';
+import { handleTestReply, handleFlowReply } from '@/lib/tests/runtime';
 import { decrypt } from './encryption';
 import { consumeCredits, checkCredits } from '@/lib/credits';
 // @google/genai used via gemini-client.ts
@@ -592,15 +592,20 @@ async function handleIncomingMessageSaving(
 
     // 1. Test/Practice session resolution. Any interactive reply (or plain
     //    text while an intro prompt is pending) is consumed by the active
-    //    test session when one exists.
+    //    test (or routing-flow) session when one exists.
     if (selectedOptionId) {
       try {
-        const testRes = await handleTestReply(contact.id, selectedOptionId, '');
-        if (testRes.handled) {
+        const flowRes = await handleFlowReply(contact.id, selectedOptionId, '');
+        if (flowRes.handled) {
           handledByTest = true;
+        } else {
+          const testRes = await handleTestReply(contact.id, selectedOptionId, '');
+          if (testRes.handled) {
+            handledByTest = true;
+          }
         }
       } catch (testErr) {
-        console.error('[ai-worker] Test session interaction error:', testErr);
+        console.error('[ai-worker] Session interaction error:', testErr);
       }
     }
 
@@ -609,14 +614,19 @@ async function handleIncomingMessageSaving(
       await resumeAutomationWithInteraction(replyContextId, interactionValue);
     }
   } else if (message.text?.body) {
-    // 1a. Plain text: route to test intro fields when a session is waiting.
+    // 1a. Plain text: route to test/flow sessions when one is waiting.
     try {
-      const testRes = await handleTestReply(contact.id, null, message.text.body);
-      if (testRes.handled) {
+      const flowRes = await handleFlowReply(contact.id, null, message.text.body);
+      if (flowRes.handled) {
         handledByTest = true;
+      } else {
+        const testRes = await handleTestReply(contact.id, null, message.text.body);
+        if (testRes.handled) {
+          handledByTest = true;
+        }
       }
     } catch (testErr) {
-      console.error('[ai-worker] Test session text error:', testErr);
+      console.error('[ai-worker] Session text error:', testErr);
     }
   }
 

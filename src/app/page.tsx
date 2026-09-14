@@ -34,6 +34,7 @@ import {
   Sparkles,
   Phone,
   FolderTree,
+  Route,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -82,6 +83,10 @@ export default function LandingPage() {
     {
       q: "Can I automatically send a practice drill or timed test when a customer texts me?",
       a: "Yes. Create practice drills and timed tests, then attach any test to your automation triggers. When a customer sends a keyword or matches a rule, HopeChat dispatches the test instantly — questions are delivered one at a time via WhatsApp buttons, with answers and scoring handled automatically.",
+    },
+    {
+      q: "Can HopeChat route a customer to the right test based on their answers?",
+      a: "Yes. Build a routing flow (for example: which class? → which subject? → which paper?) and dispatch it from any automation. Each answer is recorded and sends the customer to the next step or straight into the matching test. Levels with just one path are skipped automatically, and the Results dashboard shows accuracy per subject and per question so you know exactly what each class needs to revise.",
     },
     {
       q: "How does the AI train on my business data?",
@@ -462,6 +467,43 @@ export default function LandingPage() {
                       <div className="p-1.5 rounded border border-border flex items-center justify-between text-muted-foreground"><span>A. Nucleus</span><span className="text-[10px]">0 pts</span></div>
                       <div className="p-1.5 rounded border border-emerald-500/40 bg-emerald-500/10 flex items-center justify-between text-emerald-700 font-semibold"><span>B. Mitochondria</span><span className="text-[10px] font-bold">+10 pts ✓</span></div>
                       <div className="p-1.5 rounded border border-border flex items-center justify-between text-muted-foreground"><span>C. Ribosome</span><span className="text-[10px]">0 pts</span></div>
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                icon: Route,
+                title: "Routing Flows & Insights",
+                desc: "Build multi-level screening flows (class → subject → paper → DIT/Maths) that ask the same questions every customer answers, then route each one to the right test automatically — and see which subjects and questions need attention in Results.",
+                points: [
+                  "Branching flow designer with entry-step control and choice/text steps",
+                  "Auto-skip a level when a step only has one sensible path",
+                  "Every answer is recorded (e.g. /class = Class 8) and reusable for routing",
+                  "Results dashboard with per-test, per-question, and per-attempt analytics",
+                  "Multi-dispatch a routing flow from any automation trigger"
+                ],
+                reverse: true,
+                mock: (
+                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
+                    <div className="flex justify-between items-center border-b border-border pb-2">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5"><Route className="h-4 w-4 text-primary" /> Routing flow</span>
+                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">Live</span>
+                    </div>
+                    <div className="space-y-1.5 text-xs">
+                      {[
+                        { q: "Which class?", a: "Class 8" },
+                        { q: "Which subject?", a: "Science" },
+                        { q: "Which paper?", a: "Paper 2" },
+                      ].map((row, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <div className="font-semibold text-foreground min-w-[110px]">{row.q}</div>
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 font-bold">{row.a}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="rounded-lg bg-primary/5 border border-primary/10 px-3 py-2 text-[11px] text-foreground">
+                      <span className="font-bold text-primary">Started:</span> Science Paper 2 — Class 8 screening complete
                     </div>
                   </div>
                 ),
@@ -952,6 +994,8 @@ export default function LandingPage() {
                 <li><Link href="#features" className="hover:text-primary transition-colors">Drip Campaigns</Link></li>
                 <li><Link href="#features" className="hover:text-primary transition-colors">WhatsApp Ads</Link></li>
                 <li><Link href="#features" className="hover:text-primary transition-colors">Flow Builder</Link></li>
+                <li><Link href="#features" className="hover:text-primary transition-colors">Tests & Practice</Link></li>
+                <li><Link href="#features" className="hover:text-primary transition-colors">Routing Flows & Insights</Link></li>
                 <li><Link href="#features" className="hover:text-primary transition-colors">Team Inbox</Link></li>
               </ul>
             </div>
