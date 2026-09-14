@@ -640,20 +640,25 @@ async function handleIncomingMessageSaving(
   }).eq('id', conv.id);
 
   // 3. Fire Automations
-  // We await this now to ensure it completes within the webhook request (instant response)
-  try {
-    await runAutomationsForTrigger({
-      userId,
-      businessId,
-      triggerType: 'new_message_received',
-      contactId: contact.id,
-      context: {
-        message_text: messageText,
-        conversation_id: conv.id,
-      },
-    });
-  } catch (err) {
-    console.error('[ai-worker] Automation trigger failed:', err);
+  // We await this now to ensure it completes within the webhook request (instant response).
+  // While a test/practice session is actively handling the message we skip
+  // `new_message_received` automations entirely — otherwise a dispatch_test
+  // automation re-fires on every reply and resets the student's session.
+  if (!handledByTest) {
+    try {
+      await runAutomationsForTrigger({
+        userId,
+        businessId,
+        triggerType: 'new_message_received',
+        contactId: contact.id,
+        context: {
+          message_text: messageText,
+          conversation_id: conv.id,
+        },
+      });
+    } catch (err) {
+      console.error('[ai-worker] Automation trigger failed:', err);
+    }
   }
 
   return { conversationId: conv.id, handledByTest };

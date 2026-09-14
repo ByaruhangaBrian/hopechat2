@@ -263,3 +263,30 @@ Legend: `[ ]` pending, `[x]` done. Each task is independently verifiable.
 - [ ] `npx tsc --noEmit`, `npx eslint`, `npm run build` all pass
 - [ ] Manual flows verified (create/edit/delete test, bulk import, runtime session trace)
 - [ ] Ready for human review
+
+---
+
+## Task 10: Loop fix + intro-question routing
+**Description:** Live bug — automation "Quiz" (`new_message_received` → `dispatch_test`) re-fired `startTest` on every inbound reply, resetting each session to intro Q1 (infinite loop). Fixes: (1) idempotent `startTest` (skip if an active test session exists), (2) ai-worker skips `new_message_received` automations while a test reply is being handled, (3) entry-test routing so intro answers (class/subject) select the target test.
+
+**Acceptance criteria:**
+- [x] Migration `054_tests_routing.sql`: `tests.is_entry` (default false) + `tests.route_rules JSONB` + GIN index
+- [x] `Test.is_entry` / `Test.route_rules` in `src/types/index.ts`; POST/PATCH `/api/tests` persist both
+- [x] `startTest` is idempotent; `beginSession` extracted; session holds `entry_test_id`
+- [x] Entry test: last intro answer → `routeToTest` matches active tests by `route_rules` (case-insensitive) → "Starting {title}…" → target session (carries screening answers); no match → error + re-ask intro
+- [x] ai-worker does not fire automations when `handledByTest` is true
+- [x] TestEditorDialog: entry-test switch + routing-rules editor; QuestionsEditor shows explanation for entry tests; cards show Entry badge + Routes summary
+- [x] `npx tsc --noEmit` clean; `npx eslint` 0 errors (pre-existing `any` warnings only)
+
+**Verification (in repo):**
+- [x] `npx tsc --noEmit`, `npx eslint` (0 errors) pass
+
+**Dependencies:** Task 9
+
+**Files:**
+- `supabase/migrations/054_tests_routing.sql`
+- `src/lib/tests/runtime.ts` (rewrite: idempotency + routing)
+- `src/lib/whatsapp/ai-worker.ts`
+- `src/types/index.ts`
+- `src/app/api/tests/route.ts`, `src/app/api/tests/[id]/route.ts`
+- `src/components/tests/test-builder.tsx`

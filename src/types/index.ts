@@ -433,6 +433,10 @@ export interface Test {
   pass_mark: number;
   shuffle: boolean;
   is_active: boolean;
+  /** entry/screening test: its intro_fields route the student to a target test */
+  is_entry?: boolean;
+  /** { fieldKey: expectedValue } — marks this test as a routing target */
+  route_rules?: Record<string, string> | null;
   created_at: string;
   updated_at: string;
   questions?: TestQuestion[];

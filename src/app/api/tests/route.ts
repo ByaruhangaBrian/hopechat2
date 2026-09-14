@@ -75,6 +75,8 @@ export async function POST(request: Request) {
       pass_mark = 0,
       shuffle = false,
       is_active = true,
+      is_entry = false,
+      route_rules = null,
     } = body
 
     if (!title || typeof title !== 'string' || !title.trim()) {
@@ -106,6 +108,11 @@ export async function POST(request: Request) {
         pass_mark: Number(pass_mark),
         shuffle: Boolean(shuffle),
         is_active: Boolean(is_active),
+        is_entry: Boolean(is_entry),
+        route_rules:
+          route_rules && typeof route_rules === 'object' && Object.keys(route_rules).length > 0
+            ? route_rules
+            : null,
       })
       .select()
       .single()

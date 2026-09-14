@@ -5,7 +5,6 @@ import {
   Plus,
   Trash2,
   Edit2,
-  Check,
   ChevronUp,
   ChevronDown,
   Pencil,
@@ -35,7 +34,6 @@ import { toast } from "sonner";
 import type {
   Test,
   TestQuestion,
-  TestIntroField,
 } from "@/types";
 import { generateCsvTemplate, parseImportCsv, type ParsedQuestion } from "@/lib/csv";
 
@@ -52,6 +50,8 @@ type DraftTest = {
   pass_mark: number;
   shuffle: boolean;
   is_active: boolean;
+  is_entry: boolean;
+  route_rules: { key: string; value: string }[];
   intro_fields: DraftIntroField[];
 };
 
@@ -72,11 +72,17 @@ function emptyDraft(): DraftTest {
     pass_mark: 0,
     shuffle: false,
     is_active: true,
+    is_entry: false,
+    route_rules: [],
     intro_fields: [],
   };
 }
 
 function toPayload(d: DraftTest) {
+  const routeRules: Record<string, string> = {};
+  for (const r of d.route_rules) {
+    if (r.key.trim()) routeRules[r.key.trim()] = r.value.trim();
+  }
   return {
     title: d.title,
     description: d.description || null,
@@ -86,6 +92,8 @@ function toPayload(d: DraftTest) {
     pass_mark: d.pass_mark,
     shuffle: d.shuffle,
     is_active: d.is_active,
+    is_entry: d.is_entry,
+    route_rules: Object.keys(routeRules).length > 0 ? routeRules : null,
     intro_fields: d.intro_fields.map((f) => ({
       key: f.key.trim(),
       label: f.label.trim(),
@@ -165,6 +173,7 @@ export function TestBuilderScreen() {
 
   /* ---- Open edit dialog ---- */
   function openEdit(t: Test) {
+    const routeRules = ((t as any).route_rules as Record<string, string> | null) || {};
     setDraftEditId(t.id);
     setDraft({
       title: t.title,
@@ -175,6 +184,10 @@ export function TestBuilderScreen() {
       pass_mark: t.pass_mark,
       shuffle: t.shuffle,
       is_active: t.is_active,
+      is_entry: (t as any).is_entry === true,
+      route_rules: Object.entries(routeRules)
+        .filter(([, v]) => v != null)
+        .map(([k, v]) => ({ key: k, value: String(v) })),
       intro_fields: (Array.isArray(t.intro_fields) ? t.intro_fields : []).map((f: any) => ({
         key: f.key,
         label: f.label,
@@ -303,12 +316,20 @@ export function TestBuilderScreen() {
                   <Badge variant={t.is_active ? "default" : "outline"} className="text-[10px]">
                     {t.is_active ? "Active" : "Draft"}
                   </Badge>
+                  {t.is_entry && (
+                    <Badge variant="outline" className="border-primary text-[10px] text-primary">Entry</Badge>
+                  )}
                 </div>
               </div>
               <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
                 <span>{t.question_count ?? t.questions?.length ?? 0} Q</span>
                 {t.pass_mark > 0 && <span>Pass: {t.pass_mark}%</span>}
                 {t.mode === "test" && t.duration_minutes && <span>{t.duration_minutes} min</span>}
+                {!!(t as any).route_rules && Object.keys((t as any).route_rules).length > 0 && (
+                  <span className="truncate text-[10px]">
+                    Routes: {Object.values((t as any).route_rules).join(" / ")}
+                  </span>
+                )}
               </div>
               <div className="mt-3 flex items-center gap-2 border-t pt-2">
                 <Button
@@ -514,6 +535,92 @@ function TestEditorDialog({
             </div>
           </div>
 
+          {/* Entry test (screening / routing source) */}
+          <div className={`rounded-md border p-3 space-y-2 ${draft.is_entry ? "border-primary/50 bg-primary/5" : ""}`}>
+            <div className="flex items-start gap-2">
+              <Switch
+                checked={draft.is_entry}
+                onCheckedChange={(v) => setDraft((d) => ({ ...d, is_entry: v }))}
+              />
+              <div>
+                <span className="text-sm font-medium">Entry / screening test</span>
+                <p className="text-[10px] text-muted-foreground">
+                  An entry test holds only intro questions (e.g. class, subject). After the student
+                  answers them, they are routed to the test whose routing rules match — it has no
+                  questions of its own.
+                </p>
+              </div>
+            </div>
+            {draft.is_entry && (
+              <p className="text-[10px] text-muted-foreground italic">
+                Add intro questions below to collect the answers that drive routing. The questions
+                panel is not used for entry tests.
+              </p>
+            )}
+          </div>
+
+          {/* Routing rules (this test as a routing target) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium">Routing rules (target tests)</label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-6 gap-1 text-[10px]"
+                onClick={() =>
+                  setDraft((d) => ({ ...d, route_rules: [...d.route_rules, { key: "", value: "" }] }))
+                }
+              >
+                <Plus className="size-3" /> Add rule
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground italic">
+              Send students to this test when their entry-test answers match every rule. The rule
+              value must equal the option chosen in the entry test (rule key = intro field key).
+            </p>
+            {draft.route_rules.length === 0 && (
+              <p className="text-[10px] text-muted-foreground">No routing rules — this test is not a routing target.</p>
+            )}
+            {draft.route_rules.map((rule, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Input
+                  placeholder="field key (e.g. class)"
+                  value={rule.key}
+                  onChange={(e) =>
+                    setDraft((d) => ({
+                      ...d,
+                      route_rules: d.route_rules.map((r, j) => (j === i ? { ...r, key: e.target.value } : r)),
+                    }))
+                  }
+                  className="h-7 flex-1 text-xs"
+                />
+                <Input
+                  placeholder="expected value (e.g. O Level)"
+                  value={rule.value}
+                  onChange={(e) =>
+                    setDraft((d) => ({
+                      ...d,
+                      route_rules: d.route_rules.map((r, j) => (j === i ? { ...r, value: e.target.value } : r)),
+                    }))
+                  }
+                  className="h-7 flex-1 text-xs"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-destructive"
+                  onClick={() =>
+                    setDraft((d) => ({ ...d, route_rules: d.route_rules.filter((_, j) => j !== i) }))
+                  }
+                >
+                  <X className="size-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+
           {/* Intro fields */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -646,6 +753,28 @@ function QuestionsEditor({
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+
+  /* Entry tests hold only intro (routing) questions — no question CRUD. */
+  if ((test as any).is_entry === true) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold">{test.title}</h3>
+            <Badge variant="outline" className="border-primary text-[10px] text-primary">Entry</Badge>
+          </div>
+          <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={onDeselect}>
+            Close
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          This is an entry / screening test. Its intro questions (edit with the pencil above)
+          collect the class/subject answers that route students to a matching target test.
+          Entry tests do not hold questions of their own.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">

@@ -111,6 +111,13 @@ export async function PATCH(
 
     if ('shuffle' in body) updates.shuffle = Boolean(body.shuffle)
     if ('is_active' in body) updates.is_active = Boolean(body.is_active)
+    if ('is_entry' in body) updates.is_entry = Boolean(body.is_entry)
+    if ('route_rules' in body) {
+      updates.route_rules =
+        body.route_rules && typeof body.route_rules === 'object' && Object.keys(body.route_rules).length > 0
+          ? body.route_rules
+          : null
+    }
 
     const { data: updated, error: updateErr } = await admin
       .from('tests')

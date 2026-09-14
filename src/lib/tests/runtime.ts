@@ -21,6 +21,8 @@ interface TestSessionState {
   module: 'test'
   status: 'active' | 'completed'
   test_id: string
+  /** present when the session arrived here via entry-test routing */
+  entry_test_id?: string | null
   stage: 'intro' | 'question'
   index: number
   intro_answers: Record<string, string>[]
@@ -96,14 +98,10 @@ function sendTestQuestion(
 /**
  * Start a test/practice session for a contact.
  *
- * 1. Loads the test + questions
- * 2. Resolves/upserts the conversation
- * 3. Sends the start_message (optional) then walks intro fields first,
- *    then practice questions one-at-a-time via WhatsApp interactive buttons.
- * 4. All state lives in user_sessions.session_data.
- *
- * Called by the automation engine when a dispatch_test step fires and by
- * the "Start over" button in the final score message.
+ * Idempotent: if the contact already has an ACTIVE test session, this is a
+ * no-op. That guard stops `dispatch_test` automation steps with a
+ * `new_message_received` trigger from re-starting (and resetting) the test on
+ * every single inbound reply.
  */
 export async function startTest(contactId: string, testId: string): Promise<void> {
   const db = supabaseAdmin()
@@ -116,10 +114,35 @@ export async function startTest(contactId: string, testId: string): Promise<void
     .single()
   if (testErr || !test) throw new Error('Test not found or inactive')
 
-  const questions = sortQuestions(test.test_questions as TestQuestionRow[])
-  if (questions.length === 0) throw new Error('Test has no questions')
+  // Idempotency guard — never reset a session that is mid-flow.
+  const { data: existing } = await db
+    .from('user_sessions')
+    .select('session_data')
+    .eq('business_id', test.business_id)
+    .eq('contact_id', contactId)
+    .maybeSingle()
+  const esd = existing?.session_data as TestSessionState | null | undefined
+  if (esd?.module === 'test' && esd?.status === 'active') return
 
+  await beginSession(contactId, test)
+}
+
+/**
+ * Seed a fresh session for `test` and send its first prompt (a start message,
+ * then intro fields one-by-one, then questions one-by-one).
+ */
+async function beginSession(
+  contactId: string,
+  test: { id: string; business_id: string; title: string; start_message?: string | null; intro_fields?: unknown },
+  opts: { entry_test_id?: string | null; intro_answers?: Record<string, string>[] } = {},
+): Promise<void> {
+  const db = supabaseAdmin()
+  const questions = sortQuestions((test as any).test_questions as TestQuestionRow[] | undefined ?? [])
   const introFields = introFieldsOf(test)
+
+  if (introFields.length === 0 && questions.length === 0) {
+    throw new Error('Test has no questions or intro fields')
+  }
 
   const { data: config } = await db
     .from('whatsapp_config')
@@ -153,10 +176,11 @@ export async function startTest(contactId: string, testId: string): Promise<void
   const state: TestSessionState = {
     module: 'test',
     status: 'active',
-    test_id: testId,
+    test_id: test.id,
+    entry_test_id: opts.entry_test_id ?? null,
     stage: introFields.length > 0 ? 'intro' : 'question',
     index: 0,
-    intro_answers: [],
+    intro_answers: opts.intro_answers ?? [],
     current_score: 0,
     answered: [],
     started_at: new Date().toISOString(),
@@ -187,7 +211,7 @@ export async function startTest(contactId: string, testId: string): Promise<void
 
   if (introFields.length > 0) {
     await sendIntroQuestion(config.user_id, conversationId, contactId, introFields[0])
-  } else {
+  } else if (questions.length > 0) {
     await sendTestQuestion(config.user_id, conversationId, contactId, questions[0])
   }
 }
@@ -198,8 +222,11 @@ export interface TestReplyResult {
 
 /**
  * Handle a contact's reply to an active test/practice session.
- * Called from the WhatsApp message routing (ai-worker) whenever a message
- * arrives; returns { handled: false } when no test session is active.
+ *
+ * Flow:
+ *  - intro fields → collect answers; on the last one, either start questions
+ *    (normal test) or ROUTE to the matching target test (entry test).
+ *  - questions → grade, advance, score, then a final summary + restart/done.
  */
 export async function handleTestReply(
   contactId: string,
@@ -217,10 +244,11 @@ export async function handleTestReply(
   const state = session?.session_data as TestSessionState | null | undefined
   if (!state || state.module !== 'test') return { handled: false }
 
-  // A completed session only accepts the "Start over" button.
+  // A completed session only accepts the "Start over" button (re-runs the
+  // entry screening when the session was reached via routing).
   if (state.status === 'completed') {
-    if (selectedOptionKey === 'test:restart' && state.test_id) {
-      await startTest(contactId, state.test_id)
+    if (selectedOptionKey === 'test:restart') {
+      await startTest(contactId, state.entry_test_id || state.test_id)
       return { handled: true }
     }
     return { handled: false }
@@ -235,6 +263,7 @@ export async function handleTestReply(
 
   const questions = sortQuestions(test.test_questions as TestQuestionRow[])
   const introFields = introFieldsOf(test)
+  const isEntry = test.is_entry === true
 
   // Timed test: enforce the deadline server-side.
   if (test.mode === 'test' && test.duration_minutes) {
@@ -255,15 +284,24 @@ export async function handleTestReply(
       state.intro_answers = [...state.intro_answers, { [field.key]: answerValue }]
       state.index++
     }
+
     if (state.index >= introFields.length) {
       state.stage = 'question'
       state.index = 0
     }
+
+    // Entry test: the last intro answer triggers routing to the matching test.
+    if (state.stage === 'question' && (isEntry || questions.length === 0)) {
+      await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
+      await routeToTest(contactId, state, test, introFields)
+      return { handled: true }
+    }
+
     await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
 
-    if (state.stage === 'question' && questions.length > 0) {
+    if (state.stage === 'question') {
       await sendTestQuestion(state.user_id, state.conversation_id, contactId, questions[0])
-    } else if (state.stage === 'intro') {
+    } else {
       await sendIntroQuestion(state.user_id, state.conversation_id, contactId, introFields[state.index])
     }
     return { handled: true }
@@ -283,13 +321,14 @@ export async function handleTestReply(
   state.answered = [...state.answered, { question_id: current.id, correct, points: earned }]
   state.index++
 
-  await db.from('user_sessions').update({ session_data: state, quiz_score: state.current_score }).eq('contact_id', contactId)
+  await db
+    .from('user_sessions')
+    .update({ session_data: state, quiz_score: state.current_score })
+    .eq('contact_id', contactId)
 
   // Practice mode reveals the answer inline; test mode stays silent.
   if (test.mode === 'practice') {
-    const body = correct
-      ? 'Correct!'
-      : `Incorrect. The correct answer is ${answerLabel(current, correct)}.`
+    const body = correct ? 'Correct!' : `Incorrect. The correct answer is ${answerLabel(current)}.`
     await engineSendText({
       userId: state.user_id,
       conversationId: state.conversation_id,
@@ -307,7 +346,81 @@ export async function handleTestReply(
   return { handled: true }
 }
 
-function answerLabel(question: TestQuestionRow, _correct: boolean): string {
+/**
+ * Route an entry-test's collected intro answers to a matching target test.
+ * Each target test declares `route_rules: { fieldKey: value }`; a target is
+ * chosen when EVERY rule matches an intro answer.
+ */
+async function routeToTest(
+  contactId: string,
+  state: TestSessionState,
+  entryTest: any,
+  introFields: TestIntroField[],
+): Promise<void> {
+  const db = supabaseAdmin()
+
+  const answersObj: Record<string, string> = {}
+  for (const item of state.intro_answers) {
+    for (const [k, v] of Object.entries(item)) answersObj[k] = v
+  }
+
+  const { data: candidates, error } = await db
+    .from('tests')
+    .select('*, test_questions(*)')
+    .eq('business_id', state.business_id)
+    .eq('is_active', true)
+    .not('route_rules', 'is', null)
+    .neq('id', entryTest.id)
+
+  if (error) {
+    console.error('[tests/runtime] route lookup error:', error)
+  }
+
+  const target = (candidates || []).find((t) => {
+    const rules = (t.route_rules || {}) as Record<string, string>
+    const matches = (wanted: string, given: string) =>
+      String(wanted).trim().toLowerCase() === String(given ?? '').trim().toLowerCase()
+    return (
+      Object.keys(rules).length > 0 && Object.entries(rules).every(([k, v]) => matches(v, answersObj[k]))
+    )
+  })
+
+  if (!target) {
+    const summary = state.intro_answers.map((a) => Object.values(a)[0] ?? '').join(', ') || 'your selections'
+    await engineSendText({
+      userId: state.user_id,
+      conversationId: state.conversation_id,
+      contactId,
+      text: `Sorry, we couldn't find a test matching ${summary}. Please start over.`,
+    })
+    // Re-ask the screening from the top.
+    state.stage = 'intro'
+    state.index = 0
+    state.intro_answers = []
+    await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
+    if (introFields[0]) {
+      await sendIntroQuestion(state.user_id, state.conversation_id, contactId, introFields[0])
+    }
+    return
+  }
+
+  await engineSendText({
+    userId: state.user_id,
+    conversationId: state.conversation_id,
+    contactId,
+    text: `Starting ${target.title}…`,
+  })
+
+  // Hand the session to the target test (its own intro fields, if any, then
+  // questions). Keep the screening answers for the record and remember the
+  // entry test so "Start over" re-runs the full screening.
+  await beginSession(contactId, target, {
+    entry_test_id: entryTest.id,
+    intro_answers: state.intro_answers,
+  })
+}
+
+function answerLabel(question: TestQuestionRow): string {
   const hit = (question.options || []).find((o) => o.key === question.correct_answer)
   return hit ? hit.label : String(question.correct_answer || '')
 }
@@ -316,15 +429,15 @@ function answerLabel(question: TestQuestionRow, _correct: boolean): string {
 async function finishTest(
   contactId: string,
   state: TestSessionState,
-  test: TestQuestionRow | { test_questions?: TestQuestionRow[]; mode?: string; pass_mark?: number; duration_minutes?: number },
+  test: any,
   timedOut: boolean,
 ): Promise<void> {
   const db = supabaseAdmin()
-  const questions = sortQuestions(((test as any).test_questions || []) as TestQuestionRow[])
+  const questions = sortQuestions((test.test_questions || []) as TestQuestionRow[])
   const totalPossible = questions.reduce((sum, q) => sum + (q.points && q.points > 0 ? q.points : 1), 0)
   const correctCount = state.answered.filter((a) => a.correct).length
   const percentage = totalPossible > 0 ? Math.round((state.current_score / totalPossible) * 100) : 0
-  const passMark = Number((test as any).pass_mark || 0)
+  const passMark = Number(test.pass_mark || 0)
   const passed = percentage >= passMark
 
   let body = timedOut
@@ -334,7 +447,7 @@ async function finishTest(
   if (passMark > 0) {
     body += `\nPass mark: ${passMark}% — You ${passed ? 'PASSED' : 'DID NOT PASS'}.`
   }
-  if ((test as any).mode === 'test' && state.started_at) {
+  if (test.mode === 'test' && state.started_at) {
     const elapsed = Math.round((Date.now() - new Date(state.started_at).getTime()) / 60000)
     body += `\nTime used: ${elapsed} minute(s).`
   }
