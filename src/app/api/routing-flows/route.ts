@@ -35,7 +35,7 @@ export async function GET() {
 
     const { data, error: dbErr } = await admin
       .from('routing_flows')
-      .select('*, routing_steps(count)')
+      .select('*')
       .eq('business_id', effectiveBusinessId)
       .order('created_at', { ascending: false })
 
@@ -44,10 +44,22 @@ export async function GET() {
       return NextResponse.json({ error: dbErr.message }, { status: 500 })
     }
 
+    // Count steps with a separate query so we don't depend on the
+    // PostgREST relationship cache (avoids "table not in schema cache" errors).
+    const counts: Record<string, number> = {}
+    if (data && data.length > 0) {
+      const { data: steps } = await admin
+        .from('routing_steps')
+        .select('flow_id')
+        .in('flow_id', data.map((f: any) => f.id))
+      for (const s of steps || []) {
+        counts[s.flow_id] = (counts[s.flow_id] || 0) + 1
+      }
+    }
+
     const flows = (data || []).map((f: any) => ({
       ...f,
-      step_count: f.routing_steps?.[0]?.count ?? 0,
-      routing_steps: undefined,
+      step_count: counts[f.id] || 0,
     }))
 
     return NextResponse.json({ flows }, { headers: NO_CACHE })

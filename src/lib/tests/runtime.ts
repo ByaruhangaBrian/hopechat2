@@ -588,17 +588,23 @@ async function loadFlow(flowId: string, activeOnly: boolean): Promise<{ flow: an
   const { data: flow, error } = activeOnly
     ? await db
         .from('routing_flows')
-        .select('*, routing_steps(*)')
+        .select('*')
         .eq('id', flowId)
         .eq('is_active', true)
-        .single()
+        .maybeSingle()
     : await db
         .from('routing_flows')
-        .select('*, routing_steps(*)')
+        .select('*')
         .eq('id', flowId)
-        .single()
+        .maybeSingle()
   if (error || !flow) throw new Error('Routing flow not found or inactive')
-  const steps = sortFlowSteps((flow.routing_steps ?? []) as FlowStepRow[])
+  const { data: rows, error: stepsErr } = await db
+    .from('routing_steps')
+    .select('*')
+    .eq('flow_id', flowId)
+    .order('position', { ascending: true })
+  if (stepsErr) throw new Error('Routing flow steps could not be loaded')
+  const steps = sortFlowSteps((rows ?? []) as FlowStepRow[])
   return { flow, steps }
 }
 

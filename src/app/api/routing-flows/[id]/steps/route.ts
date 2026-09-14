@@ -32,13 +32,17 @@ async function resolveBusinessId() {
 async function loadFlowForResponse(admin: any, id: string, businessId: string) {
   const { data: flow, error: dbErr } = await admin
     .from('routing_flows')
-    .select('*, routing_steps(*)')
+    .select('*')
     .eq('id', id)
     .eq('business_id', businessId)
-    .single()
+    .maybeSingle()
   if (dbErr || !flow) return null
-  const steps = ((flow.routing_steps ?? []) as any[]).sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0))
-  return { ...flow, steps, step_count: steps.length, routing_steps: undefined }
+  const { data: steps } = await admin
+    .from('routing_steps')
+    .select('*')
+    .eq('flow_id', id)
+    .order('position', { ascending: true })
+  return { ...flow, steps: steps || [], step_count: (steps || []).length }
 }
 
 /**

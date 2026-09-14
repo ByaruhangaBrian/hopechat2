@@ -39,17 +39,25 @@ export async function GET(
 
     const { data: flow, error: dbErr } = await admin
       .from('routing_flows')
-      .select('*, routing_steps(*)')
+      .select('*')
       .eq('id', id)
       .eq('business_id', effectiveBusinessId)
-      .single()
+      .maybeSingle()
 
     if (dbErr || !flow) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    const steps = ((flow.routing_steps ?? []) as any[])
-      .sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0))
+    // Steps fetched separately (no embedded relationship, no schema-cache dependency).
+    const { data: steps, error: stepsErr } = await admin
+      .from('routing_steps')
+      .select('*')
+      .eq('flow_id', id)
+      .order('position', { ascending: true })
+    if (stepsErr) {
+      console.error('[routing-flows/[id]] steps error:', stepsErr)
+      return NextResponse.json({ error: stepsErr.message }, { status: 500 })
+    }
 
-    return NextResponse.json({ flow: { ...flow, steps, routing_steps: undefined } }, { headers: NO_CACHE })
+    return NextResponse.json({ flow: { ...flow, steps: steps || [] } }, { headers: NO_CACHE })
   } catch (err: any) {
     console.error('[routing-flows/[id]] GET error:', err)
     return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })
