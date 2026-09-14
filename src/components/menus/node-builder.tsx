@@ -102,7 +102,7 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
   const fetchNodes = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/workflow-nodes");
+      const res = await fetch("/api/workflow-nodes", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         const loaded: WorkflowNode[] = data.nodes || [];
@@ -361,6 +361,7 @@ export function NodeBuilderScreen({ initialNodes = [] }: NodeBuilderProps) {
 
       const res = await fetch(`/api/workflow-nodes/${deletedId}`, {
         method: "DELETE",
+        cache: "no-store",
         headers: { "Cache-Control": "no-cache" },
       });
       const data = await res.json().catch(() => ({}));

@@ -78,7 +78,10 @@ export async function GET(request: Request) {
       options: (node.options || []).sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0)),
     }));
 
-    return NextResponse.json({ nodes: formatted });
+    return NextResponse.json(
+      { nodes: formatted },
+      { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+    );
   } catch (err: any) {
     console.error('[workflow-nodes] Route error:', err);
     return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 });

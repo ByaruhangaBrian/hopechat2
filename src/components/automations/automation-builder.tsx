@@ -210,23 +210,31 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
         }
       })
       .catch(console.error)
-    fetch("/api/workflow-nodes")
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data.nodes)) {
-          setAvailableWorkflowNodes(
-            (data.nodes as any[]).map((n) => ({
-              id: n.id,
-              title: n.title,
-              node_key: n.node_key,
-              level: n.level,
-              node_type: n.node_type,
-              parent_node_id: n.parent_node_id ?? null,
-            }))
-          )
-        }
-      })
-      .catch(console.error)
+    function loadRoots() {
+      fetch("/api/workflow-nodes", { cache: "no-store" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data.nodes)) {
+            setAvailableWorkflowNodes(
+              (data.nodes as any[]).map((n) => ({
+                id: n.id,
+                title: n.title,
+                node_key: n.node_key,
+                level: n.level,
+                node_type: n.node_type,
+                parent_node_id: n.parent_node_id ?? null,
+              }))
+            )
+          }
+        })
+        .catch(console.error)
+    }
+    loadRoots()
+
+    // Re-load root menus when the tab regains focus so menus created or deleted
+    // in another tab appear in the dropdown immediately.
+    window.addEventListener("focus", loadRoots)
+    return () => window.removeEventListener("focus", loadRoots)
   }, [initial.id])
 
   function patchTop<K extends keyof BuilderInitial>(key: K, value: BuilderInitial[K]) {
