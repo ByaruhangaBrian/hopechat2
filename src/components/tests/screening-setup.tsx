@@ -1,7 +1,18 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Loader2, Plus, X, Save, Sparkles, ChevronRight, MousePointerClick, Link2 } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  X,
+  Save,
+  Sparkles,
+  ChevronRight,
+  MousePointerClick,
+  Link2,
+  Type,
+  ListChecks,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -21,7 +32,10 @@ function slug(label: string): string {
 }
 
 const SEP = "\u0001";
+const TEXT = "*"; // placeholder for the (non-routing) typed answer in mapping keys
 const comboKey = (a: string, b: string) => `${a}${SEP}${b}`;
+
+type Q1Type = "text" | "choice";
 
 type ScreeningTest = {
   id: string;
@@ -47,12 +61,16 @@ type Pos = { x: number; y: number };
 /* ------------------------------------------------------------------ */
 
 function FlowCanvas({
+  q1Type,
+  q1Label,
   q1Options,
   q2Options,
   mapping,
   targets,
   onPickCombo,
 }: {
+  q1Type: Q1Type;
+  q1Label: string;
   q1Options: string[];
   q2Options: string[];
   mapping: Record<string, string>;
@@ -68,46 +86,56 @@ function FlowCanvas({
 
   const q1 = q1Options.map((o) => o.trim()).filter(Boolean);
   const q2 = q2Options.map((o) => o.trim()).filter(Boolean);
-  const combos: Array<{ a: string; b: string; key: string }> = [];
-  for (const a of q1) for (const b of q2) combos.push({ a, b, key: comboKey(a, b) });
+  const isChoice = q1Type === "choice";
+
+  const combos: Array<{ a: string; b: string; key: string }> = isChoice
+    ? q1.flatMap((a) => q2.map((b) => ({ a, b, key: comboKey(a, b) })))
+    : q2.map((b) => ({ a: TEXT, b, key: comboKey(TEXT, b) }));
+  const q1NodeId = isChoice ? (a: string) => `a-${a}` : () => "a-note";
 
   /* Build a deterministic default layout, filling in only missing nodes. */
   useEffect(() => {
-    if (q1.length === 0 || q2.length === 0) return;
+    if (q2.length === 0) return;
     setPositions((prev) => {
       const next = { ...prev };
       const needs = (id: string) => !next[id];
-      const yOfQ1 = (i: number) => 24 + i * 76;
-      q1.forEach((a, i) => {
-        if (needs(`a-${a}`)) next[`a-${a}`] = { x: COL_X.q1, y: yOfQ1(i) };
-      });
-      let comboY = 24;
+      const yOf = (i: number) => 24 + i * 76;
+      if (isChoice) {
+        q1.forEach((a, i) => {
+          if (needs(q1NodeId(a))) next[q1NodeId(a)] = { x: COL_X.q1, y: yOf(i) };
+        });
+      } else if (needs("a-note")) {
+        next["a-note"] = { x: COL_X.q1, y: 24 };
+      }
       combos.forEach((c) => {
-        const idx = q1.indexOf(c.a);
-        if (needs(c.key)) next[c.key] = { x: COL_X.combo, y: yOfQ1(idx) + q2.indexOf(c.b) * 68 };
-        comboY = Math.max(comboY, next[c.key].y);
+        if (needs(c.key)) {
+          const anchor = isChoice ? q1.indexOf(c.a) : 0;
+          const y = yOf(anchor) + q2.indexOf(c.b) * 68;
+          next[c.key] = { x: COL_X.combo, y };
+        }
       });
-      const mappedTests = new Set<string>();
-      for (const v of Object.values(mapping)) if (v) mappedTests.add(v);
-      let fallbackY = comboY + 90;
+      const comboYs = combos.map((c) => next[c.key]?.y ?? 0);
+      let fallbackY = (comboYs.length ? Math.max(...comboYs) : 24) + 90;
       for (const t of targets) {
         const ys: number[] = [];
         combos.forEach((c) => {
           if (mapping[c.key] === t.id) ys.push((next[c.key]?.y ?? 0) + NODE.combo.h / 2);
         });
-        const y = ys.length > 0 ? ys.reduce((s, v) => s + v, 0) / ys.length - NODE.test.h / 2 : fallbackY;
-        if (needs(`test-${t.id}`)) next[`test-${t.id}`] = { x: COL_X.test, y };
-        if (ys.length === 0) fallbackY += NODE.test.h + 20;
-        if (mappedTests.has(t.id)) mappedTests.delete(t.id);
+        if (needs(`test-${t.id}`)) {
+          const y = ys.length > 0 ? ys.reduce((s, v) => s + v, 0) / ys.length - NODE.test.h / 2 : fallbackY;
+          next[`test-${t.id}`] = { x: COL_X.test, y };
+          if (ys.length === 0) fallbackY += NODE.test.h + 20;
+        }
       }
       return next;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q1.join(","), q2.join(","), mapping, targets.length]);
+  }, [isChoice, q1.join(","), q2.join(","), mapping, targets.length]);
 
   function onPointerDown(e: React.PointerEvent, id: string) {
-    e.currentTarget.setPointerCapture(e.pointerId);
     const p = posRef.current[id];
+    if (!p) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
     dragRef.current = { id, dx: e.clientX - p.x, dy: e.clientY - p.y, startX: e.clientX, startY: e.clientY, moved: false };
   }
 
@@ -127,11 +155,7 @@ function FlowCanvas({
 
   const bounds = Object.entries(positions).reduce(
     (b, [id, p]) => {
-      const size = id.startsWith("test-")
-        ? NODE.test
-        : id.startsWith("a-")
-          ? NODE.q1
-          : NODE.combo;
+      const size = id.startsWith("test-") ? NODE.test : id.startsWith("a-") ? NODE.q1 : NODE.combo;
       return {
         w: Math.max(b.w, p.x + size.w),
         h: Math.max(b.h, p.y + size.h),
@@ -152,35 +176,35 @@ function FlowCanvas({
     return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
   };
 
-  const edges: string[] = [];
-  const colors: string[] = [];
-  const renderCol = (id: string, size: { w: number; h: number }) =>
+  const mid = (id: string, size: { w: number; h: number }) =>
     positions[id] ? { x: positions[id].x, y: positions[id].y + size.h / 2 } : null;
 
-  // Q1 answer => each of its combos
-  for (const a of q1) {
-    const src = renderCol(`a-${a}`, NODE.q1);
-    if (!src) continue;
-    for (const c of combos) {
-      if (c.a !== a) continue;
-      const tgt = renderCol(c.key, NODE.combo);
-      if (!tgt) continue;
-      edges.push(curve(src.x + NODE.q1.w, src.y, tgt.x, tgt.y));
-      colors.push("#cbd5e1");
-    }
+  const edges: Array<{ d: string; color: string }> = [];
+  const addEdge = (srcId: string, srcSize: { w: number; h: number }, tgtId: string, tgtSize: { w: number; h: number }, color: string) => {
+    const s = mid(srcId, srcSize);
+    const t = mid(tgtId, tgtSize);
+    if (!s || !t) return;
+    edges.push({ d: curve(s.x + srcSize.w, s.y, t.x, t.y), color });
+  };
+
+  // Q1 (answers or typed-note) => its combos
+  for (const c of combos) {
+    const srcId = q1NodeId(c.a);
+    addEdge(srcId, NODE.q1, c.key, NODE.combo, "#cbd5e1");
   }
   // combo => target test
   for (const c of combos) {
     const testId = mapping[c.key];
-    if (!testId) continue;
-    const src = renderCol(c.key, NODE.combo);
-    const tgt = renderCol(`test-${testId}`, NODE.test);
-    if (!src || !tgt) continue;
-    edges.push(curve(src.x + NODE.combo.w, src.y, tgt.x, tgt.y));
-    colors.push("#10b981");
+    if (testId) addEdge(c.key, NODE.combo, `test-${testId}`, NODE.test, "#10b981");
   }
 
   const testById = new Map(targets.map((t) => [t.id, t]));
+
+  const headerWrap = (text: string) => (
+    <div className="absolute rounded-md bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground" style={{ left: -6, top: -20 }}>
+      {text}
+    </div>
+  );
 
   return (
     <div className="relative overflow-auto rounded-lg border border-border bg-muted/40">
@@ -191,46 +215,61 @@ function FlowCanvas({
           height={canvasH}
           style={{ transform: `translate(${ox}px, ${oy}px)` }}
         >
-          {edges.map((d, i) => (
-            <path key={i} d={d} fill="none" stroke={colors[i]} strokeWidth={2.5} strokeLinecap="round" opacity={0.9} />
+          {edges.map((e, i) => (
+            <path key={i} d={e.d} fill="none" stroke={e.color} strokeWidth={2.5} strokeLinecap="round" opacity={0.9} />
           ))}
         </svg>
 
         {/* Column headers */}
-        {q1.length > 0 && (
-          <div className="absolute rounded-md bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground" style={{ left: ox + COL_X.q1 - 6, top: oy - 20 }}>
-            Answers 1
+        {q2.length > 0 && (
+          <div className="absolute" style={{ left: ox + COL_X.q1 - 16, top: oy + 2 }}>
+            {headerWrap(isChoice ? "Answers 1" : "Typed answer")}
           </div>
         )}
-        {q1.length > 0 && q2.length > 0 && (
-          <div className="absolute rounded-md bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground" style={{ left: ox + COL_X.combo - 6, top: oy - 20 }}>
-            Question 2 answer
+        {q2.length > 0 && (
+          <div className="absolute" style={{ left: ox + COL_X.combo - 16, top: oy + 2 }}>
+            {headerWrap("Question 2 answer")}
           </div>
         )}
-        <div className="absolute rounded-md bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground" style={{ left: ox + COL_X.test - 6, top: oy - 20 }}>
-          Test
+        <div className="absolute" style={{ left: ox + COL_X.test - 16, top: oy + 2 }}>
+          {headerWrap("Test")}
         </div>
 
-        {/* Q1 answer nodes */}
-        {q1.map((a) => {
-          const p = positions[`a-${a}`];
-          if (!p) return null;
-          return (
-            <div
-              key={a}
-              className="absolute cursor-grab select-none rounded-lg border border-primary/40 bg-card px-3 py-2 shadow-sm active:cursor-grabbing"
-              style={{ left: ox + p.x, top: oy + p.y, width: NODE.q1.w, height: NODE.q1.h }}
-              onPointerDown={(e) => onPointerDown(e, `a-${a}`)}
-              onPointerMove={onPointerMove}
-              onPointerUp={(e) => onPointerUp(e, `a-${a}`)}
-            >
-              <div className="text-xs font-semibold text-foreground">{a}</div>
-              <div className="text-[10px] text-muted-foreground">click-drag to move</div>
-            </div>
-          );
-        })}
+        {/* Q1: multiple-choice answers OR a typed-answer note */}
+        {isChoice
+          ? q1.map((a) => {
+              const p = positions[q1NodeId(a)];
+              if (!p) return null;
+              return (
+                <div
+                  key={a}
+                  className="absolute cursor-grab select-none rounded-lg border border-primary/40 bg-card px-3 py-2 shadow-sm active:cursor-grabbing"
+                  style={{ left: ox + p.x, top: oy + p.y, width: NODE.q1.w, height: NODE.q1.h }}
+                  onPointerDown={(e) => onPointerDown(e, q1NodeId(a))}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={(e) => onPointerUp(e, q1NodeId(a))}
+                >
+                  <div className="text-xs font-semibold text-foreground">{a}</div>
+                  <div className="text-[10px] text-muted-foreground">click-drag to move</div>
+                </div>
+              );
+            })
+          : (() => {
+              const p = positions["a-note"];
+              if (!p) return null;
+              return (
+                <div
+                  key="a-note"
+                  className="absolute w-[180px] cursor-default select-none rounded-lg border border-dashed border-muted-foreground/40 bg-card px-3 py-2 shadow-sm"
+                  style={{ left: ox + p.x, top: oy + p.y, height: NODE.q1.h }}
+                >
+                  <div className="line-clamp-2 text-xs font-semibold text-foreground">{q1Label}</div>
+                  <div className="text-[10px] text-muted-foreground">student types this</div>
+                </div>
+              );
+            })()}
 
-        {/* Combo nodes */}
+        {/* Combo / Q2 answer nodes */}
         {combos.map((c) => {
           const p = positions[c.key];
           if (!p) return null;
@@ -250,9 +289,7 @@ function FlowCanvas({
               onPointerUp={(e) => onPointerUp(e, c.key)}
             >
               <div className="flex items-center justify-between gap-1 text-xs">
-                <span className="truncate font-medium text-foreground">
-                  {c.a} · {c.b}
-                </span>
+                <span className="truncate font-medium text-foreground">{c.b}</span>
                 {mapped ? (
                   <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
                 ) : (
@@ -260,6 +297,7 @@ function FlowCanvas({
                 )}
               </div>
               <div className="mt-1 truncate text-[10px] text-muted-foreground">
+                {isChoice ? `${c.a} · ` : ""}
                 {mapped ? testById.get(mapping[c.key])?.title ?? "Test" : "Tap to choose a test"}
               </div>
             </div>
@@ -292,57 +330,59 @@ function FlowCanvas({
         })}
 
         {/* Target picker popover for selected combo */}
-        {selected && (() => {
-          const [a, b] = selected.split(SEP);
-          const p = positions[selected];
-          if (!p) return null;
-          const choose = (testId: string) => {
-            onPickCombo(a, b, testId);
-            setSelected(null);
-          };
-          return (
-            <>
-              <div className="fixed inset-0 z-30" onClick={() => setSelected(null)} />
-              <div
-                className="absolute z-40 w-56 rounded-lg border border-border bg-card p-2 shadow-xl"
-                style={{ left: ox + p.x + NODE.combo.w + 12, top: Math.max(oy, oy + p.y) }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="mb-1 px-1 text-[11px] font-semibold text-foreground">
-                  {a} · {b}
-                </div>
-                <button
-                  type="button"
-                  className={cn(
-                    "block w-full truncate rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted",
-                    mapping[selected] ? "" : "bg-muted font-medium",
-                  )}
-                  onClick={() => choose("")}
+        {selected &&
+          (() => {
+            const [a, b] = selected.split(SEP);
+            const p = positions[selected];
+            if (!p) return null;
+            const choose = (testId: string) => {
+              onPickCombo(a, b, testId);
+              setSelected(null);
+            };
+            return (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setSelected(null)} />
+                <div
+                  className="absolute z-40 w-56 rounded-lg border border-border bg-card p-2 shadow-xl"
+                  style={{ left: ox + p.x + NODE.combo.w + 12, top: oy + p.y }}
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  — none (no test) —
-                </button>
-                {targets.length === 0 && (
-                  <p className="px-1 py-1 text-[10px] text-muted-foreground">
-                    Create tests first under Tests &amp; Practice.
-                  </p>
-                )}
-                {targets.map((t) => (
+                  <div className="mb-1 px-1 text-[11px] font-semibold text-foreground">
+                    {isChoice ? `${a} · ` : ""}
+                    {b}
+                  </div>
                   <button
-                    key={t.id}
                     type="button"
                     className={cn(
                       "block w-full truncate rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted",
-                      mapping[selected] === t.id && "bg-primary/10 font-medium text-primary",
+                      mapping[selected] ? "" : "bg-muted font-medium",
                     )}
-                    onClick={() => choose(t.id)}
+                    onClick={() => choose("")}
                   >
-                    {t.title}
+                    — none (no test) —
                   </button>
-                ))}
-              </div>
-            </>
-          );
-        })()}
+                  {targets.length === 0 && (
+                    <p className="px-1 py-1 text-[10px] text-muted-foreground">
+                      Create tests first under Tests &amp; Practice.
+                    </p>
+                  )}
+                  {targets.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className={cn(
+                        "block w-full truncate rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted",
+                        mapping[selected] === t.id && "bg-primary/10 font-medium text-primary",
+                      )}
+                      onClick={() => choose(t.id)}
+                    >
+                      {t.title}
+                    </button>
+                  ))}
+                </div>
+              </>
+            );
+          })()}
       </div>
     </div>
   );
@@ -359,6 +399,7 @@ export function ScreeningSetupScreen() {
 
   const [tests, setTests] = useState<ScreeningTest[]>([]);
 
+  const [q1Type, setQ1Type] = useState<Q1Type>("choice");
   const [q1Label, setQ1Label] = useState("Which class?");
   const [q1Options, setQ1Options] = useState<string[]>(["Class 6", "Class 7", "Class 8"]);
   const [q2Label, setQ2Label] = useState("Which subject?");
@@ -382,6 +423,7 @@ export function ScreeningSetupScreen() {
         const f0 = entry.intro_fields?.[0];
         const f1 = entry.intro_fields?.[1];
         if (f0) {
+          setQ1Type(f0.type === "text" ? "text" : "choice");
           setQ1Label(f0.label || "Which class?");
           setQ1Options(Array.isArray(f0.options) ? f0.options.filter(Boolean) : []);
         }
@@ -391,12 +433,15 @@ export function ScreeningSetupScreen() {
         }
         const key0 = f0?.key;
         const key1 = f1?.key;
-        if (key0 && key1) {
+        const isChoice = f0?.type !== "text";
+        if ((isChoice && key0 && key1) || (!isChoice && key1)) {
           const m: Record<string, string> = {};
           for (const t of all) {
             if (t.is_entry) continue;
             const rules = t.route_rules || {};
-            if (rules[key0] && rules[key1]) m[comboKey(rules[key0], rules[key1])] = t.id;
+            if (!rules[key1]) continue;
+            if (isChoice && rules[key0]) m[comboKey(rules[key0], rules[key1])] = t.id;
+            if (!isChoice && Object.keys(rules).every((k) => k === key1)) m[comboKey(TEXT, rules[key1])] = t.id;
           }
           setMapping(m);
         }
@@ -414,26 +459,26 @@ export function ScreeningSetupScreen() {
 
   const q1 = q1Options.map((o) => o.trim()).filter(Boolean);
   const q2 = q2Options.map((o) => o.trim()).filter(Boolean);
+  const isChoice = q1Type === "choice";
 
   const targets = tests
     .filter((t) => !t.is_entry)
     .sort((a, b) => a.title.localeCompare(b.title));
 
-  function addOption(list: 1 | 2) {
-    const v = optInput.trim();
+  function addOption(v: string) {
     if (!v) return;
-    const arr = list === 1 ? q1Options : q2Options;
+    const arr = addingTo === 1 ? q1Options : q2Options;
     if (arr.map((o) => o.trim().toLowerCase()).includes(v.toLowerCase())) {
       toast.error("That answer already exists");
       return;
     }
-    if (list === 1) setQ1Options((p) => [...p, v]);
+    if (addingTo === 1) setQ1Options((p) => [...p, v]);
     else setQ2Options((p) => [...p, v]);
     setOptInput("");
   }
 
-  function removeOption(list: 1 | 2, idx: number) {
-    if (list === 1) {
+  function removeOption(idx: number) {
+    if (addingTo === 1) {
       const removed = q1Options[idx];
       setQ1Options((p) => p.filter((_, i) => i !== idx));
       if (removed) dropComboContaining(removed, true);
@@ -455,32 +500,43 @@ export function ScreeningSetupScreen() {
     });
   }
 
+  function switchQ1Type(next: Q1Type) {
+    if (next === q1Type) return;
+    setQ1Type(next);
+    setMapping({});
+    setSavedOk(false);
+    toast(isChoice ? "Switched to text — tap combinations to re-route them." : "Switched to multiple choice — tap combinations to re-route them.");
+  }
+
   function pickCombo(a: string, b: string, testId: string) {
+    const key = comboKey(a, b);
     if (!testId) {
       setMapping((prev) => {
         const next = { ...prev };
-        delete next[comboKey(a, b)];
+        delete next[key];
         return next;
       });
       return;
     }
-    const alreadyUsed = Object.entries(mapping).find(([k, v]) => v === testId && k !== comboKey(a, b));
+    const alreadyUsed = Object.entries(mapping).find(([k, v]) => v === testId && k !== key);
     if (alreadyUsed) {
       toast.error("That test is already routed from another combination");
       return;
     }
-    setMapping((prev) => ({ ...prev, [comboKey(a, b)]: testId }));
+    setMapping((prev) => ({ ...prev, [key]: testId }));
   }
 
   async function save() {
     if (!q1Label.trim() || !q2Label.trim()) return toast.error("Give both questions a name");
-    if (q1.length === 0 || q2.length === 0) return toast.error("Add at least one answer to each question");
-    if (q1.length > 10 || q2.length > 10) return toast.error("Max 10 answers per question (WhatsApp button limit)");
+    if (isChoice && q1.length === 0) return toast.error("Add at least one answer to the first question");
+    if (q2.length === 0) return toast.error("Add at least one answer to the second question");
+    if (isChoice && q1.length > 10) return toast.error("Max 10 answers per question (WhatsApp button limit)");
+    if (q2.length > 10) return toast.error("Max 10 answers per question (WhatsApp button limit)");
 
     const key1 = slug(q1Label);
     const key2 = slug(q2Label);
     const introFields = [
-      { key: key1, label: q1Label.trim(), type: "choice", options: q1 },
+      { key: key1, label: q1Label.trim(), type: q1Type, options: isChoice ? q1 : [] },
       { key: key2, label: q2Label.trim(), type: "choice", options: q2 },
     ];
     const previousMapping = { ...mapping };
@@ -518,15 +574,17 @@ export function ScreeningSetupScreen() {
       const newIds = new Set<string>();
       for (const [key, testId] of Object.entries(mapping)) {
         const [a, b] = key.split(SEP);
-        if (!q1.includes(a) || !q2.includes(b)) continue;
+        if (!q2.includes(b)) continue;
+        if (isChoice && !q1.includes(a)) continue;
         newIds.add(testId);
+        const route_rules = isChoice ? { [key1]: a, [key2]: b } : { [key2]: b };
         const res = await fetch(`/api/tests/${testId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ route_rules: { [key1]: a, [key2]: b } }),
+          body: JSON.stringify({ route_rules }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(`Failed to save routing for "${a} → ${b}": ${data.error || ""}`);
+        if (!res.ok) throw new Error(`Failed to save routing for "${b}": ${data.error || ""}`);
       }
 
       for (const [key, testId] of Object.entries(previousMapping)) {
@@ -534,7 +592,8 @@ export function ScreeningSetupScreen() {
         const t = tests.find((x) => x.id === testId);
         const rules = t?.route_rules || {};
         const keys = Object.keys(rules);
-        if (keys.length > 0 && keys.every((k) => k === key1 || k === key2)) {
+        const allowed = isChoice ? [key1, key2] : [key2];
+        if (keys.length > 0 && keys.every((k) => allowed.includes(k))) {
           const res = await fetch(`/api/tests/${testId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -566,40 +625,34 @@ export function ScreeningSetupScreen() {
     );
   }
 
-  const optionEditor = (list: 1 | 2) => (
+  const optionEditor = (placeholder: string) => (
     <div className="flex gap-2">
       <Input
-        value={addingTo === list ? optInput : ""}
-        placeholder={list === 1 ? "Add an answer, e.g. Class 6" : "Add an answer, e.g. Maths"}
+        value={optInput}
+        placeholder={placeholder}
         className="h-8 flex-1 text-sm"
         onChange={(e) => {
-          setAddingTo(list);
           setOptInput(e.target.value);
         }}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
-            addOption(list);
+            addOption(optInput.trim());
           }
         }}
       />
-      <Button type="button" variant="outline" size="sm" className="h-8 gap-1 text-xs" onClick={() => addOption(list)}>
+      <Button type="button" variant="outline" size="sm" className="h-8 gap-1 text-xs" onClick={() => addOption(optInput.trim())}>
         <Plus className="size-3" /> Add
       </Button>
     </div>
   );
 
-  const chips = (list: 1 | 2, options: string[]) => (
+  const chips = (options: string[]) => (
     <div className="flex flex-wrap gap-1.5">
       {options.map((opt, i) => (
         <span key={i} className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 text-xs text-foreground">
           {opt}
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-destructive"
-            onClick={() => removeOption(list, i)}
-            aria-label={`Remove ${opt}`}
-          >
+          <button type="button" className="text-muted-foreground hover:text-destructive" onClick={() => removeOption(i)} aria-label={`Remove ${opt}`}>
             <X className="size-3" />
           </button>
         </span>
@@ -616,7 +669,7 @@ export function ScreeningSetupScreen() {
           <Sparkles className="h-6 w-6 text-primary" /> Screening setup
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Ask every student 2 questions (e.g. class, subject), then route each answer combination to the right test.
+          Ask every student up to 2 questions, then route each answer to the right test.
         </p>
       </div>
 
@@ -626,15 +679,62 @@ export function ScreeningSetupScreen() {
         <div className="mt-4 grid gap-5 md:grid-cols-2">
           <div className="space-y-2">
             <label className="text-xs font-medium text-muted-foreground">First question</label>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => switchQ1Type("text")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                  !isChoice ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Type className="size-3.5" /> Typed answer
+              </button>
+              <button
+                type="button"
+                onClick={() => switchQ1Type("choice")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                  isChoice ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <ListChecks className="size-3.5" /> Multiple choice
+              </button>
+            </div>
             <Input value={q1Label} onChange={(e) => setQ1Label(e.target.value)} placeholder="e.g. Which class?" className="h-8 text-sm" />
-            {optionEditor(1)}
-            {chips(1, q1Options)}
+            {isChoice ? (
+              <div className="space-y-2">
+                <div
+                  onClick={() => {
+                    setAddingTo(1);
+                  }}
+                >
+                  {optionEditor("Add an answer, e.g. Class 6")}
+                </div>
+                {chips(q1Options)}
+                <p className="text-[11px] italic text-muted-foreground">Student taps one of these buttons.</p>
+              </div>
+            ) : (
+              <p className="text-[11px] italic text-muted-foreground">
+                Student types their answer — it&apos;s recorded but the routing is decided by the second question.
+              </p>
+            )}
           </div>
+
           <div className="space-y-2">
             <label className="text-xs font-medium text-muted-foreground">Second question</label>
             <Input value={q2Label} onChange={(e) => setQ2Label(e.target.value)} placeholder="e.g. Which subject?" className="h-8 text-sm" />
-            {optionEditor(2)}
-            {chips(2, q2Options)}
+            <div
+              onClick={() => {
+                setAddingTo(2);
+              }}
+            >
+              {optionEditor("Add an answer, e.g. Maths")}
+            </div>
+            {chips(q2Options)}
+            <p className="text-[11px] italic text-muted-foreground">
+              Student taps one of these buttons — each routes to a test.
+            </p>
           </div>
         </div>
       </div>
@@ -652,13 +752,17 @@ export function ScreeningSetupScreen() {
           Drag boxes around to arrange them — the connectors bend to follow.
         </p>
 
-        {q1.length === 0 || q2.length === 0 ? (
+        {q2.length === 0 || (isChoice && q1.length === 0) ? (
           <p className="mt-4 rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-            Add at least one answer to each question above to draw the flow.
+            {isChoice
+              ? "Add at least one answer to each question above to draw the flow."
+              : "Add at least one answer to the second question above to draw the flow."}
           </p>
         ) : (
           <div className="mt-4">
             <FlowCanvas
+              q1Type={q1Type}
+              q1Label={q1Label}
               q1Options={q1}
               q2Options={q2}
               mapping={mapping}
@@ -680,12 +784,12 @@ export function ScreeningSetupScreen() {
         <h2 className="text-sm font-semibold">3. Turn it on</h2>
         <p className="text-xs text-muted-foreground">
           In Automations, add the step <span className="font-semibold text-foreground">Dispatch Test / Practice</span> and choose{" "}
-          <span className="font-semibold text-foreground">Entry Screening</span>. When a student texts, they answer your 2
-          questions and go straight into the mapped test.
+          <span className="font-semibold text-foreground">Entry Screening</span>. When a student texts, they answer your
+          question(s) and go straight into the mapped test.
         </p>
         <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
           <p className="text-[11px] italic text-muted-foreground">
-            {savedOk ? "Saved — routing is live." : "Students whose combination has no test will be asked to start over."}
+            {savedOk ? "Saved — routing is live." : "Students whose answer has no test will be asked to start over."}
           </p>
           <Button onClick={save} disabled={saving} className="gap-1.5">
             {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
