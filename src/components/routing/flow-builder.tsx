@@ -222,6 +222,10 @@ export function FlowBuilderScreen() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create flow");
       setCreateOpen(false);
+      setFlows((prev) => {
+        const rest = prev.filter((f) => f.id !== data.flow.id);
+        return [{ ...data.flow, step_count: data.flow.step_count ?? 0 }, ...rest];
+      });
       await fetchFlows();
       await openDetail(data.flow.id);
       toast.success("Flow created");
@@ -390,6 +394,15 @@ export function FlowBuilderScreen() {
         entry_step_id: f.entry_step_id ?? null,
         steps: (f.steps ?? []).map((s: any) => stepToDraft(s)),
       });
+      setFlows((prev) =>
+        prev.map((fl) => ({
+          ...fl,
+          name: f.name ?? fl.name,
+          description: f.description ?? fl.description,
+          is_active: f.is_active === true,
+          step_count: (f.steps ?? []).length,
+        }))
+      );
       await fetchFlows();
       toast.success("Flow saved");
     } catch (err: any) {

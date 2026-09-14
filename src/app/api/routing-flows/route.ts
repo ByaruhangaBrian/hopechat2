@@ -48,12 +48,16 @@ export async function GET() {
     // PostgREST relationship cache (avoids "table not in schema cache" errors).
     const counts: Record<string, number> = {}
     if (data && data.length > 0) {
-      const { data: steps } = await admin
-        .from('routing_steps')
-        .select('flow_id')
-        .in('flow_id', data.map((f: any) => f.id))
-      for (const s of steps || []) {
-        counts[s.flow_id] = (counts[s.flow_id] || 0) + 1
+      try {
+        const { data: steps } = await admin
+          .from('routing_steps')
+          .select('flow_id')
+          .in('flow_id', data.map((f: any) => f.id))
+        for (const s of steps || []) {
+          counts[s.flow_id] = (counts[s.flow_id] || 0) + 1
+        }
+      } catch (countErr) {
+        console.error('[routing-flows] step count error (ignored):', countErr)
       }
     }
 
