@@ -86,7 +86,7 @@ export default function LandingPage() {
     },
     {
       q: "Can HopeChat route a customer to the right test based on their answers?",
-      a: "Yes. Build a routing flow (for example: which class? → which subject? → which paper?) and dispatch it from any automation. Each answer is recorded and sends the customer to the next step or straight into the matching test. Levels with just one path are skipped automatically, and the Results dashboard shows accuracy per subject and per question so you know exactly what each class needs to revise.",
+      a: "Yes. Create an entry screening test that asks two intro questions (for example: which class? → which subject?). Each regular test then declares routing rules, so the moment a student answers the last question they are routed straight into the matching test automatically. The Results dashboard shows accuracy per subject and per question so you know exactly what each class needs to revise.",
     },
     {
       q: "How does the AI train on my business data?",
@@ -473,27 +473,25 @@ export default function LandingPage() {
               },
               {
                 icon: Route,
-                title: "Routing Flows & Insights",
-                desc: "Build multi-level screening flows (class → subject → paper → DIT/Maths) that ask the same questions every customer answers, then route each one to the right test automatically — and see which subjects and questions need attention in Results.",
+                title: "Smart Screening & Insights",
+                desc: "Put an entry screening in front of your tests — two intro questions (e.g. class → subject) answered once, then every student is routed straight to the right test. Results show which subjects and questions need attention.",
                 points: [
-                  "Branching flow designer with entry-step control and choice/text steps",
-                  "Auto-skip a level when a step only has one sensible path",
-                  "Every answer is recorded (e.g. /class = Class 8) and reusable for routing",
-                  "Results dashboard with per-test, per-question, and per-attempt analytics",
-                  "Multi-dispatch a routing flow from any automation trigger"
+                  "Entry test asks the intro questions (class, subject)",
+                  "Routing rules send each student to the matching test automatically",
+                  "Every intro answer is recorded and reusable for routing",
+                  "Results dashboard with per-test, per-question, and per-attempt analytics"
                 ],
                 reverse: true,
                 mock: (
                   <div className="bg-white border border-border rounded-xl p-4 space-y-3">
                     <div className="flex justify-between items-center border-b border-border pb-2">
-                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5"><Route className="h-4 w-4 text-primary" /> Routing flow</span>
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5"><Route className="h-4 w-4 text-primary" /> Entry screening</span>
                       <span className="text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">Live</span>
                     </div>
                     <div className="space-y-1.5 text-xs">
                       {[
                         { q: "Which class?", a: "Class 8" },
                         { q: "Which subject?", a: "Science" },
-                        { q: "Which paper?", a: "Paper 2" },
                       ].map((row, i) => (
                         <div key={i} className="flex items-center gap-2">
                           <div className="font-semibold text-foreground min-w-[110px]">{row.q}</div>
@@ -503,7 +501,7 @@ export default function LandingPage() {
                       ))}
                     </div>
                     <div className="rounded-lg bg-primary/5 border border-primary/10 px-3 py-2 text-[11px] text-foreground">
-                      <span className="font-bold text-primary">Started:</span> Science Paper 2 — Class 8 screening complete
+                      <span className="font-bold text-primary">Routing:</span> Class 8 + Science → Science Paper 2
                     </div>
                   </div>
                 ),
@@ -995,7 +993,7 @@ export default function LandingPage() {
                 <li><Link href="#features" className="hover:text-primary transition-colors">WhatsApp Ads</Link></li>
                 <li><Link href="#features" className="hover:text-primary transition-colors">Flow Builder</Link></li>
                 <li><Link href="#features" className="hover:text-primary transition-colors">Tests & Practice</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">Routing Flows & Insights</Link></li>
+                <li><Link href="#features" className="hover:text-primary transition-colors">Smart Screening</Link></li>
                 <li><Link href="#features" className="hover:text-primary transition-colors">Team Inbox</Link></li>
               </ul>
             </div>

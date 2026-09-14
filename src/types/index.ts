@@ -255,7 +255,6 @@ export type AutomationStepType =
   | 'whatsapp_interaction'
   | 'whatsapp_flow'
   | 'dispatch_test'
-  | 'dispatch_routing_flow'
   | 'trigger_automation';
 
 export type AutomationLogStatus = 'success' | 'partial' | 'failed';

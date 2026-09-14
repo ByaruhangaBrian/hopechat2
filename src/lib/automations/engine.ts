@@ -19,11 +19,10 @@ import type {
   WhatsAppFlowStepConfig,
   TriggerAutomationStepConfig,
   DispatchTestStepConfig,
-  DispatchFlowStepConfig,
 } from '@/types'
 import { supabaseAdmin } from './admin-client'
 import { engineSendText, engineSendTemplate, engineSendInteractive, engineSendFlow } from './meta-send'
-import { startTest, startFlow } from '@/lib/tests/runtime'
+import { startTest } from '@/lib/tests/runtime'
 import { generateGeminiResponse } from './gemini-client'
 import { getOrSetCache } from '@/lib/whatsapp/gemini-cache'
 import { logHttpEvent } from '@/lib/logs/http-logs'
@@ -301,7 +300,7 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
 
   for (const step of steps as AutomationStep[]) {
     // suspension points: `wait`, `whatsapp_interaction`, `whatsapp_flow`
-    if (step.step_type === 'wait' || step.step_type === 'whatsapp_interaction' || step.step_type === 'whatsapp_flow' || step.step_type === 'dispatch_test' || step.step_type === 'dispatch_routing_flow') {
+    if (step.step_type === 'wait' || step.step_type === 'whatsapp_interaction' || step.step_type === 'whatsapp_flow' || step.step_type === 'dispatch_test') {
       try {
         const detail = await runStep(step, args)
         results.push({
@@ -549,15 +548,6 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
 
       await startTest(args.contactId, cfg.test_id)
       return `test ${cfg.test_id} dispatched`
-    }
-
-    case 'dispatch_routing_flow': {
-      const cfg = step.step_config as DispatchFlowStepConfig
-      if (!cfg.flow_id) throw new Error('dispatch_routing_flow needs flow_id')
-      if (!args.contactId) throw new Error('dispatch_routing_flow needs a contact')
-
-      await startFlow(args.contactId, cfg.flow_id)
-      return `routing flow ${cfg.flow_id} dispatched`
     }
 
     case 'wait': {

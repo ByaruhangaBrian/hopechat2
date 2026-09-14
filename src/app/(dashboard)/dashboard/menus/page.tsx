@@ -3,7 +3,7 @@ import { TestCenterScreen } from "@/components/tests/test-center";
 
 export const metadata: Metadata = {
   title: "Tests & Practice | HopeChat",
-  description: "Practice drills, timed tests, routing flows and results analytics via WhatsApp.",
+  description: "Practice drills, timed tests, entry screening with routing and results analytics via WhatsApp.",
 };
 
 export default function MenusPage() {

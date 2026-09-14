@@ -1,17 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import { FolderTree, Route, BarChart3 } from "lucide-react";
+import { FolderTree, BarChart3 } from "lucide-react";
 import { TestBuilderScreen } from "@/components/tests/test-builder";
-import { FlowBuilderScreen } from "@/components/routing/flow-builder";
 import { ResultsDashboard } from "@/components/results/results-dashboard";
 import { cn } from "@/lib/utils";
 
-type Tab = "tests" | "routing" | "results";
+type Tab = "tests" | "results";
 
 const TABS: Array<{ value: Tab; label: string; icon: any }> = [
   { value: "tests", label: "Tests & Practice", icon: FolderTree },
-  { value: "routing", label: "Routing Flows", icon: Route },
   { value: "results", label: "Results & Insights", icon: BarChart3 },
 ];
 
@@ -42,7 +40,6 @@ export function TestCenterScreen() {
 
       {/* Only mount the active component so an error in one tab can't crash the others */}
       {tab === "tests" && <TestBuilderScreen />}
-      {tab === "routing" && <FlowBuilderScreen />}
       {tab === "results" && <ResultsDashboard />}
     </div>
   );
