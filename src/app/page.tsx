@@ -80,6 +80,10 @@ export default function LandingPage() {
       a: "Yes. Connect the same WhatsApp number you already use — no new SIM, no lost history. Keep using the WhatsApp Business app on your phone while HopeChat runs automations alongside it. Official Meta-approved coexistence.",
     },
     {
+      q: "Can I automatically send a menu or quiz when a customer texts me?",
+      a: "Yes. Build unlimited interactive menus, question banks, and subscreen flows, then attach any screen to your automation triggers. When a customer sends a keyword or matches a rule, HopeChat dispatches the menu instantly — and resumes exactly where they left off after each button or list tap.",
+    },
+    {
       q: "How does the AI train on my business data?",
       a: "Upload your product catalogues, price lists, FAQs, and website URLs. HopeChat AI learns your business automatically and answers customer questions based on what you teach it. It escalates to a human when it doesn't know the answer.",
     },
@@ -440,6 +444,7 @@ export default function LandingPage() {
                   "Hierarchical tree view: Root menus, sub-categories, and deep question banks",
                   "Smart Meta API rendering: 1–3 quick reply buttons or 4–10 list menus",
                   "Automated scoring for quizzes, tests, and customer surveys",
+                  "Auto-dispatch any screen from automations — keyword triggers and drip sequences launch menus on demand",
                   "Live WhatsApp chat simulator with real-time bubble preview"
                 ],
                 reverse: true,
