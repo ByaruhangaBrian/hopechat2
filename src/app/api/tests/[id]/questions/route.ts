@@ -101,3 +101,48 @@ export async function POST(
     return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })
   }
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: testId } = await params
+    const { admin, effectiveBusinessId, error } = await resolveBusinessId()
+    if (error) return error
+
+    const { data: test } = await admin
+      .from('tests')
+      .select('id')
+      .eq('id', testId)
+      .eq('business_id', effectiveBusinessId)
+      .maybeSingle()
+    if (!test) return NextResponse.json({ error: 'Test not found' }, { status: 404 })
+
+    const body = await request.json().catch(() => null)
+    const ids = Array.isArray(body?.ids) ? (body.ids as unknown[]).filter((x) => typeof x === 'string') : []
+    if (ids.length === 0) {
+      return NextResponse.json({ error: 'No question ids provided' }, { status: 400 })
+    }
+
+    const { data: deleted, error: delErr } = await admin
+      .from('test_questions')
+      .delete()
+      .eq('test_id', testId)
+      .in('id', ids)
+      .select('id')
+
+    if (delErr) {
+      console.error('[questions] DELETE error:', delErr)
+      return NextResponse.json({ error: delErr.message }, { status: 500 })
+    }
+
+    return NextResponse.json(
+      { success: true, count: deleted?.length ?? 0 },
+      { headers: NO_CACHE }
+    )
+  } catch (err: any) {
+    console.error('[questions] DELETE route error:', err)
+    return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })
+  }
+}

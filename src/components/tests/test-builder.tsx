@@ -753,6 +753,10 @@ function QuestionsEditor({
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [questionsToDelete, setQuestionsToDelete] = useState<string[] | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   /* Entry tests hold only intro (routing) questions — no question CRUD. */
   if ((test as any).is_entry === true) {
@@ -776,6 +780,42 @@ function QuestionsEditor({
     );
   }
 
+  const allIds = (test.questions ?? []).map((q) => q.id);
+  const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
+
+  function toggleSelectAll() {
+    setSelected(allSelected ? new Set() : new Set(allIds));
+  }
+
+  async function deleteQuestions(ids: string[]) {
+    if (ids.length === 0) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/tests/${test.id}/questions`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Failed to delete");
+        return;
+      }
+      toast.success(ids.length === 1 ? "Question deleted" : `${ids.length} questions deleted`);
+      setSelected((s) => {
+        const next = new Set(s);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      });
+      refresh();
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setDeleting(false);
+      setQuestionsToDelete(null);
+    }
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -786,12 +826,42 @@ function QuestionsEditor({
           </Button>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setImportOpen(true)}>
-            Bulk import CSV
-          </Button>
-          <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setAdding(true)}>
-            <Plus className="size-3 mr-1" /> Add question
-          </Button>
+          {bulkMode ? (
+            <>
+              <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={toggleSelectAll}>
+                {allSelected ? "Clear" : "Select all"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-xs text-destructive"
+                disabled={selected.size === 0}
+                onClick={() => setQuestionsToDelete([...selected])}
+              >
+                <Trash2 className="size-3 mr-1" /> Delete ({selected.size})
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-xs"
+                onClick={() => { setBulkMode(false); setSelected(new Set()); }}
+              >
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setBulkMode(true)}>
+                Bulk delete
+              </Button>
+              <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setImportOpen(true)}>
+                Bulk import CSV
+              </Button>
+              <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setAdding(true)}>
+                <Plus className="size-3 mr-1" /> Add question
+              </Button>
+            </>
+          )}
           <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={onDeselect}>
             Close
           </Button>
@@ -806,6 +876,17 @@ function QuestionsEditor({
           refresh={refresh}
           editingId={editingId}
           setEditingId={setEditingId}
+          bulkMode={bulkMode}
+          selected={selected}
+          onSelect={(id) =>
+            setSelected((s) => {
+              const next = new Set(s);
+              if (next.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            })
+          }
+          onDeleteRequest={(id) => setQuestionsToDelete([id])}
         />
       )}
 
@@ -824,6 +905,22 @@ function QuestionsEditor({
           onImported={() => { setImportOpen(false); refresh(); }}
         />
       )}
+
+      {/* Bulk / single question delete confirmation */}
+      <ConfirmationModal
+        open={!!questionsToDelete}
+        onOpenChange={(v) => { if (!v) setQuestionsToDelete(null); }}
+        onConfirm={() => deleteQuestions(questionsToDelete ?? [])}
+        title={questionsToDelete && questionsToDelete.length > 1 ? `Delete ${questionsToDelete.length} questions?` : "Delete question?"}
+        description={
+          questionsToDelete && questionsToDelete.length > 1
+            ? `Are you sure you want to delete the ${questionsToDelete.length} selected questions? This cannot be undone.`
+            : "Are you sure you want to delete this question? This cannot be undone."
+        }
+        variant="destructive"
+        confirmText={deleting ? "Deleting..." : "Delete"}
+        loading={deleting}
+      />
     </div>
   );
 }
@@ -833,11 +930,19 @@ function QuestionsList({
   refresh,
   editingId,
   setEditingId,
+  bulkMode,
+  selected,
+  onSelect,
+  onDeleteRequest,
 }: {
   test: Test;
   refresh: () => void;
   editingId: string | null;
   setEditingId: (id: string | null) => void;
+  bulkMode: boolean;
+  selected: Set<string>;
+  onSelect: (id: string) => void;
+  onDeleteRequest: (id: string) => void;
 }) {
   const questions = (test.questions ?? [])
     .slice()
@@ -867,17 +972,11 @@ function QuestionsList({
             key={q.id}
             question={q}
             total={questions.length}
+            selectable={bulkMode}
+            selected={selected.has(q.id)}
+            onSelect={() => onSelect(q.id)}
             onEdit={() => setEditingId(q.id)}
-            onDelete={async () => {
-              if (!confirm("Delete this question?")) return;
-              const res = await fetch(`/api/tests/${test.id}/questions/${q.id}`, { method: "DELETE" });
-              if (res.ok) {
-                toast.success("Question deleted");
-                refresh();
-              } else {
-                toast.error("Failed to delete");
-              }
-            }}
+            onDelete={() => onDeleteRequest(q.id)}
             onMove={async (dir) => {
               const newPos = q.position + dir;
               if (newPos < 0) return;
@@ -898,16 +997,46 @@ function QuestionsList({
 function QuestionRow({
   question,
   total,
+  selectable,
+  selected,
+  onSelect,
   onEdit,
   onDelete,
   onMove,
 }: {
   question: TestQuestion;
   total: number;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onMove: (dir: -1 | 1) => void;
 }) {
+  if (selectable) {
+    return (
+      <div
+        className="flex items-start gap-2 rounded-md border p-2 bg-card cursor-pointer hover:bg-accent/40"
+        onClick={onSelect}
+      >
+        <input
+          type="checkbox"
+          checked={!!selected}
+          readOnly
+          className="mt-0.5 size-3 shrink-0 pointer-events-none"
+        />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium line-clamp-1">{question.question}</p>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">
+            {question.options?.length ?? 0} options
+            {question.correct_answer ? ` · correct: ${question.correct_answer}` : ""}
+            {question.points > 0 ? ` · ${question.points} pt` : ""}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-start gap-2 rounded-md border p-2 bg-card">
       <div className="flex flex-col gap-0.5 pt-0.5">
