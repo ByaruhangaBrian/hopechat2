@@ -1170,7 +1170,7 @@ function ImportDialog({
 
         <div className="space-y-3 py-2">
           <p className="text-xs text-muted-foreground">
-            Upload a CSV file with columns: question, option_a, option_b, option_c, option_d, correct_option (A/B/C/D), points.
+            Upload a CSV file with columns: question, option_a, option_b, option_c, option_d, correct_option (A/B/C/D), points. The first heading row is skipped automatically.
           </p>
           <Button variant="outline" size="sm" className="h-7 text-xs" onClick={downloadTemplate}>
             Download template CSV

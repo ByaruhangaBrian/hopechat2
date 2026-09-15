@@ -8,10 +8,16 @@
  * - `correct_option` is the letter of the correct answer (A, B, C …) or blank.
  * - `points` defaults to 1.
  * - Rows with an empty question are skipped.
+ * - The first row is treated as a header (and skipped) when it looks like one —
+ *   a title row, the branded template, or any row whose cells are column
+ *   labels (e.g. "Option 1", "Correct Answer", localized titles).
  */
 
 const CSV_HEADER_PATTERN =
   /^question\s*,\s*option[_\s]?a\s*,/i;
+
+// Column cells that read as labels rather than data.
+const HEADER_CELL_PATTERN = /question|option|answer|correct|points|pregunta|respuesta|título|title|sl\.?\s*no|sr\.?\s*no/i;
 
 function splitCsvLine(line: string): string[] {
   // Simple CSV splitter that handles quoted fields.
@@ -44,6 +50,17 @@ function splitCsvLine(line: string): string[] {
   return cells
 }
 
+function looksLikeHeaderRow(line: string): boolean {
+  if (CSV_HEADER_PATTERN.test(line)) return true
+  const cells = splitCsvLine(line).filter((c) => c)
+  if (cells.length === 0) return false
+  const headerCells = cells.filter((c) => HEADER_CELL_PATTERN.test(c))
+  // A single-cell title row ("My Test Questions", "Questions", a course name…).
+  if (cells.length === 1) return headerCells.length === 1
+  // Multi-column header ("Question,Option 1,…", "No.,Question,Answer A,…", …).
+  return headerCells.length >= 2
+}
+
 export interface ParsedQuestion {
   question: string
   options: Array<{ key: string; label: string }>
@@ -52,12 +69,12 @@ export interface ParsedQuestion {
 }
 
 export function parseImportCsv(csv: string): ParsedQuestion[] {
-  const lines = csv.split(/\r?\n/).filter((l) => l.trim())
-  if (lines.length < 2) return []
+  const clean = csv.replace(/^\uFEFF/, '')
+  const lines = clean.split(/\r?\n/).filter((l) => l.trim())
+  if (lines.length === 0) return []
 
-  // Detect header row — if it matches the expected pattern, skip it.
-  const headerLine = lines[0]
-  const hasHeader = CSV_HEADER_PATTERN.test(headerLine)
+  // Detect a header row — if the first line looks like labels, skip it.
+  const hasHeader = looksLikeHeaderRow(lines[0])
   const dataLines = hasHeader ? lines.slice(1) : lines
 
   const results: ParsedQuestion[] = []

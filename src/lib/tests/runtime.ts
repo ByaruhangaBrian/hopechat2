@@ -31,6 +31,8 @@ interface TestSessionState {
   flow_answers?: Record<string, string>
   stage: 'intro' | 'question'
   index: number
+  /** consecutive un-answerable replies (audio, gibberish) — throttles re-prompts */
+  invalid_replies?: number
   intro_answers: Record<string, string>[]
   current_score: number
   answered: Array<{ question_id: string; selected: string; correct: boolean; points: number }>
@@ -136,9 +138,54 @@ function sendTestQuestion(
     userId,
     conversationId,
     contactId,
-    question.question,
+question.question,
     options.map((o) => ({ id: `${question.id}:${o.key}`, label: o.label })),
   )
+}
+
+function normalize(s: string): string {
+  return String(s ?? '').trim().toLowerCase()
+}
+
+/**
+ * Guardrail helpers for messages a student sends that are NOT a valid answer:
+ * audio notes, attachments, empty text, gibberish, or a typed label that
+ * doesn't match any option. We nudge back with the exact instruction instead of
+ * recording the bad input as an answer and advancing the test.
+ */
+
+async function nudgeAndReaskIntro(
+  contactId: string,
+  state: TestSessionState,
+  field: TestIntroField,
+  nudges: number,
+): Promise<void> {
+  const { user_id, conversation_id } = state
+  const text =
+    field.type === 'choice' && field.options?.length
+      ? `I didn't get that. Please answer with one of: ${(field.options || []).join(' / ')}.`
+      : "I didn't get that. Please type your answer as text."
+  await engineSendText({ userId: user_id, conversationId: conversation_id, contactId, text })
+  if (nudges < 3) {
+    await sendIntroQuestion(user_id, conversation_id, contactId, field)
+  }
+}
+
+async function nudgeAndReaskQuestion(
+  contactId: string,
+  state: TestSessionState,
+  question: TestQuestionRow,
+  nudges: number,
+): Promise<void> {
+  const { user_id, conversation_id } = state
+  const options = (question.options || []).filter((o) => o && o.key).map((o) => o.label)
+  const text = options.length
+    ? `I didn't get that. Please answer with one of: ${options.join(' / ')}.`
+    : "I didn't get that. Please type your answer as text."
+  await engineSendText({ userId: user_id, conversationId: conversation_id, contactId, text })
+  if (nudges < 3) {
+    await sendTestQuestion(user_id, conversation_id, contactId, question)
+  }
 }
 
 /**
@@ -309,8 +356,23 @@ export async function handleTestReply(
     .eq('contact_id', contactId)
     .maybeSingle()
 
-  const state = session?.session_data as TestSessionState | null | undefined
+const state = session?.session_data as TestSessionState | null | undefined
   if (!state || state.module !== 'test') return { handled: false }
+
+  // Coalesce concurrent webhook deliveries: claim this reply by CAS-ing
+  // last_interaction_at against the value we just read. Only the winning
+  // request proceeds; competitors are swallowed so rapid double-taps sent as
+  // two overlapping webhook payloads can never send two questions at once,
+  // double-advance the session, or double-finish a timed test.
+  const nowTs = new Date().toISOString()
+  const { data: claimed } = await db
+    .from('user_sessions')
+    .update({ last_interaction_at: nowTs })
+    .eq('contact_id', contactId)
+    .eq('last_interaction_at', session.last_interaction_at)
+    .select('id')
+    .maybeSingle()
+  if (!claimed) return { handled: true }
 
 // A completed session only accepts two buttons: "Start over" (re-runs the
   // screening it came through — routing flow, entry test, or nothing) and
@@ -349,9 +411,6 @@ export async function handleTestReply(
     return { handled: true }
   }
 
-  // Reset the inactivity clock — the student just interacted.
-  await db.from('user_sessions').update({ last_interaction_at: new Date().toISOString() }).eq('contact_id', contactId)
-
   const questions = sortQuestions(test.test_questions as TestQuestionRow[])
   const introFields = introFieldsOf(test)
   const isEntry = test.is_entry === true
@@ -368,11 +427,37 @@ export async function handleTestReply(
   // Extract the raw answer value from a button reply or typed text.
   const answerValue = selectedOptionKey ? selectedOptionKey.split(':').slice(1).join(':') : (messageText || '')
 
-  // --- INTRO STAGE ---
+// --- INTRO STAGE ---
   if (state.stage === 'intro') {
     const field = introFields[state.index]
+
     if (field) {
-      state.intro_answers = [...state.intro_answers, { [field.key]: answerValue }]
+      const typed = String(answerValue ?? '').trim()
+
+      if (field.type === 'choice' && field.options?.length) {
+        // Valid answer = a tapped button for THIS field, or typed text that
+        // matches one of the option labels. Anything else (audio, attachment,
+        // gibberish, an irrelevant tap) is re-asked — never recorded.
+        const tapped = !!selectedOptionKey?.startsWith(`${field.key}:`)
+        const matched = (field.options || []).find((opt) => normalize(opt) === normalize(typed))
+        if (!tapped && !matched) {
+          state.invalid_replies = (state.invalid_replies ?? 0) + 1
+          await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
+          await nudgeAndReaskIntro(contactId, state, field, state.invalid_replies)
+          return { handled: true }
+        }
+        state.intro_answers = [...state.intro_answers, { [field.key]: matched ?? typed }]
+      } else if (!typed) {
+        // Text field: a tap / audio / empty reply is not an answer.
+        state.invalid_replies = (state.invalid_replies ?? 0) + 1
+        await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
+        await nudgeAndReaskIntro(contactId, state, field, state.invalid_replies)
+        return { handled: true }
+      } else {
+        state.intro_answers = [...state.intro_answers, { [field.key]: typed.slice(0, 500) }]
+      }
+
+      state.invalid_replies = 0
       state.index++
     }
 
@@ -405,11 +490,31 @@ export async function handleTestReply(
   }
 
   const current = questions[state.index]
-  const correct = !!current.correct_answer && answerValue === current.correct_answer
+  const hasOptions = (current.options || []).some((o) => o && o.key)
+
+  // Choice questions must receive a tapped button or a typed option label
+  // (matched case-insensitively and recorded as the option key so grading and
+  // feedback stay correct). Audio / empty / unrelated text is re-asked.
+  let finalAnswer = answerValue
+  if (hasOptions) {
+    const typed = String(answerValue ?? '').trim()
+    const tapped = !!selectedOptionKey?.startsWith(`${current.id}:`)
+    const matched = (current.options || []).find((o) => o && o.key && normalize(o.label) === normalize(typed))
+    if (!tapped && !matched) {
+      state.invalid_replies = (state.invalid_replies ?? 0) + 1
+      await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
+      await nudgeAndReaskQuestion(contactId, state, current, state.invalid_replies)
+      return { handled: true }
+    }
+    finalAnswer = tapped ? typed : matched!.key
+  }
+
+  const correct = !!current.correct_answer && finalAnswer === current.correct_answer
   const earned = correct ? (current.points && current.points > 0 ? current.points : 1) : 0
 
   state.current_score += earned
-  state.answered = [...state.answered, { question_id: current.id, selected: answerValue, correct, points: earned }]
+  state.invalid_replies = 0
+  state.answered = [...state.answered, { question_id: current.id, selected: finalAnswer, correct, points: earned }]
   state.index++
 
   await db
@@ -849,6 +954,18 @@ export async function handleFlowReply(
 const state = session?.session_data as FlowState | null | undefined
   if (!state || state.module !== 'flow' || state.status !== 'active') return { handled: false }
 
+  // Claim this reply (CAS on last_interaction_at) so overlapping webhook
+  // deliveries for the same contact can't both advance the flow.
+  const nowTs = new Date().toISOString()
+  const { data: claimed } = await db
+    .from('user_sessions')
+    .update({ last_interaction_at: nowTs })
+    .eq('contact_id', contactId)
+    .eq('last_interaction_at', session.last_interaction_at)
+    .select('id')
+    .maybeSingle()
+  if (!claimed) return { handled: true }
+
   // Inactivity timeout — same window as tests (flows are always untimed).
   if (await isInactiveExpired(state.business_id, session?.last_interaction_at ?? state.started_at, null)) {
     await db.from('user_sessions').delete().eq('contact_id', contactId)
@@ -860,8 +977,6 @@ const state = session?.session_data as FlowState | null | undefined
     })
     return { handled: true }
   }
-
-  await db.from('user_sessions').update({ last_interaction_at: new Date().toISOString() }).eq('contact_id', contactId)
 
   let flow: any
   let steps: FlowStepRow[]
@@ -897,10 +1012,13 @@ const state = session?.session_data as FlowState | null | undefined
     return { handled: true }
   }
 
-  // choice: option buttons are id `${stepId}:${index}`
+// choice: option buttons are id `${stepId}:${index}`; typed option labels are
+  // also accepted (case-insensitively). Audio / empty text re-asks the step.
   const parts = (selectedOptionKey || '').split(':')
   const idx = parts.length >= 2 ? Number(parts[parts.length - 1]) : NaN
-  const option = !Number.isNaN(idx) ? (step.options || [])[idx] : undefined
+  const tapped = !Number.isNaN(idx) ? (step.options || [])[idx] : undefined
+  const typedMatch = tapped ? undefined : (step.options || []).find((o) => normalize(o.label) === normalize(messageText ?? ''))
+  const option = tapped ?? typedMatch
   if (!option) {
     await askStepOrAdvance(contactId, state, flow, steps, step.id)
     return { handled: true }
