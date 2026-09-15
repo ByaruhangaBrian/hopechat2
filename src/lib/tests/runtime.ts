@@ -74,6 +74,43 @@ function introFieldsOf(test: { intro_fields?: unknown }): TestIntroField[] {
   return Array.isArray(test.intro_fields) ? (test.intro_fields as TestIntroField[]) : []
 }
 
+/** A timed exam: mode 'test' with a duration. Practice tests are exempt. */
+function isTimedTest(test: { mode?: string; duration_minutes?: number | null } | null | undefined): boolean {
+  return test?.mode === 'test' && !!test.duration_minutes
+}
+
+/**
+ * Attempt guard: a timed exam may be finished only once per phone number.
+ * Only COMPLETED attempts count — a student who abandons before finishing can
+ * retry — so this checks the `test_attempts` history, not the live session.
+ */
+async function hasFinishedAttempt(contactId: string, testId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin()
+    .from('test_attempts')
+    .select('id')
+    .eq('contact_id', contactId)
+    .eq('test_id', testId)
+    .limit(1)
+    .maybeSingle()
+  return !!data
+}
+
+function attemptLimitMessage(title: string): string {
+  return `You have already taken "${title}". Each phone number can attempt this test only once.`
+}
+
+/**
+ * True when `test` is a timed exam the contact has already finished; in that
+ * case the caller must not start it (a notice is sent by the caller).
+ */
+async function isAttemptBlocked(
+  contactId: string,
+  test: { id: string; mode?: string; duration_minutes?: number | null },
+): Promise<boolean> {
+  if (!isTimedTest(test)) return false
+  return hasFinishedAttempt(contactId, test.id)
+}
+
 /**
  * True when an active session has gone quiet for longer than the business's
  * configured inactivity window. Timed tests are exempt — their own duration
@@ -267,7 +304,7 @@ async function resolveUserAndConversation(businessId: string, contactId: string)
  */
 async function beginSession(
   contactId: string,
-  test: { id: string; business_id: string; title: string; start_message?: string | null; intro_fields?: unknown; test_questions?: unknown },
+  test: { id: string; business_id: string; title: string; start_message?: string | null; intro_fields?: unknown; test_questions?: unknown; mode?: string; duration_minutes?: number | null },
   opts: {
     entry_test_id?: string | null
     intro_answers?: Record<string, string>[]
@@ -284,6 +321,12 @@ async function beginSession(
   }
 
   const { userId, conversationId } = await resolveUserAndConversation(test.business_id, contactId)
+
+  // Timed exams are once per phone number (based on completed attempts).
+  if (await isAttemptBlocked(contactId, test)) {
+    await engineSendText({ userId, conversationId, contactId, text: attemptLimitMessage(test.title) })
+    return
+  }
 
   const state: TestSessionState = {
     module: 'test',
@@ -600,6 +643,17 @@ async function routeToTest(
     return
   }
 
+  // A timed exam the student already finished can't be re-routed into.
+  if (await isAttemptBlocked(contactId, target)) {
+    await engineSendText({
+      userId: state.user_id,
+      conversationId: state.conversation_id,
+      contactId,
+      text: attemptLimitMessage(target.title),
+    })
+    return
+  }
+
   await engineSendText({
     userId: state.user_id,
     conversationId: state.conversation_id,
@@ -648,10 +702,16 @@ async function finishTest(
     body += `\nTime used: ${elapsed} minute(s).`
   }
 
-  await sendInteractive(state.user_id, state.conversation_id, contactId, body, [
-    { id: 'test:restart', label: 'Start over' },
-    { id: 'test:done', label: 'Done' },
-  ])
+  // Timed exams can't be retaken, so offer only "Done"; practice/unlimited
+  // tests keep the "Start over" option.
+  const endButtons = isTimedTest(test)
+    ? [{ id: 'test:done', label: 'Done' }]
+    : [
+        { id: 'test:restart', label: 'Start over' },
+        { id: 'test:done', label: 'Done' },
+      ]
+
+  await sendInteractive(state.user_id, state.conversation_id, contactId, body, endButtons)
 
   await persistAttempt(contactId, state, test, questions, percentage, passed, correctCount, totalPossible, timedOut)
 
@@ -912,6 +972,16 @@ async function followFlowTarget(
         conversationId: state.conversation_id,
         contactId,
         text: 'Sorry, that paper is not available right now. Please try again later.',
+      })
+      return
+    }
+    // A timed exam the student already finished can't be re-routed into.
+    if (await isAttemptBlocked(contactId, test)) {
+      await engineSendText({
+        userId: state.user_id,
+        conversationId: state.conversation_id,
+        contactId,
+        text: attemptLimitMessage(test.title),
       })
       return
     }
