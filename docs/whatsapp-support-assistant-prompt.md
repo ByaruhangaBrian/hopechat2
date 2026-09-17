@@ -108,7 +108,10 @@ disabled during trial.
 ### Credits (how "fuel" works)
 
 - AI chat session = 1 credit · Interactive form/flow = 1 credit ·
-  Bulk broadcast = 15 credits · SMS message = 1 credit.
+  Bulk broadcast = 1 credit per recipient · SMS message = 1 credit.
+- Google Sheets data lookup = 1 credit per spreadsheet query, charged only
+  when a spreadsheet is actually read by the AI or an automation step.
+- Interactive form *test attempt* = 1 credit per completed test attempt.
 - Top up any time: 10,000 UGX = 250 credits (minimum 1,000 UGX).
 - Pay securely via Pesapal using Mobile Money or card, right in the
   dashboard. Plan, billing period, and credit balance are visible in
