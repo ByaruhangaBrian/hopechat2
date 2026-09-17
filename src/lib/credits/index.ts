@@ -20,6 +20,7 @@ export type CreditAction =
   | 'bulk_broadcast'
   | 'sms'
   | 'test_attempt'
+  | 'spreadsheet_lookup'
 
 export interface CreditCostEntry {
   credits: number
@@ -34,6 +35,8 @@ export interface CreditCosts {
   sms_per_message: CreditCostEntry
   /** Cost per completed test / practice attempt. */
   test_attempt: CreditCostEntry
+  /** Cost per Google Sheets API lookup (AI tool or lookup_spreadsheet step). */
+  spreadsheet_lookup: CreditCostEntry
   credit_ugx_rate: number
 }
 
@@ -43,6 +46,7 @@ const DEFAULT_COSTS: CreditCosts = {
   bulk_broadcast: { credits: 15, label: 'Bulk Broadcast' },
   sms_per_message: { credits: 1, label: 'SMS Message' },
   test_attempt: { credits: 1, label: 'Test Attempt' },
+  spreadsheet_lookup: { credits: 1, label: 'Google Sheets Lookup' },
   credit_ugx_rate: 40,
 }
 
@@ -67,6 +71,7 @@ export async function getCreditCosts(): Promise<CreditCosts> {
     bulk_broadcast: v.bulk_broadcast ?? DEFAULT_COSTS.bulk_broadcast,
     sms_per_message: v.sms_per_message ?? DEFAULT_COSTS.sms_per_message,
     test_attempt: v.test_attempt ?? DEFAULT_COSTS.test_attempt,
+    spreadsheet_lookup: v.spreadsheet_lookup ?? DEFAULT_COSTS.spreadsheet_lookup,
     credit_ugx_rate: v.credit_ugx_rate ?? DEFAULT_COSTS.credit_ugx_rate,
   }
 }

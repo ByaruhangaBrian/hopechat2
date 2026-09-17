@@ -266,6 +266,18 @@ export async function getBusinessSpreadsheets(businessId: string): Promise<Busin
 }
 
 /**
+ * Thrown by `lookupRow` when the business has no spreadsheet configured at all —
+ * the ONLY failure that happens before any Google Sheets API call. Callers use
+ * it to skip credit charging (a lookup that never reached the API isn't billed).
+ */
+export class SheetsNotConfiguredError extends Error {
+  constructor(message = 'No spreadsheets configured for this business') {
+    super(message);
+    this.name = 'SheetsNotConfiguredError';
+  }
+}
+
+/**
  * Find a row by searching a column for a specific value.
  * @param spreadsheetId - Optional. If not provided, uses the first enabled spreadsheet from the new table.
  */
@@ -288,7 +300,7 @@ export async function lookupRow(businessId: string, sheetName: string, searchCol
         .eq('is_enabled', true)
         .maybeSingle();
       const cfg = (integration?.config as any) || {};
-      if (!cfg.spreadsheet_id) throw new Error('No spreadsheets configured for this business');
+      if (!cfg.spreadsheet_id) throw new SheetsNotConfiguredError();
       targetSpreadsheetId = cfg.spreadsheet_id;
     }
   }
@@ -319,8 +331,12 @@ export async function lookupRow(businessId: string, sheetName: string, searchCol
 /**
  * Search all enabled spreadsheets for AI tool calling.
  * Returns results tagged with the spreadsheet name so the AI knows which data came from where.
+ *
+ * The result includes `apiCalled` — whether the Google Sheets API was actually
+ * invoked — so callers can bill `spreadsheet_lookup` credits only when Google
+ * was really queried (config early-returns and "no spreadsheets" skip it).
  */
-export async function searchSheets(businessId: string, query: string, spreadsheetName?: string) {
+export async function searchSheets(businessId: string, query: string, spreadsheetName?: string): Promise<{ text: string; apiCalled: boolean }> {
   try {
     const { sheets } = await getClient(businessId);
     const spreadsheets = await getBusinessSpreadsheets(businessId);
@@ -339,7 +355,7 @@ export async function searchSheets(businessId: string, query: string, spreadshee
       if (cfg.spreadsheet_id) {
         return await searchSingleSheet(sheets, cfg.spreadsheet_id, cfg.reference_column, cfg.return_columns, query, cfg.sheet_name || 'Sheet1');
       }
-      return "No spreadsheets are configured. Ask the business owner to add spreadsheets in Settings > Integrations.";
+      return { text: 'No spreadsheets are configured. Ask the business owner to add spreadsheets in Settings > Integrations.', apiCalled: false };
     }
 
     void logHttpEvent({
@@ -353,7 +369,7 @@ export async function searchSheets(businessId: string, query: string, spreadshee
 
     if (spreadsheetName) {
       const sheet = spreadsheets.find(s => s.name.toLowerCase() === spreadsheetName.toLowerCase());
-      if (!sheet) return `Spreadsheet "${spreadsheetName}" not found. Available: ${spreadsheets.map(s => s.name).join(', ')}`;
+      if (!sheet) return { text: `Spreadsheet "${spreadsheetName}" not found. Available: ${spreadsheets.map(s => s.name).join(', ')}`, apiCalled: false };
       return await searchSingleSheet(
         sheets,
         sheet.spreadsheet_id,
@@ -366,6 +382,7 @@ export async function searchSheets(businessId: string, query: string, spreadshee
     }
 
     const allResults: string[] = [];
+    let calledApi = false;
     for (const sheet of spreadsheets) {
       const result = await searchSingleSheet(
         sheets,
@@ -376,23 +393,24 @@ export async function searchSheets(businessId: string, query: string, spreadshee
         sheet.sheet_name || 'Sheet1',
         sheet.name
       );
-      allResults.push(result);
+      allResults.push(result.text);
+      calledApi = calledApi || result.apiCalled;
     }
 
     const noMatchPrefix = `No matches found for "${query}"`;
     const allNoMatch = allResults.every(r => r.includes(noMatchPrefix));
     if (allNoMatch) {
-      return `No records found matching "${query}".`;
+      return { text: `No records found matching "${query}".`, apiCalled: calledApi };
     }
 
-    return allResults.join('\n\n=====\n\n');
+    return { text: allResults.join('\n\n=====\n\n'), apiCalled: calledApi };
   } catch (err: any) {
     console.error(`${TAG} searchSheets FAILED:`, {
       message: err.message,
       code: err.code,
       name: err.name,
     });
-    return `Error searching spreadsheets: ${err.message}`;
+    return { text: `Error searching spreadsheets: ${err.message}`, apiCalled: false };
   }
 }
 
@@ -404,7 +422,7 @@ async function searchSingleSheet(
   query: string,
   sheetName: string,
   spreadsheetName?: string
-): Promise<string> {
+): Promise<{ text: string; apiCalled: boolean }> {
   try {
     const range = `${sheetName}!A:Z`;
     void logHttpEvent({
@@ -421,7 +439,7 @@ async function searchSingleSheet(
     });
 
     const rows = response.data.values;
-    if (!rows || rows.length < 2) return `[${spreadsheetName || spreadsheetId}] Spreadsheet is empty.`;
+    if (!rows || rows.length < 2) return { text: `[${spreadsheetName || spreadsheetId}] Spreadsheet is empty.`, apiCalled: true };
 
     const header = rows[0];
     const refCol = referenceColumn?.trim();
@@ -450,7 +468,7 @@ async function searchSingleSheet(
     });
 
     if (results.length === 0) {
-      return `[${spreadsheetName || sheetName}] No matches found for "${query}".`;
+      return { text: `[${spreadsheetName || sheetName}] No matches found for "${query}".`, apiCalled: true };
     }
 
     let columnsToReturn: string[] = [];
@@ -470,8 +488,8 @@ async function searchSingleSheet(
     }).join('\n---\n');
 
     const label = spreadsheetName || sheetName;
-    return `Spreadsheet "${label}":\n${formatted}`;
+    return { text: `Spreadsheet "${label}":\n${formatted}`, apiCalled: true };
   } catch (err: any) {
-    return `[${spreadsheetName || spreadsheetId}] Error: ${err.message}`;
+    return { text: `[${spreadsheetName || spreadsheetId}] Error: ${err.message}`, apiCalled: true };
   }
 }

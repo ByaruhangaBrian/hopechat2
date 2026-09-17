@@ -28,7 +28,7 @@ import { generateGeminiResponse } from './gemini-client'
 import { getOrSetCache } from '@/lib/whatsapp/gemini-cache'
 import { logHttpEvent } from '@/lib/logs/http-logs'
 import { decrypt } from '@/lib/whatsapp/encryption'
-import { lookupRow } from '@/lib/integrations/google-sheets'
+import { lookupRow, SheetsNotConfiguredError } from '@/lib/integrations/google-sheets'
 import { consumeCredits, checkCredits } from '@/lib/credits'
 
 // ------------------------------------------------------------
@@ -933,7 +933,44 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         throw new Error('lookup_spreadsheet needs sheet_name, search_column, and search_value')
       }
       const searchValue = interpolate(cfg.search_value, args)
-      const row = await lookupRow(args.businessId, cfg.sheet_name, cfg.search_column, searchValue, cfg.spreadsheet_id)
+
+      // Paid-API rule: never run a Sheets query the business can't pay for.
+      const creditGate = await checkCredits(args.businessId, 'spreadsheet_lookup')
+      if (!creditGate.ok) {
+        throw new Error(`Insufficient credits: have ${creditGate.remaining}, need ${creditGate.required}`)
+      }
+
+      const chargeLookup = async (): Promise<void> => {
+        const credit = await consumeCredits(args.businessId, 'spreadsheet_lookup', {
+          userId: args.automation.user_id,
+          referenceId: args.context.conversation_id ?? undefined,
+          contactId: args.contactId ?? null,
+          description: 'lookup_spreadsheet automation step',
+          metadata: {
+            sheet_name: cfg.sheet_name,
+            search_column: cfg.search_column,
+            search_value: searchValue,
+          },
+        })
+        if (!credit.ok) {
+          throw new Error(`Insufficient credits: ${credit.reason}`)
+        }
+      }
+
+      let row: Record<string, string> | null
+      try {
+        row = await lookupRow(args.businessId, cfg.sheet_name, cfg.search_column, searchValue, cfg.spreadsheet_id)
+      } catch (err) {
+        // A throw after the API (e.g. column not found) means Google billed the
+        // values.get — bill it too. The only pre-API failure (no spreadsheet
+        // configured) is exempt.
+        if (!(err instanceof SheetsNotConfiguredError)) {
+          await chargeLookup()
+        }
+        throw err
+      }
+
+      await chargeLookup()
       if (!row) return `no row found for ${searchValue}`
       if (!args.context.vars) args.context.vars = {}
       for (const [colName, varName] of Object.entries(cfg.mapping || {})) {

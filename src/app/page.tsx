@@ -96,7 +96,7 @@ export default function LandingPage() {
     },
     {
       q: "How does the AI train on my business data?",
-      a: "Upload your product catalogues, price lists, FAQs, and website URLs. HopeChat AI learns your business automatically and answers customer questions based on what you teach it. It escalates to a human when it doesn't know the answer.",
+      a: "Upload your product catalogues, price lists, FAQs, and website URLs. HopeChat AI learns your business automatically and answers customer questions based on what you teach it. Connect a Google Sheet and the AI can answer live questions like \"is item X in stock?\" or \"what does it cost?\" — each spreadsheet lookup the AI performs costs one credit. It escalates to a human when it doesn't know the answer.",
     },
     {
       q: "Is HopeChat compliant with Meta's Official WhatsApp API policies?",

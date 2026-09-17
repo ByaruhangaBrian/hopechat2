@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { searchSheets } from '@/lib/integrations/google-sheets';
 import { supabaseAdmin } from '@/lib/automations/admin-client';
 import { logAIUsage, type AIUsageAction } from '@/lib/ai-usage';
-import { getCreditCost, type CreditAction } from '@/lib/credits';
+import { getCreditCost, checkCredits, consumeCredits, type CreditAction } from '@/lib/credits';
 import { stageTestOffer } from '@/lib/tests/runtime';
 
 const MAX_RETRIES = 3;
@@ -222,7 +222,27 @@ export async function generateGeminiResponse(
           const query = (functionCall.args as any)?.query;
           const spreadsheetName = (functionCall.args as any)?.spreadsheet;
           if (query) {
-            result = await searchSheets(businessId, query, spreadsheetName);
+            // Paid-API rule: never run a Sheets query the business can't pay for.
+            const gate = await checkCredits(businessId, 'spreadsheet_lookup')
+            if (!gate.ok) {
+              result = `The business has insufficient credits for a spreadsheet lookup (${gate.remaining} left, ${gate.required} required). Do NOT query the spreadsheet; politely tell the customer the data service is temporarily unavailable.`;
+            } else {
+              const { text, apiCalled } = await searchSheets(businessId, query, spreadsheetName);
+              result = text;
+              // Bill only when the Google Sheets API actually ran. Errors after a
+              // real API call still count — Google invoiced the request.
+              if (apiCalled) {
+                const credit = await consumeCredits(businessId, 'spreadsheet_lookup', {
+                  referenceId: String(options.metadata?.conversation_id ?? '').trim() || undefined,
+                  contactId: String(options.metadata?.contact_id ?? '').trim() || null,
+                  description: 'AI Google Sheets lookup',
+                  metadata: { spreadsheet: spreadsheetName || null, query },
+                });
+                if (!credit.ok) {
+                  console.warn(`[gemini-client] spreadsheet_lookup credit deduction failed for business ${businessId}:`, credit.reason);
+                }
+              }
+            }
           }
         } else if (functionCall.name === 'start_test') {
           if (!businessId) {

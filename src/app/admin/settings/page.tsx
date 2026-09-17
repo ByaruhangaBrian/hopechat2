@@ -71,6 +71,7 @@ export default function AdminSettingsPage() {
     bulk_broadcast: { credits: 15, label: "Bulk Broadcast" },
     sms_per_message: { credits: 1, label: "SMS Message" },
     test_attempt: { credits: 1, label: "Test Attempt" },
+    spreadsheet_lookup: { credits: 1, label: "Google Sheets Lookup" },
     credit_ugx_rate: 40,
   });
   const [smsSettings, setSmsSettings] = useState({
@@ -145,6 +146,7 @@ export default function AdminSettingsPage() {
           bulk_broadcast: cc.value.bulk_broadcast ?? { credits: 15, label: "Bulk Broadcast" },
           sms_per_message: cc.value.sms_per_message ?? { credits: 1, label: "SMS Message" },
           test_attempt: cc.value.test_attempt ?? { credits: 1, label: "Test Attempt" },
+          spreadsheet_lookup: cc.value.spreadsheet_lookup ?? { credits: 1, label: "Google Sheets Lookup" },
           credit_ugx_rate: cc.value.credit_ugx_rate ?? 40,
         });
       }
@@ -1124,6 +1126,31 @@ export default function AdminSettingsPage() {
                     </div>
                     <p className="text-[11px] text-muted-foreground/60">
                       per finished test or practice attempt
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs">
+                      {creditCosts.spreadsheet_lookup.label}
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={creditCosts.spreadsheet_lookup.credits}
+                        onChange={(e) =>
+                          setCreditCosts((prev) => ({
+                            ...prev,
+                            spreadsheet_lookup: { ...prev.spreadsheet_lookup, credits: Number(e.target.value) },
+                          }))
+                        }
+                        className="bg-muted border-border text-foreground font-semibold text-lg pr-12"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        credits
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground/60">
+                      per Google Sheets data lookup (AI query or automation step)
                     </p>
                   </div>
                 </div>

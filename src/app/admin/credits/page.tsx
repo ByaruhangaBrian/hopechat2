@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type CreditAction = "ai_chat" | "interactive_form" | "bulk_broadcast" | "sms";
+type CreditAction = "ai_chat" | "interactive_form" | "bulk_broadcast" | "sms" | "test_attempt" | "spreadsheet_lookup";
 
 interface CreditUsageLog {
   id: string;
@@ -62,6 +62,8 @@ interface UsageByBusiness {
   interactive_form: number;
   bulk_broadcast: number;
   sms: number;
+  test_attempt: number;
+  spreadsheet_lookup: number;
   total_credits: number;
   last_used: string | null;
 }
@@ -71,6 +73,8 @@ const ACTION_LABELS: Record<string, string> = {
   interactive_form: "Interactive Form / Flow",
   bulk_broadcast: "Bulk Broadcast",
   sms: "SMS Broadcast",
+  test_attempt: "Test Attempt",
+  spreadsheet_lookup: "Google Sheets Lookup",
 };
 
 export default function AdminCreditsPage() {
@@ -139,6 +143,8 @@ export default function AdminCreditsPage() {
         interactive_form: 0,
         bulk_broadcast: 0,
         sms: 0,
+        test_attempt: 0,
+        spreadsheet_lookup: 0,
         total_credits: 0,
         last_used: null,
       };
@@ -273,6 +279,8 @@ export default function AdminCreditsPage() {
                 <TableHead className="text-muted-foreground text-right">Forms / Flows</TableHead>
                 <TableHead className="text-muted-foreground text-right">Broadcasts</TableHead>
                 <TableHead className="text-muted-foreground text-right">SMS</TableHead>
+                <TableHead className="text-muted-foreground text-right">Tests</TableHead>
+                <TableHead className="text-muted-foreground text-right">Sheet Lookups</TableHead>
                 <TableHead className="text-muted-foreground text-right">Total Credits</TableHead>
                 <TableHead className="text-muted-foreground">Last Used</TableHead>
               </TableRow>
@@ -280,14 +288,14 @@ export default function AdminCreditsPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                     <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" />
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : filteredByBusiness.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                     No credit usage for the selected filters.
                   </TableCell>
                 </TableRow>
@@ -300,6 +308,8 @@ export default function AdminCreditsPage() {
                     <TableCell className="text-right text-sm text-muted-foreground">{b.interactive_form}</TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">{b.bulk_broadcast}</TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">{b.sms}</TableCell>
+                    <TableCell className="text-right text-sm text-muted-foreground">{b.test_attempt}</TableCell>
+                    <TableCell className="text-right text-sm text-muted-foreground">{b.spreadsheet_lookup}</TableCell>
                     <TableCell className="text-right text-sm font-bold text-primary">{b.total_credits.toLocaleString()}</TableCell>
                     <TableCell className="text-xs text-muted-foreground/60 whitespace-nowrap">
                       {b.last_used ? format(new Date(b.last_used), "MMM d, HH:mm") : "—"}

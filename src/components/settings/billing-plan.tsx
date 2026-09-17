@@ -40,7 +40,7 @@ interface Transaction {
 
 interface CreditUsageLog {
   id: string;
-  action: 'ai_chat' | 'interactive_form' | 'bulk_broadcast' | 'sms';
+  action: 'ai_chat' | 'interactive_form' | 'bulk_broadcast' | 'sms' | 'test_attempt' | 'spreadsheet_lookup';
   credits_used: number;
   description: string | null;
   reference_id: string | null;
@@ -62,6 +62,8 @@ const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   interactive_form: { label: 'Interactive Form / Flow', color: 'text-sky-500' },
   bulk_broadcast: { label: 'Bulk Broadcast', color: 'text-violet-500' },
   sms: { label: 'SMS Broadcast', color: 'text-emerald-500' },
+  test_attempt: { label: 'Test Attempt', color: 'text-amber-500' },
+  spreadsheet_lookup: { label: 'Google Sheets Lookup', color: 'text-green-600' },
 };
 
 export function BillingPlan() {

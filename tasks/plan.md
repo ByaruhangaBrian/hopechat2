@@ -1,164 +1,125 @@
-# Implementation Plan: AI-Driven Test Offers With Confirmation
+# Implementation Plan: Google Sheets Lookup Credit Charges
 
 ## Overview
 
-Today a business's WhatsApp "tests" module and its AI assistant are two separate
-configs: the AI knows nothing about the business's tests, so offering a test
-requires a *separate* automation (an entry-test screening or a `dispatch_test`
-step configured in the builder canvas). This plan makes the standalone AI the
-single place tests are offered: the model is told which tests a business has,
-and when a customer *seems* to want to take one, the AI calls a `start_test`
-Gemini tool instead of answering. The tool does NOT start the test — it stages a
-pending offer in `user_sessions` — and the AI's own reply becomes the
-confirmation question, sent as WhatsApp buttons (`Start` / `Not Now`). The
-customer's next reply is consumed by the existing test-session runtime: confirm →
-`beginSession` runs the exact same test path as today (intro fields, questions,
-grading, credits, timed-exam once-per-phone guard); decline → the offer row is
-cleared and the AI keeps chatting normally.
+Today Google Sheets is a **free** integration: every time a business's data is
+queried through the Sheets API — via the AI's `search_business_data` tool or a
+`lookup_spreadsheet` automation step — no credits are deducted. But each of
+those calls is real *paid* Google Cloud usage (Sheets API + OAuth are billed to
+whatever GCP project hosts the service account). This plan adds a new credit
+action, **`spreadsheet_lookup`**, deducted once per successful Sheets API query,
+mirroring how `ai_chat` / `test_attempt` are already metered.
 
-**A per-business switch enables/disables the whole integration.** The switch
-lives with the existing tests settings (admin UI → Tests & Practice Settings).
-Off ⇒ the AI never sees the business's tests and never calls `start_test`;
-existing keyword/entry-test automations keep working untouched.
-
-**Credit accounting is unchanged.** The AI reply that asks the confirmation
-question costs 1 `ai_chat` credit up front (`ai-worker.ts:446`, today's AI
-pricing). Running the test then costs 1 `test_attempt` credit on completion
-(`runtime.ts:777`, today's test pricing). During the test the AI is never called:
-`handledByTest=true` short-circuits AI job scheduling (`ai-worker.ts:107-113`),
-so no AI cost is incurred mid-test. Total for a confirmed attempt = 1 AI + 1
-test credit; a declined offer costs only the 1 AI reply. Credit code itself is
-not touched.
-
-No DB migrations. No new automation step. The `dispatch_test` / entry-test
-configs keep working unchanged (the AI path and the deterministic path are
-already mutually exclusive via `handledByTest`); businesses simply no longer need
-a duplicate keyword automation to offer tests.
+Scope is deliberately tight: grep confirms exactly **two** call sites invoke the
+Sheets API —
+`searchSheets` from `src/lib/automations/gemini-client.ts:225` (AI tool) and
+`lookupRow` from `src/lib/automations/engine.ts:936` (`lookup_spreadsheet` step).
+`getBusinessSpreadsheets` and `searchSingleSheet` are private helpers, and there
+is **no** `appendRow`/`syncFromSheet` path anywhere in the codebase.
 
 ## Architecture Decisions
 
-- **Trigger = Gemini tool call (`start_test`).** The current Gemini function
-  calling loop (`src/lib/automations/gemini-client.ts:132-222`) already exists
-  for `search_business_data` and runs one function-call round-trip then a final
-  text response. We add a second function declaration, `start_test`, and let the
-  model decide when intent is present. Tooling stays opt-in per call via a new
-  `GeminiCallOptions.tools` option, defaulting to today's behavior so the
-  automation-engine path (`engine.ts:803` `assign_to_ai`) is unaffected. Only the
-  standalone assistant call site (`ai-worker.ts:428`) enables it.
-- **Confirm-first, always.** A `start_test` call only stages an offer; the test
-  is never started on the tool call. This is the user's core requirement
-  ("a confirmation question when user seems to want to use the test module") and
-  prevents accidental starts during unrelated conversation.
-- **Pending state lives in `user_sessions`, not a new table.** Reuse the
-  existing session row and claim machinery (`runtime.ts` CAS on
-  `last_interaction_at`). Add the value `'confirm'` to the session `stage`
-  union (currently `'intro' | 'question'`). No schema change: `session_data` is
-  JSONB. The offer row is short-lived: confirm → `beginSession` overwrites it;
-  decline → row deleted so no future message is intercepted.
-- **Buttons, not typed YES/NO.** The test runtime already sends WhatsApp buttons
-  via `engineSendInteractive` (`meta-send.ts:59`). The AI worker appends the
-  same style of buttons (`test:confirm` / `test:cancel`) after the model's
-  confirmation text. `handleTestReply` recognizes those ids; a typed "yes"/"no"
-  reply is normalized as a fallback for customers who don't tap.
-- **All test gates are inherited for free.** The confirm path lands in
-  `beginSession` (same as `dispatch_test` today), so timed-exam
-  once-per-phone, inactivity timeout, per-attempt credit, start message, intro
-  fields, and routing all behave identically. `stageTestOffer` pre-checks the
-  two cheap disqualifiers (`isAttemptBlocked`, already-active session) so the
-  model can be told "don't offer" rather than offering an unstartable test.
-- **Test inventory is injected via the system prompt.** In `executeAiJob`, active
-  tests for the business (`title`, `description`, `mode`, `duration_minutes`,
-  `is_entry`) are listed the same way spreadsheets are today
-  (`ai-worker.ts:381-388`), with instructions to call `start_test` when the
-  customer expresses intent. This block and the tool are gated on the per-business
-  switch.
-- **Per-business enable switch.** New key `enable_ai_test_offers` in
-  `business_settings.value` (JSON — no schema change), surfaced as a Switch in
-  the existing Test Settings card (`src/components/settings/test-settings.tsx`)
-  alongside the inactivity timeout. Default: **on** when no setting exists and the
-  business has active tests (existing businesses get the feature without
-  configuration). Off ⇒ `executeAiJob` omits the AVAILABLE TESTS block and does
-  not hand the `start_test` tool to the model; deterministic test paths are
-  unaffected.
-- **Credit model is untouched (explicit).** No changes to `credits/index.ts`.
-  AI: `ai_chat` consumed when the confirmation reply is generated/sent.
-  Test: `test_attempt` consumed on attempt completion via `persistAttempt`. AI is
-  never invoked during the test (`handledByTest` short-circuit), so test time
-  costs no AI credits.
-- **Landing-page parity (AGENTS.md).** "AI can offer your tests on demand" is a
-  new capability of the tests feature → the marketing landing page (`src/app/page.tsx`)
-  and the docs tests page (`src/app/docs/tests/page.tsx`) get matching copy.
+- **New credit action `spreadsheet_lookup`, default cost 1.** Added to the
+  `CreditAction` union, the `CreditCosts` interface, `DEFAULT_COSTS`, and the
+  `getCreditCosts` merge. Configurable by the super admin under Admin →
+  Settings → Credit System Configuration (Task 3). No new DB table: the
+  `credit_costs` row in `system_settings` is already a JSONB value that the admin
+  UI upserts whole.
+- **Gate *before* the API call, consume *after* success.** Paid-API billing
+  rule: never let a Sheets query run for a business that can't pay for it, and
+  never charge when the API didn't actually run.
+  - `checkCredits(businessId, 'spreadsheet_lookup')` before calling,
+    short-circuiting the call when credits are low (the AI is told "insufficient
+    credits" instead of querying for free).
+  - `consumeCredits(businessId, 'spreadsheet_lookup', { ... })` after a genuine,
+    successful API response. Existing atomic-guarded deduction + `credit_usage_logs`
+    ledger write are reused untouched.
+- **`searchSheets` reports whether the API was actually invoked.** It has two
+  early-return paths that make *zero* API calls ("No spreadsheets configured",
+  and "Spreadsheet X not found"); those must not charge. Change its return type
+  to `{ text: string; apiCalled: boolean }` — the function already has only one
+  consumer (`gemini-client.ts`), so this is an internal, safe interface change.
+  `apiCalled` becomes true the moment a `values.get` is attempted by
+  `searchSingleSheet` (success or caught error — the API was billed either way).
+- **`lookupRow` charges on any normal return AND on API-level errors.**
+  A normal return (row found *or* null) means the API answered — charge. A
+  throw after the API (e.g. "Column not found") also means Google billed the
+  `values.get` — charge, then rethrow. The only exempt throw is the pre-API
+  "No spreadsheets configured" case, which becomes a distinct
+  `SheetsNotConfiguredError` so the engine can tell a real API call from a pure
+  config error (per user Q3 decision: charge on student-facing get errors,
+  never on zero-API-call paths).
+- **Dashboard + admin billing UIs show the new action.** `ACTION_LABELS` in
+  `src/components/settings/billing-plan.tsx` and the admin credits page action
+  map get a `spreadsheet_lookup` entry (with the already-missing `test_attempt`
+  added too — both currently fall back to raw action names in the UI).
+- **Both paths use the existing ledger fields**: `referenceId` =
+  conversation_id, `contactId` from context, `metadata` with sheet/query detail.
+  `user_id` is null from `gemini-client` (it has no user context), matching
+  today's pattern.
+- **Stacking with existing charges is intended.** An AI reply that queries a
+  spreadsheet now costs `ai_chat` (1) + `spreadsheet_lookup` (1); a
+  `lookup_spreadsheet` step inside an interactive form flow costs
+  `interactive_form` + `spreadsheet_lookup`. That is the point: the paid Google
+  call is metered regardless of which feature triggered it. Failed or
+  zero-result searches where no API call happened are free.
+- **Migration 058 extends the `credit_usage_logs.action` CHECK.** Currently the
+  constraint (last set in `044_sms_broadcasts.sql`) allows only
+  `('ai_chat','interactive_form','bulk_broadcast','sms')`. This is a **latent
+  bug**: the shipped tests feature consumes `test_attempt`, whose ledger inserts
+  are silently rejected by the CHECK today. 058 drops + recreates the constraint
+  to include `test_attempt` (fix) and `spreadsheet_lookup` (new), and seeds the
+  default `spreadsheet_lookup` cost into `system_settings` when absent (merging,
+  never clobbering admin-edited values).
 
 ## Dependency Graph
 
 ```
-Tests runtime: stageTestOffer + confirm handling (T1)   ◄── foundation
+Credit lib: spreadsheet_lookup action + defaults (T1)   ◄── foundation
     │
-    ├── Gemini tool declaration + handler (T2)   ◄── calls runtime.ts T1
-    │         │
-    │         └── AI worker: intent prompt + tool enable + buttons send (T3)
-    │                   │
-    │                   └── Per-business switch (T4)  ◄── gates T3's prompt/tool
-    │                             │
-    │                             └── Docs + landing copy (T5)
-Typecheck/build/tests checkpoint after T1-T3.
+    ├── Admin settings: cost editor row (T3)
+    ├── AI call site: searchSheets apiCalled + gate/consume (T4)
+    ├── Automation call site: lookup_spreadsheet gate/consume (T5)
+    └── Docs + landing copy (T6)
+Migration 058 (T2)   ◄── independent of code; applied to auth on the DB
+Checkpoint after T1, T3-T5: typecheck/build + engine/run short-circuit verify
 ```
 
 ## Task List
 
-### Phase 1: Test-session confirm flow
-- [x] Task 1: Runtime staging & confirm handling in `src/lib/tests/runtime.ts`
-- [x] Task 2: Gemini `start_test` tool in `src/lib/automations/gemini-client.ts`
-- [x] Task 3: AI worker intent context + confirmation buttons in `src/lib/whatsapp/ai-worker.ts`
+### Phase 1: Foundation
+- [ ] Task 1: `spreadsheet_lookup` action in `src/lib/credits/index.ts` (union type + defaults + `getCreditCosts` merge)
+- [ ] Task 2: migration `supabase/migrations/058_sheet_lookup_credits.sql` (CHECK constraint incl. `test_attempt` + `spreadsheet_lookup`; seed default cost) — apply to the DB
 
-### Checkpoint: Core flow
-- [x] `npm run typecheck` passes
-- [x] `npm run build` passes
-- [ ] End-to-end: customer hints at a test → AI asks "start?" with buttons → tap Start runs the test; tap Not Now leaves AI chatting; "already attempted" timed test is never offered (needs live WhatsApp / Gemini test run)
+### Phase 2: Charging call sites
+- [ ] Task 3: Admin Settings → Credit System Configuration UI row for `spreadsheet_lookup`
+- [ ] Task 4: `google-sheets.ts` `searchSheets` → `{ text, apiCalled }`; `gemini-client.ts` gate-then-consume around the `search_business_data` handler
+- [ ] Task 5: `engine.ts` `lookup_spreadsheet` gate-then-consume, incl. consume on API-level throws (not on `SheetsNotConfiguredError`)
 
-### Phase 2: Admin switch & parity
-- [x] Task 4 (required): per-business `enable_ai_test_offers` switch in `business_settings` + Test Settings admin UI; gates AI context/tool in Task 3
-- [x] Task 5: Landing page + docs copy
-- [ ] Checkpoint: full spec review with human
+### Checkpoint: Core charging
+- [ ] `npm run typecheck` passes
+- [ ] `npm run build` passes
+- [ ] Manual: AI data query deducts 1 `spreadsheet_lookup` credit while reply deducts `ai_chat`; automation `lookup_spreadsheet` deducts 1 (row found, not-found, and column-error all charge; misconfigured/no-spreadsheet never charges); business with 0 credits gets no spreadsheet query
 
-## Live-fix (17 Sep): engine `assign_to_ai` path
-
-Live testing showed the AI never offered tests. Root cause: for this deployment the
-actual responder is the `new_message_received` **automation** ("AI", `assign_to_ai`
-step in `engine.ts`) — not `ai-worker.ts`. The engine builds its own system prompt
-and called `generateGeminiResponse` with only the default `search_business_data`
-tool, so it never saw AVAILABLE TESTS / `start_test`.
-
-Fix applied in `engine.ts` `assign_to_ai`:
-- AVAILABLE TESTS prompt block gated on `enable_ai_test_offers` (default on)
-- `tools: ['search_business_data', 'start_test']` when offers are enabled
-- after the model replies, sniff `user_sessions.stage === 'confirm'`; when a test
-  offer was staged, send the confirmation via `engineSendInteractive` (Start / Not
-  Now) instead of plain text
-
-`ai-worker.ts` keeps the same integration for conversations WITHOUT an assign-to-AI
-automation (trial path). Confirm/decline consumption stays in ai-worker's
-`handleIncomingMessageSaving` (runs for every inbound message).
-
-Retest after redeploy: "I want to try the test" → Start / Not Now buttons → tap
-Start runs the quiz; a pending timed exam already attempted is never re-offered.
+### Phase 3: Parity
+- [ ] Task 6: docs `billing` page bullet + landing page pricing/FAQ line + `billing-plan.tsx` / admin credits page action labels (`spreadsheet_lookup` + `test_attempt`)
+- [ ] Checkpoint: full spec review with human; then push (approved commit)
 
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Model calls `start_test` mid-unrelated conversation and spams offers | Med | Confirm-first design + prompt instruction to only offer on clear intent; `stageTestOffer` is idempotent and replaces, not duplicates, the pending row |
-| Buttons + AI text double-send or AI talks over the just-started test | Med | `handledByTest=true` short-circuits AI scheduling (existing `ai-worker.ts:111`); `stageTestOffer` rejects when an active test session exists |
-| Pending offer survives forever and intercepts later messages | Low | Offer cleared on decline; unrecognized reply re-asks (nudge pattern); handled before the inactivity-timeout block so stale offers get the "session closed" message like other idle sessions |
-| Timing: AI job is debounced 5s; user replies before offer staged | Low | Offer is only readable after the AI reply is sent; a confirm tap without an existing row short-circuits as unhandled and chats normally |
-| Tool availability leaks into `assign_to_ai` engine path | Low | `tools` is opt-in per call; only `ai-worker.ts:428` enables `start_test` |
-| Credits double-charged (AI charged twice, or AI charged during the test) | Med | Zero changes to credit code; `ai_chat` charged once for the confirmation reply (existing `ai-worker.ts:446` path, skipped when `handledByTest`); `test_attempt` charged once at completion (`runtime.ts:777`). Verified via test-session run-through |
-| Switch off still offers tests | Low | Same `getBusinessSettings` source of truth read in `executeAiJob` gates both the AVAILABLE TESTS prompt block and the `start_test` tool; defaults on only when active tests exist |
+| `searchSheets` return-shape change breaks its consumer | Med | Single consumer confirmed by grep; TypeScript surfaces the break; bumped in the same commit as T4 |
+| Over-charging spreadsheets: setup/preview or retry loops count as billable | Med | Charge strictly on "API actually answered" (`apiCalled`); no-charge for no-spreadsheet/not-found early returns to reduce noise |
+| Double charge within one user action | Low | Each Sheets API call is billed once by whichever path invoked it; AI + step never both run for one message because the engine handles the reply once |
+| Admin-set costs lost | Low | Migration merges (`NOT value ? 'spreadsheet_lookup'`), never overwrites the whole JSONB |
+| `test_attempt` constraint drift on prod (if 058 not applied) | Low | 058 is a required, separate DB step; the ledger failure is silent-and-recoverable (balance still correct) |
 
 ## Open Questions
 
-- Should the confirmation buttons also be offered for practice (free) tests, or
-  only timed/paying ones? Current plan: always confirm (matches user request).
-- Should `dispatch_test` automations + entry-test screening be soft-deprecated in
-  docs later, or kept as the deterministic fallback? Current plan: keep, document
-  both paths.
+- **Default cost = 1 credit per Sheets lookup** — confirmed 1 credit by the human.
+- **Dashboard Billing screen shows `spreadsheet_lookup`** — confirmed; also fix
+  the invisible `test_attempt` label while editing the action maps.
+- **Charge on API-error results** — confirmed for both sites (AI path charges
+  when `apiCalled` even on error text; engine step charges on API-level throws,
+  excluding the pre-API `SheetsNotConfiguredError`).

@@ -52,6 +52,9 @@ export default function DocsBillingPage() {
             <span key="4">
               <b>SMS broadcast</b> — 1 credit per SMS sent.
             </span>,
+            <span key="5">
+              <b>Google Sheets data lookup</b> — 1 credit per spreadsheet query, charged only when a spreadsheet is actually read by the AI or an automation step.
+            </span>,
           ]}
         />
       </DocSection>
