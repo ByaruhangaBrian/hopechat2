@@ -782,12 +782,18 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
             let info = `"${t.title}" (id: ${t.id})`;
             if (t.description) info += ` — ${t.description}`;
             info +=
-              t.mode === 'test' && t.duration_minutes
-                ? ` [timed ${t.duration_minutes} min, once per phone number]`
-                : ` [${t.mode === 'practice' ? 'practice' : 'test'}]`;
+              t.is_entry
+                ? ' [ENTRY screening — intro questions ask what the customer needs and route them to the right test]'
+                : t.mode === 'test' && t.duration_minutes
+                  ? ` [timed ${t.duration_minutes} min, once per phone number]`
+                  : ` [${t.mode === 'practice' ? 'practice' : 'test'}]`;
             systemInstruction += `${i + 1}. ${info}\n`;
           });
-          systemInstruction += `\nWhen a customer clearly wants to take a test/quiz/exam/assessment, call start_test with the matching test id. If several could fit, ask which one first. NEVER start a test directly — always offer it, then confirm with the customer before it runs.\n`;
+          systemInstruction += `\nWhen a customer wants to take a test/quiz/exam/assessment, call start_test as follows:\n`;
+          systemInstruction += `- They named a specific test (e.g. "the Science test")? Offer that test.\n`;
+          systemInstruction += `- Otherwise, offer the ENTRY screening test above — its intro questions ask what they need and route them automatically. Do NOT list the tests or ask which test the customer wants.\n`;
+          systemInstruction += `- No entry test exists? Offer the single best-matching active test, or ask only if no clear single fit.\n`;
+          systemInstruction += `NEVER start a test directly — always offer it via start_test, then confirm with the customer before it runs.\n`;
         }
       }
 

@@ -164,7 +164,7 @@ export async function generateGeminiResponse(
     declarations.push({
       name: 'start_test',
       description:
-        'Offer one of this business\'s tests (quiz/exam/assessment/screening) to the customer. Call this ONLY when the customer clearly expresses intent to take a test. It stages the offer for confirmation — it does NOT start anything; the customer must confirm first.',
+        'Offer one of this business\'s tests (quiz/exam/assessment) to the customer. Call this ONLY when the customer clearly wants to take a test. If the customer did NOT name a specific test, offer the ENTRY screening test — its intro questions ask what they need and route them automatically; do NOT ask which test. It stages the offer for confirmation — it does NOT start anything; the customer must confirm first.',
       parameters: {
         type: Type.OBJECT,
         properties: {
