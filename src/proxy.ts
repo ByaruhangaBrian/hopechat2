@@ -1,22 +1,69 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const DOCS_HOST = 'docs.hopechat2.vercel.app'
+// Subdomain zones. All three share one deployment; the proxy splits them:
+// - apex (hopechat.net, www.hopechat.net) → marketing landing page
+// - app.hopechat.net                      → the business app (dashboard + auth)
+// - docs.hopechat.net                     → the documentation site
+const APP_HOST = 'app.hopechat.net'
+const DOCS_HOST = 'docs.hopechat.net'
+const DOCS_LEGACY_HOST = 'docs.hopechat2.vercel.app'
+const LANDING_HOSTS = new Set(['hopechat.net', 'www.hopechat.net'])
+
+// Paths that belong to the app zone. Requests for these coming in on the
+// landing domain are redirected to app.hopechat.net.
+const APP_PATHS = [
+  '/dashboard', '/inbox', '/contacts', '/pipelines', '/broadcasts',
+  '/automations', '/settings', '/onboarding', '/menus', '/ai',
+  '/login', '/signup', '/forgot-password',
+]
+
+function withHost(pathname: string, search: string, host: string): NextResponse {
+  return NextResponse.redirect(new URL(`${pathname}${search}`, `https://${host}`))
+}
 
 export async function proxy(request: NextRequest) {
-  // ──────────────────────────────────────────────────────────────
-  // Docs subdomain: rewrite to the /docs route group, skip auth.
-  // Hosted on the same deployment; Vercel routes the subdomain here.
-  // ──────────────────────────────────────────────────────────────
   const hostname = request.nextUrl.hostname
-  if (hostname === DOCS_HOST) {
-    const { pathname } = request.nextUrl
+  const { pathname, search } = request.nextUrl
+
+  // ──────────────────────────────────────────────────────────────
+  // Docs zone: rewrite /x → /docs/x, skip auth.
+  // Vercel routes the docs subdomain to this deployment.
+  // ──────────────────────────────────────────────────────────────
+  if (hostname === DOCS_HOST || hostname === DOCS_LEGACY_HOST) {
     if (!pathname.startsWith('/docs')) {
       const rewritten = request.nextUrl.clone()
       rewritten.pathname = `/docs${pathname === '/' ? '' : pathname}`
       return NextResponse.rewrite(rewritten)
     }
     return NextResponse.next({ request })
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // App zone
+  // ──────────────────────────────────────────────────────────────
+  const isAppZoneBareRoot = hostname === APP_HOST && pathname === '/'
+  if (hostname === APP_HOST && pathname.startsWith('/docs')) {
+    return withHost(pathname, search, DOCS_HOST)
+  }
+  // Bare "/" on the app host resolves to the dashboard home. Mutating the
+  // request before the auth checks lets the existing protected-path logic
+  // decide (anonymous visitors are sent to /login on this host). The mutation
+  // is carried by NextResponse.next({ request }) and does not re-run proxy.
+  if (isAppZoneBareRoot) {
+    request.nextUrl.pathname = '/dashboard'
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // Landing zone: keep the app and docs off the landing domain.
+  // ──────────────────────────────────────────────────────────────
+  if (LANDING_HOSTS.has(hostname)) {
+    if (APP_PATHS.some((p) => pathname.startsWith(p))) {
+      return withHost(pathname, search, APP_HOST)
+    }
+    if (pathname.startsWith('/docs')) {
+      return withHost(pathname, search, DOCS_HOST)
+    }
   }
 
   // ──────────────────────────────────────────────────────────────
