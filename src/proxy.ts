@@ -1,7 +1,27 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+const DOCS_HOST = 'docs.hopechat2.vercel.app'
+
+export async function proxy(request: NextRequest) {
+  // ──────────────────────────────────────────────────────────────
+  // Docs subdomain: rewrite to the /docs route group, skip auth.
+  // Hosted on the same deployment; Vercel routes the subdomain here.
+  // ──────────────────────────────────────────────────────────────
+  const hostname = request.nextUrl.hostname
+  if (hostname === DOCS_HOST) {
+    const { pathname } = request.nextUrl
+    if (!pathname.startsWith('/docs')) {
+      const rewritten = request.nextUrl.clone()
+      rewritten.pathname = `/docs${pathname === '/' ? '' : pathname}`
+      return NextResponse.rewrite(rewritten)
+    }
+    return NextResponse.next({ request })
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // Everything below is the existing auth proxy, unchanged.
+  // ──────────────────────────────────────────────────────────────
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(

@@ -39,6 +39,8 @@ import {
 
 import { cn } from "@/lib/utils";
 
+const DOCS_URL = "https://docs.hopechat2.vercel.app";
+
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
   visible: (delay = 0) => ({
@@ -135,6 +137,7 @@ export default function LandingPage() {
               {navLinks.map((l) => (
                 <Link key={l.href} href={l.href} className="hover:text-primary transition-colors duration-200">{l.label}</Link>
               ))}
+              <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors duration-200">Docs</a>
             </nav>
           </div>
           <div className="flex items-center gap-3">
@@ -150,6 +153,7 @@ export default function LandingPage() {
             {navLinks.map((l) => (
               <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)} className="block px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground rounded-lg hover:bg-background">{l.label}</Link>
             ))}
+            <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)} className="block px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground rounded-lg hover:bg-background">Docs</a>
             <div className="pt-2 border-t border-border flex flex-col gap-2">
               <Link href="/login" onClick={() => setMobileOpen(false)} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center")}>Log In</Link>
             </div>
@@ -1014,6 +1018,7 @@ export default function LandingPage() {
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-foreground mb-4">Company</h4>
               <ul className="space-y-2.5 text-xs text-muted-foreground font-semibold">
                 <li><Link href="/request-demo" className="hover:text-primary transition-colors">Request a Demo</Link></li>
+                <li><a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">Docs & Guides</a></li>
                 <li><Link href="#setup-service" className="hover:text-primary transition-colors">Setup Service</Link></li>
                 <li><a href="tel:+256763149276" className="hover:text-primary transition-colors">+256 763 149 276</a></li>
                 <li><a href="mailto:hopetechsolutionsltd@gmail.com" className="hover:text-primary transition-colors">Email Us</a></li>

@@ -1,292 +1,229 @@
-# Task List — School Test/Practice Module
+# Task List — Docs Site for New Business Setup
 
 Legend: `[ ]` pending, `[x]` done. Each task is independently verifiable.
+Deployment: single app; docs served on `docs.hopechat2.vercel.app` via Next.js Proxy host rewrite. Content: hand-written TSX pages.
 
 ---
 
-## Task 1: Migration 053 (schema + step rename)
-**Description:** Create `tests` (with `mode`, `duration_minutes`, `is_active`, `pass_mark`) and `test_questions` with `ON DELETE CASCADE`, RLS mirroring migration 052, indexes, and rewrite existing `dispatch_workflow_node` automation steps to `dispatch_test`.
+## Task 1: Proxy migration + docs host routing
+**Description:** Rename `src/middleware.ts` → `src/proxy.ts`, porting all existing auth logic unchanged (named `proxy` export, same `matcher` config). Add host-based routing: when `request.nextUrl.hostname` starts with `docs.` and ends with `hopechat2.vercel.app`, rewrite to `/docs/<path>` (pass through when path already starts with `/docs`). Existing auth redirects/protections must behave identically.
 
 **Acceptance criteria:**
-- [x] `tests` table has `mode CHECK (mode IN ('practice','test'))`, nullable `duration_minutes`, `is_active BOOLEAN DEFAULT true`, `pass_mark INT`
-- [x] `tests` and `test_questions` tables exist with RLS policies using `get_user_business_id()` / `is_admin_view_all()`
-- [x] Deleting a test cascades to its questions (FK `test_questions.test_id ... ON DELETE CASCADE`)
-- [x] `automation_steps` rows with `step_type='dispatch_workflow_node'` are rewritten to `step_type='dispatch_test'` with `step_config = jsonb_build_object('test_id', step_config->>'node_id')`
+- [ ] `src/proxy.ts` exists with `export function proxy(...)`; `src/middleware.ts` removed
+- [ ] Docs-host requests rewrite to `/docs/*`; main domain unaffected for all existing routes
+- [ ] Auth behavior byte-for-byte identical (login/signup/onboarding/dashboard redirects, admin guard, API auth)
 
 **Verification:**
-- [ ] Migration runs cleanly against Supabase
-- [ ] SQL sanity: `SELECT COUNT(*) FROM test_questions WHERE test_id NOT IN (SELECT id FROM tests)` returns 0 after a cascade delete
+- [ ] `npx tsc --noEmit` passes
+- [ ] `npm run build` passes
+- [ ] Manual: landing + dashboard + auth flows unchanged; direct `docs.hopechat2.vercel.app/about` style request hits `/docs` (test via localhost `Host: docs.hopechat2.vercel.app` header equivalent / preview)
 
 **Dependencies:** None
 
-**Files:**
-- `supabase/migrations/053_school_test_module.sql`
+**Files likely touched:**
+- `src/middleware.ts` (rename → `src/proxy.ts`)
 
-**Estimated scope:** Medium (1-2 files)
+**Estimated scope:** Small (1-2 files)
 
 ---
 
-## Task 2: Types
-**Description:** Add `Test`, `TestQuestion`, `IntroField` types and replace the automation step config to reference a test.
+## Task 2: Docs shell (layout + sidebar + nav registry)
+**Description:** `src/app/docs/layout.tsx` rendering a docs chrome: top bar with brand + "Back to HopeChat", responsive sidebar (desktop fixed, mobile collapsible) listing every guide from a typed nav registry (`src/components/docs/nav.ts`), active-page highlight, styled to match the landing page design system. Docs metadata: `%s — HopeChat Docs` title template, description, `robots: index`.
 
 **Acceptance criteria:**
-- [x] `DispatchTestStepConfig { test_id: string }` replaces `DispatchWorkflowNodeStepConfig`; `AutomationStepType` union uses `dispatch_test`
-- [x] `AutomationStepConfig` union updated; no remaining references to `DispatchWorkflowNodeStepConfig`
+- [ ] Sidebar auto-renders all pages from the nav registry; active page highlighted
+- [ ] Mobile: sidebar collapses behind a toggle; content remains readable
+- [ ] Metadata title/description + robots:index set on the docs layout
 
 **Verification:**
-- [x] `npx tsc --noEmit` passes
+- [ ] `npx tsc --noEmit` passes
+- [ ] `npm run build` passes
+- [ ] Manual: navigate docs in desktop + mobile widths
 
 **Dependencies:** Task 1
 
-**Files:**
-- `src/types/index.ts`
+**Files likely touched:**
+- `src/app/docs/layout.tsx`
+- `src/components/docs/nav.ts`
+- `src/components/docs/sidebar.tsx`
+- `src/components/docs/docs-header.tsx`
+
+**Estimated scope:** Medium (3-4 files)
+
+---
+
+## Task 3: Overview / Getting started page
+**Description:** `/docs` index page — what HopeChat is, prerequisites (WhatsApp Business account, Meta developer app, phone number to connect), and a numbered high-level setup path with cards/links to each guide page.
+
+**Acceptance criteria:**
+- [ ] Page renders at `/docs` root with introduction + prerequisites
+- [ ] Every setup step links to its corresponding guide page (registry-driven where sensible)
+- [ ] No references to features/behaviors that don't exist in the product
+
+**Verification:**
+- [ ] `npx tsc --noEmit` passes
+- [ ] Manual: all links resolve; page matches landing-page visual language
+
+**Dependencies:** Task 2
+
+**Files likely touched:**
+- `src/app/docs/page.tsx`
 
 **Estimated scope:** Small (1 file)
 
 ---
 
-## Task 3a: Tests API (list + create + single)
-**Description:** `GET/POST /api/tests` and `GET/PATCH/DELETE /api/tests/[id]`, business-scoped, `no-store` headers, auth via cookie session (same pattern as workflow-nodes API incl. impersonation).
+## Task 4: Essential setup guides (account + WhatsApp)
+**Description:** `/docs/account` — sign up, name your workspace (onboarding screen), enter dashboard, first checklist. `/docs/whatsapp` — what's needed, where to find Phone Number ID / WABA ID / System User token in Meta, pasting into Settings → WhatsApp Config, verifying connection, common errors (content verified against `whatsapp-config.tsx`).
 
 **Acceptance criteria:**
-- [x] `GET /api/tests` returns tests with `question_count`, ordered by `created_at desc`
-- [x] `POST /api/tests` creates a test; `GET/PATCH/DELETE /api/tests/[id]` work for the owning business only
-- [x] `DELETE` removes the test and all its questions (verified via follow-up GET)
-- [x] Responses include `Cache-Control: no-store`
+- [ ] Account guide covers signup → workspace naming → dashboard entry accurately
+- [ ] WhatsApp guide names the exact fields shown in `whatsapp-config.tsx` and where each value lives in Meta; describes connection states + error recovery
+- [ ] Both pages appear in the sidebar nav
 
 **Verification:**
-- [x] `npx tsc --noEmit` passes
-- [ ] Manual API check (authenticated): create → add questions → delete test → list shows it gone
+- [ ] `npx tsc --noEmit` passes
+- [ ] Manual: read-through matches the actual settings screen
 
-**Dependencies:** Task 1, Task 2
+**Dependencies:** Task 3
 
-**Files:**
-- `src/app/api/tests/route.ts`
-- `src/app/api/tests/[id]/route.ts`
-
-**Estimated scope:** Medium (2 files)
-
----
-
-## Task 3b: Questions API (single + bulk)
-**Description:** `POST /api/tests/[id]/questions` accepts a single question or an array (bulk import); `PATCH/DELETE /api/tests/[id]/questions/[qid]` for editing/deleting one.
-
-**Acceptance criteria:**
-- [x] Bulk `POST` inserts many rows in one call under the owning test
-- [x] `DELETE` removes one question instantly; `PATCH` updates fields and position
-- [x] Name-length/option-count validation mirrors WhatsApp limits; responses are `no-store`
-
-**Verification:**
-- [x] `npx tsc --noEmit` passes
-- [ ] Manual: bulk-insert 5 rows, delete one, verify order after PATCH
-
-**Dependencies:** Task 3a
-
-**Files:**
-- `src/app/api/tests/[id]/questions/route.ts`
-- `src/app/api/tests/[id]/questions/[qid]/route.ts`
-
-**Estimated scope:** Small (2 files)
-
----
-
-## Checkpoint: Foundation (after Tasks 1-3)
-- [x] `npx tsc --noEmit` passes
-- [ ] `npm run build` passes
-- [ ] Manual end-to-end API walkthrough passes
-- [ ] Review with human before proceeding
-
----
-
-## Task 4: Test runtime
-**Description:** New `src/lib/tests/runtime.ts` with `startTest(contactId, testId)` and `handleTestReply(contactId, text)`: intro questions → practice questions one at a time → final score + restart buttons; session lives in `user_sessions.session_data`. Update the webhook call site from the old `handleNodeInteraction`/`dispatchWorkflowNode`.
-
-**Acceptance criteria:**
-- [x] A new session starts at the first intro question; each reply advances one step
-- [x] After the last intro question the first practice question is sent
-- [x] Practice answers are graded (option key vs `correct_answer`), score accumulated
-- [x] After the last question a score summary is sent with "Start Over" / "Done" options
-- [x] `Start Over` resets the session and re-sends intro Q1; answers persist across separate WhatsApp messages
-- [x] **Mode behavior:** `practice` reveals correct/incorrect after each answer; `test` shows results only at the end, enforces the deadline server-side (late reply → "Time's up", final score), and reports time used + pass/fail vs `pass_mark`; inactive tests cannot be started
-- [x] No reference to the old `workflow-nodes` runtime remains
-
-**Verification:**
-- [x] `npx tsc --noEmit` passes
-- [ ] Code-review a full simulated session (vitest blocked in this env)
-
-**Dependencies:** Task 2, Task 3
-
-**Files:**
-- `src/lib/tests/runtime.ts`
-- `src/lib/whatsapp/ai-worker.ts`
-- `src/lib/workflow-nodes/runtime.ts` (deleted)
-- `src/lib/workflow-nodes/runtime.test.ts` (deleted)
-
-**Estimated scope:** Large (3-5 files) — split into start/advance/score if needed
-
----
-
-## Task 5: Automation integration
-**Description:** Engine dispatch case calls `startTest`; `validate.ts` requires `test_id`; builder lists tests in the step dropdown (no-store + focus refetch); update `validate.test.ts`.
-
-**Acceptance criteria:**
-- [x] `STEP_META`/`ADDABLE_STEPS`/`blankConfig`/`previewFor` use `dispatch_test` ("Start Test / Practice")
-- [x] StepEditor dropdown shows tests by title (not tree nodes); empty state when none exist
-- [x] `engine.ts` `dispatch_test` case calls `startTest` and fails the step on error
-- [x] `validate.ts` flags a missing `test_id`
-
-**Verification:**
-- [x] `npx tsc --noEmit` passes
-- [ ] `npx eslint` on changed files passes
-- [ ] `npm run build` passes
-
-**Dependencies:** Task 4
-
-**Files:**
-- `src/lib/automations/engine.ts`
-- `src/lib/automations/validate.ts` + `validate.test.ts`
-- `src/components/automations/automation-builder.tsx`
+**Files likely touched:**
+- `src/app/docs/account/page.tsx`
+- `src/app/docs/whatsapp/page.tsx`
+- `src/components/docs/nav.ts`
 
 **Estimated scope:** Medium (3 files)
 
 ---
 
-## Checkpoint: Core Path (after Tasks 4-5)
-- [x] `npx tsc --noEmit` passes
+## Checkpoint: Core Path (after Tasks 1-4)
+- [ ] `npx tsc --noEmit` passes
 - [ ] `npm run build` passes
-- [ ] Full session trace reviewed (intro → questions → score → restart)
+- [ ] Manual: docs.hopechat2.vercel.app root serves overview; sidebar navigates account + WhatsApp guides; main domain unchanged
 - [ ] Review with human before proceeding
 
 ---
 
-## Task 6: TestBuilder — tests list + editor + intro fields
-**Description:** New `TestBuilder` component rendering on `/dashboard/menus`: test cards list (title, question count, **mode badge**, **Active toggle**, edit, delete) and an editor for title, description, start message, **mode selector (Practice / Timed Test with duration input)**, pass mark, shuffle toggle, and the **configurable intro fields** manager (add/remove/reorder; each with label, type `choice`/`text`, and options for choice type).
+## Task 5: Team, templates, contacts guides
+**Description:** `/docs/team` — roles/permissions, seats by plan, adding members (Settings → Users). `/docs/templates` — creating Meta-approved message templates, variable substitution, status. `/docs/contacts` — importing CSV, tags, custom fields, dedupe.
 
 **Acceptance criteria:**
-- [x] New test creation appears in the list instantly (optimistic, no manual refresh)
-- [x] Deleting a test removes it instantly (single DELETE, FK cascade)
-- [x] **Mode selection:** admin picks Practice or Timed Test; Timed Test requires a `duration_minutes` value; mode + duration persist on save and show as a badge on the card
-- [x] **Active toggle** publishes/unpublishes instantly (inactive tests show a "Paused" state and cannot be dispatched)
-- [x] Intro fields are fully configurable (label + type + options per field) and persist on save
-- [x] All fetches use `cache: "no-store"`
+- [ ] Each page describes the real flow with the real labels (verify against `user-management.tsx`, `template-manager.tsx`, contacts components)
+- [ ] All three appear in the sidebar with internal cross-links where relevant
 
 **Verification:**
-- [x] `npx tsc --noEmit` passes
-- [ ] `npm run build` passes
-- [ ] Manual: create test, configure 3 intro fields, reload — data intact
+- [ ] `npx tsc --noEmit` passes
+- [ ] Manual: steps reproducible in the app
 
-**Dependencies:** Task 3a
+**Dependencies:** Task 4
 
-**Files:**
-- `src/components/tests/test-builder.tsx`
-- `src/app/(dashboard)/dashboard/menus/page.tsx`
+**Files likely touched:**
+- `src/app/docs/team/page.tsx`
+- `src/app/docs/templates/page.tsx`
+- `src/app/docs/contacts/page.tsx`
+- `src/components/docs/nav.ts`
 
-**Estimated scope:** Medium (2-4 files)
+**Estimated scope:** Medium (4 files)
 
 ---
 
-## Task 7: Questions management
-**Description:** Per-test questions panel: add one question (question text, options A-E, correct answer, points), edit inline, delete immediately, reorder up/down.
+## Task 6: Automations, AI, tests guides
+**Description:** `/docs/automations` — triggers, conditions, steps incl. `dispatch_test`, builder walkthrough, run logs. `/docs/ai` — knowledge base uploads, training, escalation to humans. `/docs/tests` — practice drills vs timed exams, entry-test routing, once-per-number rule, how students experience it, credit cost.
 
 **Acceptance criteria:**
-- [x] Adding/editing/deleting a question reflects instantly (optimistic + `no-store` re-sync)
-- [x] Correct-answer selection and points persist; reorder updates positions
+- [ ] Automation guide documents triggers/branches/waits/dispatch-test using builder vocabulary from `automation-builder.tsx`
+- [ ] AI guide matches the AI config/knowledge manager screens
+- [ ] Tests guide reflects `runtime.ts` behavior (practice vs timed, routing, attempt limit) and credit cost
 
 **Verification:**
-- [x] `npx tsc --noEmit` passes
-- [ ] Manual: add 3 questions, delete one, reorder — list stays accurate after reload
+- [ ] `npx tsc --noEmit` passes
+- [ ] Manual: walkthroughs reproducible
 
-**Dependencies:** Task 6, Task 3b
+**Dependencies:** Task 5
 
-**Files:**
-- `src/components/tests/test-builder.tsx` (QuestionsEditor inline)
+**Files likely touched:**
+- `src/app/docs/automations/page.tsx`
+- `src/app/docs/ai/page.tsx`
+- `src/app/docs/tests/page.tsx`
+- `src/components/docs/nav.ts`
 
-**Estimated scope:** Medium (1-2 files)
+**Estimated scope:** Medium (4 files)
 
 ---
 
-## Task 8: Bulk import (template + upload)
-**Description:** `src/lib/csv.ts` (parse + generate). "Download Template" produces a CSV (question, option_a, option_b, option_c, option_d, option_e, correct_answer, points) with a filled example row. Upload parses, validates rows, shows a preview count, and bulk-POSTs to the questions API.
+## Task 7: Broadcasts, billing, FAQ guides
+**Description:** `/docs/broadcasts` — approved templates, audience selection, scheduling, SMS channel. `/docs/billing` — plans/tiers, Pesapal payments (Mobile Money/card), credit top-up, how message sends + test attempts consume credits. `/docs/faq` — common setup/troubleshooting questions.
 
 **Acceptance criteria:**
-- [x] Template downloads with header row + one example row
-- [x] Valid CSV imports in one call and the list updates instantly
-- [x] Rows with missing question text or invalid correct_answer are reported (not silently dropped)
+- [ ] Broadcast guide matches the broadcast builder steps (template → audience → personalize → schedule)
+- [ ] Billing guide reflects `subscriptions/index.ts`, credit model, and Pesapal integration
+- [ ] FAQ covers the highest-signal setup questions (WhatsApp connect issues, template approval, timing out, credits)
 
 **Verification:**
-- [x] `npx tsc --noEmit` passes
-- [ ] Manual: download template, fill 10 rows, upload → all 10 appear immediately
+- [ ] `npx tsc --noEmit` passes
+- [ ] Manual: FAQ answers are accurate against current behavior
 
-**Dependencies:** Task 3b, Task 7
+**Dependencies:** Task 6
 
-**Files:**
-- `src/lib/csv.ts`
-- `src/components/tests/test-builder.tsx` (ImportDialog inline)
+**Files likely touched:**
+- `src/app/docs/broadcasts/page.tsx`
+- `src/app/docs/billing/page.tsx`
+- `src/app/docs/faq/page.tsx`
+- `src/components/docs/nav.ts`
 
-**Estimated scope:** Medium (2 files)
+**Estimated scope:** Medium (4 files)
 
 ---
 
-## Checkpoint: UI Complete (after Tasks 6-8)
-- [x] Create test + intro fields + questions; import template; delete question and test — all instant
+## Checkpoint: Guides Complete (after Tasks 5-7)
+- [ ] All 12 guide pages render; sidebar lists every page; cross-links resolve
+- [ ] `npx tsc --noEmit` passes
+- [ ] Content spot-checked against real product labels/flows
 - [ ] Review with human before proceeding
 
 ---
 
-## Task 9: Cleanup + polish
-**Description:** Remove `node-builder.tsx`, `/api/workflow-nodes/*`; sidebar label → "Tests & Practice"; landing page Features/FAQ updated (AGENTS.md parity); final verification.
+## Task 8: Landing page parity (docs link)
+**Description:** Add a "Docs" link to the landing page header and footer pointing at `https://docs.hopechat2.vercel.app` (new service → must be promoted per AGENTS.md parity rule). Keep mobile menu consistent.
 
 **Acceptance criteria:**
-- [ ] No references to `workflow_nodes`/`node_options` or the old runtime in `src/`
-- [ ] Sidebar shows "Tests & Practice" linking to `/dashboard/menus`
-- [ ] Landing page promotes Tests & Practice (and automation dispatch) instead of Interactive Menus
+- [ ] "Docs" visible in header nav + footer; opens the subdomain in a new tab (external link)
+- [ ] Mobile nav includes the same link
 
 **Verification:**
-- [ ] `npx tsc --noEmit` passes; `npx eslint` clean (no new warnings)
-- [ ] `npm run build` passes
-- [ ] `git grep -i "workflow_node\|node-builder"` returns nothing in `src/`
+- [ ] `npx tsc --noEmit` passes; `npm run build` passes
+- [ ] Manual: click from landing header + footer + mobile menu
 
-**Dependencies:** All prior tasks
+**Dependencies:** Task 7 (docs content complete)
 
-**Files:**
-- `src/components/menus/node-builder.tsx` (delete)
-- `src/app/api/workflow-nodes/*` (delete)
-- `src/components/layout/sidebar.tsx`
+**Files likely touched:**
 - `src/app/page.tsx`
 
-**Estimated scope:** Medium (3-5 files)
+**Estimated scope:** Small (1 file)
+
+---
+
+## Task 9: Deploy + subdomain wiring (manual handoff)
+**Description:** Add `docs.hopechat2.vercel.app` under Vercel Project → Domains, deploy, and verify: subdomain serves docs, main domain serves landing + dashboard unchanged.
+
+**Acceptance criteria:**
+- [ ] `docs.hopechat2.vercel.app` resolves and serves the docs site
+- [ ] `hopechat2.vercel.app` still serves landing + dashboard; auth flows unaffected
+- [ ] Landing "Docs" link works from production
+
+**Verification:**
+- [ ] Manual browser check on both hosts
+
+**Dependencies:** Task 8
+
+**Files likely touched:** (none — Vercel dashboard)
+
+**Estimated scope:** XS (external)
 
 ---
 
 ## Final Checkpoint
 - [ ] All acceptance criteria met
 - [ ] `npx tsc --noEmit`, `npx eslint`, `npm run build` all pass
-- [ ] Manual flows verified (create/edit/delete test, bulk import, runtime session trace)
+- [ ] docs.hopechat2.vercel.app live, linked from landing, content accurate
 - [ ] Ready for human review
-
----
-
-## Task 10: Loop fix + intro-question routing
-**Description:** Live bug — automation "Quiz" (`new_message_received` → `dispatch_test`) re-fired `startTest` on every inbound reply, resetting each session to intro Q1 (infinite loop). Fixes: (1) idempotent `startTest` (skip if an active test session exists), (2) ai-worker skips `new_message_received` automations while a test reply is being handled, (3) entry-test routing so intro answers (class/subject) select the target test.
-
-**Acceptance criteria:**
-- [x] Migration `054_tests_routing.sql`: `tests.is_entry` (default false) + `tests.route_rules JSONB` + GIN index
-- [x] `Test.is_entry` / `Test.route_rules` in `src/types/index.ts`; POST/PATCH `/api/tests` persist both
-- [x] `startTest` is idempotent; `beginSession` extracted; session holds `entry_test_id`
-- [x] Entry test: last intro answer → `routeToTest` matches active tests by `route_rules` (case-insensitive) → "Starting {title}…" → target session (carries screening answers); no match → error + re-ask intro
-- [x] ai-worker does not fire automations when `handledByTest` is true
-- [x] TestEditorDialog: entry-test switch + routing-rules editor; QuestionsEditor shows explanation for entry tests; cards show Entry badge + Routes summary
-- [x] `npx tsc --noEmit` clean; `npx eslint` 0 errors (pre-existing `any` warnings only)
-
-**Verification (in repo):**
-- [x] `npx tsc --noEmit`, `npx eslint` (0 errors) pass
-
-**Dependencies:** Task 9
-
-**Files:**
-- `supabase/migrations/054_tests_routing.sql`
-- `src/lib/tests/runtime.ts` (rewrite: idempotency + routing)
-- `src/lib/whatsapp/ai-worker.ts`
-- `src/types/index.ts`
-- `src/app/api/tests/route.ts`, `src/app/api/tests/[id]/route.ts`
-- `src/components/tests/test-builder.tsx`

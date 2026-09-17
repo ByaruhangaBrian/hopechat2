@@ -1,95 +1,100 @@
-# Implementation Plan: School Test/Practice Module (replaces Interactive Menus & Assessments)
+# Implementation Plan: Docs Site for New Business Setup
 
 ## Overview
 
-Replace the multi-level `workflow_nodes` node-builder ("Interactive Menus & Assessments") with a focused **Tests & Practice** module for WhatsApp. The admin configures a module and picks its **mode**: *Practice* (no time pressure, correct answer revealed after each question) or *Test* (a timed exam with `duration_minutes`, scored only at the end), plus an **Active** toggle to publish/unpublish it. A student triggered via an automation step (or a message) walks through: configurable intro questions (class, subject, …) → practice questions **one at a time** → final score with a "start over" option. Questions can be added one-by-one or **bulk-imported from a provided/downloadable CSV template**. The flat two-table model (test + questions) eliminates the cascade-delete bugs of the old tree, and optimistic UI updates remove the "new nodes take long to show" problem.
+Build a documentation site that walks a new business owner through setting up HopeChat for their business — create account → connect WhatsApp → add team → templates → contacts → automations → tests → broadcasts → billing. The docs are served on the subdomain **docs.hopechat2.vercel.app** (same deployment as the app; host-based routing in Next.js Proxy rewrites that hostname to the `/docs` route group). Content is hand-written static TSX pages — no new markdown/MDX dependencies.
 
-Decisions (confirmed with user):
-- **Replace** the current node-builder entirely (old tables stay but become unused; not dropped this iteration).
-- **Runtime flow:** intro questions → one-at-a-time practice questions → final score + restart.
-- **Bulk add:** downloadable CSV template + upload/parse/import.
-- **Keep automation dispatch:** the `dispatch_workflow_node` step becomes `dispatch_test`, targeting a test instead of a tree node.
+Confirmed with user:
+- **Deployment:** same app, host-based routing (one repo, one deploy).
+- **Content authoring:** hand-written TSX pages.
 
 ## Architecture Decisions
 
-- **Two flat tables** (`tests`, `test_questions`) with `test_questions.test_id ... ON DELETE CASCADE`. Deleting a test or question is a single statement — no recursive cascade logic, so deletion is instant and cannot over-delete (fixes the delete bug).
-- **Mode per test: Practice or Timed Test.** `tests.mode IN ('practice','test')`, `tests.duration_minutes INT NULL`, and `tests.is_active BOOLEAN` (the Active publish toggle). Practice mode reveals correct/incorrect after each answer; Test mode hides results until the end and shows time used + pass/fail against `pass_mark`.
-- **Time limit is enforced server-side at submit time** (compare `now()` vs `session started_at + duration_minutes`): a late answer is rejected with "Time's up — your final score is X". No client timers, no cron dependency. An optional scheduled "time is up" push can be added later via the existing automation cron.
-- **The send/answer loop is deterministic server-side — NOT Meta Flow JSON and NOT AI.** We use the existing mechanism already in the codebase: send WhatsApp interactive **buttons** through the Business Cloud API (`meta-send.ts`/`meta-api.ts`), the customer's tap arrives as a webhook callback to our app, and our backend grades the answer and sends the next question. Grading is exact string/number matching, so an LLM is neither used nor appropriate.
-- **Sessions reuse `user_sessions`**: continue existing table from migration 052; running state lives in `session_data` (module: `test`, `test_id`, stage `intro`/`question`, index, `intro_answers`, `score`, `answered`, `started_at`). `quiz_score` column mirrors the running score for easy debugging.
-- **Intro questions are configurable JSONB** on the test (`[{ key, label, type: 'choice'|'text', options: [] }]`) — teacher defines which profile questions to ask and their options.
-- **Practice questions are multiple choice** with `options jsonb [{key,label}]`, `correct_answer` (option key), `points`, `position`. Auto-graded. Open/text practice questions are out of scope to keep the runtime simple.
-- **Automation step renamed to `dispatch_test`** with config `{ test_id }`; a data migration rewrites existing `dispatch_workflow_node` rows. The automation builder dropdown lists tests (fetched with `no-store` + on tab focus).
-- **No browser caching anywhere** in the new module: all GET handlers send `Cache-Control: no-store`; all client fetches use `cache: "no-store"`. Combined with optimistic state updates, creates/deletes render instantly.
-- **Reuse the WhatsApp send wrappers** (`meta-send.ts`, `meta-api.ts`) for interactive buttons/list messages and limit validation.
-- **Old code is removed, not left half-wired**: `node-builder.tsx`, `/api/workflow-nodes/*`, and the old `src/lib/workflow-nodes/runtime.ts` are deleted and replaced so there are no dangling references.
-- **Migration numbering:** next Supabase migration is `053`. RLS reuses `get_user_business_id()` / `is_admin_view_all()` helpers (already proven in 052).
+- **Served on a subdomain via Proxy rewrite.** All docs live under `src/app/docs/*` as static (server-rendered) TSX pages. Next.js Proxy checks `request.nextUrl.hostname`; when it is `docs.hopechat2.vercel.app` (or ends with `.hopechat2.vercel.app`), it rewrites the URL by prefixing `/docs`. Main domain keeps serving the landing page + dashboard as today; `/docs` also remains reachable on the main domain (useful for dev/preview).
+- **Migrate `middleware.ts` → `proxy.ts`.** Next.js 16 deprecated the `middleware` file convention and renamed it to `proxy`. The existing auth logic in `src/middleware.ts` is ported unchanged to `src/proxy.ts` (same exports, config supported — `matcher`, `NextRequest`/`NextResponse`), and the host-based docs rewrite is added there. Existing behavior preserved; `protectedPaths` does not include `/docs` so docs stay public.
+- **Shared docs shell.** `src/app/docs/layout.tsx` renders a docs chrome (top nav with brand + "Back to HopeChat", sidebar listing all guide pages) consistent with the landing page design system. Page list is driven by a typed nav registry so adding a page updates the sidebar automatically.
+- **Content grounded in the real product.** Every guide reflects the actual labels/flows in the app (settings tabs, WhatsApp config fields, automation builder, etc.), verified against source before writing.
+- **Landing page parity (AGENTS.md).** The marketing landing page gets a "Docs" / "Guides" link (header + footer) pointing at `https://docs.hopechat2.vercel.app`. The docs site itself is a new service/asset → must be reachable from the landing page.
+- **Domain wiring is a manual Vercel step.** `docs.hopechat2.vercel.app` is a subdomain of the Vercel-assigned app domain; it must be added under Project → Domains in the Vercel dashboard. Marked as an explicit handoff task (not scriptable here).
 
 ## Dependency Graph
 
 ```
-Migration 053 (tests + test_questions + RLS + step rename)   ← T1
-   ├── Types (Test, TestQuestion, DispatchTestStepConfig)    ← T2
-   │     ├── Tests API routes                                ← T3a, T3b
-   │     └── Runtime + Automation (engine/validate/builder)  ← T4, T5
-   └── UI (TestBuilder, questions, bulk import)              ← T6, T7, T8
-Cleanup + landing page + verification                         ← T9
+Proxy/middleware host routing (T1: foundation)
+   │
+   ├── Docs layout + nav shell (T2)   ◄──  everything else renders inside this
+   │        │
+   ├────────┼── Overview page (T3)
+   │        ├── Setup guides A (T4): account, WhatsApp
+   │        ├── Setup guides B (T5): team, templates, contacts
+   │        ├── Feature guides A (T6): automations, AI, tests
+   │        └── Feature guides B (T7): broadcasts, billing, FAQ
+   │
+   └── Landing page links (T8)
+Deploy + domain verification (T9, manual)
 ```
 
-Implementation order is bottom-up: schema → types → APIs → runtime/automation → UI → cleanup.
+Implementation order is bottom-up: routing foundation → shell → pages → links → deploy.
 
 ## Task List
 
-### Phase 1: Foundation (Schema + Types + APIs)
+### Phase 1: Foundation
 
-- [ ] **Task 1:** Migration `053_school_test_module.sql` — `tests` (with `mode`, `duration_minutes`, `is_active`, `pass_mark`) + `test_questions` tables, indexes, RLS, `ON DELETE CASCADE`, and a data migration renaming `automation_steps.step_type='dispatch_workflow_node'` → `'dispatch_test'` with `step_config = jsonb_build_object('test_id', step_config->>'node_id')`.
-- [ ] **Task 2:** Types — add `Test`, `TestQuestion`, `IntroField`; replace `DispatchWorkflowNodeStepConfig` with `DispatchTestStepConfig { test_id }`; update `AutomationStepType` union and `AutomationStepConfig`.
-- [ ] **Task 3a:** `GET/POST /api/tests` + `GET/PATCH/DELETE /api/tests/[id]` (with `question_count`, questions ordered by position, `no-store` headers, business scoping + impersonation).
-- [ ] **Task 3b:** `POST /api/tests/[id]/questions` (single or bulk rows) + `PATCH/DELETE /api/tests/[id]/questions/[qid]`.
+- [ ] **Task 1:** Rename `src/middleware.ts` → `src/proxy.ts` porting all existing auth logic unchanged (named `proxy` export), and add host-based rewrite: when `request.nextUrl.hostname` ends with `hopechat2.vercel.app` and starts with `docs.`, rewrite to `/docs/<path>` (pass through if the path already starts with `/docs`). All existing auth redirects/protections must behave identically.
 
 ### Checkpoint: Foundation
 - [ ] `npx tsc --noEmit` passes
 - [ ] `npm run build` passes
-- [ ] Migration applied; API CRUD verified manually (create test, add 3 questions, fetch, delete one question, delete test removes all)
+- [ ] Manual: `hopechat2.vercel.app` still serves landing+dashboard; auth redirects unchanged
 
-### Phase 2: Runtime + Automation
+### Phase 2: Docs Shell + Core Pages
 
-- [ ] **Task 4:** New `src/lib/tests/runtime.ts` — `startTest(contactId, testId)` and `handleTestReply(contactId, text)` implementing intro → questions → final score → restart; **practice vs timed-test behavior** (practice reveals answers inline; test enforces the deadline server-side and reports time used + pass/fail); update the webhook call site to use it.
-- [ ] **Task 5:** Automation integration — engine dispatch case calls `startTest`; `validate.ts` requires `test_id`; builder: STEP_META/ADDABLE_STEPS/blankConfig/previewFor + StepEditor dropdown lists tests (no-store + focus refetch); update `validate.test.ts`.
+- [ ] **Task 2:** Docs shell — `src/app/docs/layout.tsx` (metadata with title template + `robots: index`), responsive sidebar (from a typed nav registry, active-state highlight), top bar linking back to the app/landing, styled to match the landing page (Tailwind v4, brand colors, Inter font).
+
+- [ ] **Task 3:** Overview / Getting started page (`/docs`) — what HopeChat is, prerequisites (WhatsApp Business account, Meta developer app), and a numbered high-level setup path with links to each guide.
+
+- [ ] **Task 4:** Essential setup guides — **Create account & workspace** (`/docs/account`: signup → name workspace → enter dashboard) and **Connect WhatsApp** (`/docs/whatsapp`: what's needed, where to find Phone Number ID / WABA ID / System User token, pasting into Settings → WhatsApp Config, webhook/verify status, common errors). Content verified against `whatsapp-config.tsx`.
 
 ### Checkpoint: Core Path
 - [ ] `npx tsc --noEmit` passes; `npm run build` passes
-- [ ] Simulation walkthrough of one full test session in code review (vitest is blocked in this environment — see Risks)
+- [ ] Manual: docs.hopechat2.vercel.app root serves the overview; sidebar navigates across pages; main domain unaffected
 
-### Phase 3: UI
+### Phase 3: Setup + Feature Guides
 
-- [ ] **Task 6:** `TestBuilder` — list view (cards with question counts, **mode badge**, Active toggle, delete) + editor for title, description, start message, **mode selector (Practice / Timed Test with `duration_minutes` input)**, **configurable intro fields** (add/remove/reorder; label + type choice/text + options), pass mark, shuffle. Optimistic updates, no-store.
-- [ ] **Task 7:** Questions management — add single question, edit, delete (immediate), reorder up/down.
-- [ ] **Task 8:** Bulk import — `src/lib/csv.ts` (parse + generate), **Download Template** button (CSV: question, option_a…option_e, correct_answer, points), file upload → parse → validate → preview count → bulk POST → optimistic list update.
+- [ ] **Task 5:** Team & templates & contacts — **Team & permissions** (`/docs/team`: roles, seats, adding members via Settings → Users), **Message templates** (`/docs/templates`: creating/approving Meta templates, variables), **Contacts** (`/docs/contacts`: importing CSV, tags, custom fields, dedupe).
 
-### Checkpoint: UI Complete
-- [ ] Create a test with intro fields + questions; import a template CSV; delete a question and a whole test — all reflect instantly without manual refresh
+- [ ] **Task 6:** Automation & AI & tests — **Automations** (`/docs/automations`: triggers, conditions, steps incl. dispatch test, builder walkthrough), **AI assistant** (`/docs/ai`: knowledge base, training, escalation), **Tests & Practice** (`/docs/tests`: creating practice drills vs timed exams, entry-test routing, how students experience it).
 
-### Phase 4: Cleanup + Polish
+- [ ] **Task 7:** Broadcasts & billing & FAQ — **Broadcasts** (`/docs/broadcasts`: templates, audience, scheduling, SMS channel), **Billing & credits** (`/docs/billing`: plans, Pesapal payments, credit top-up, how attempts consume credits), **FAQ / troubleshooting** (`/docs/faq`).
 
-- [ ] **Task 9:** Remove `node-builder.tsx`, `/api/workflow-nodes/*`, old `workflow-nodes` runtime + tests; sidebar label → "Tests & Practice"; landing page section + FAQ updated (per AGENTS.md parity rule); final `tsc`/lint/build.
+### Checkpoint: Guides Complete
+- [ ] All 12 guide pages render, sidebar shows every page, internal cross-links resolve
+- [ ] Content matches actual product labels/flows (spot-checked against components/APIs)
+- [ ] Review with human before proceeding
+
+### Phase 4: Landing Page Parity + Deploy
+
+- [ ] **Task 8:** Landing page parity — add a "Docs" link in the landing header + footer pointing to `https://docs.hopechat2.vercel.app` (per AGENTS.md parity rule); keep mobile nav consistent.
+
+- [ ] **Task 9 (deploy, manual/handoff):** Add `docs.hopechat2.vercel.app` under Vercel Project → Domains for this project, deploy, verify the subdomain serves docs and the main domain is unchanged.
 
 ### Checkpoint: Complete
-- [ ] No references to `workflow_nodes`/`node_options`/old runtime remain in `src/`
-- [ ] All acceptance criteria met; ready for review
+- [ ] All acceptance criteria met
+- [ ] `npx tsc --noEmit`, `npx eslint`, `npm run build` all pass
+- [ ] docs.hopechat2.vercel.app live and linked from the landing page
+- [ ] Ready for human review
 
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Supabase migration must be applied before the app ships | High | Migration is the first task; user runs `supabase db push` / migration runner; API calls fail loudly until applied |
-| Vitest cannot run in this environment (Node 21.7.2 + rolldown `ERR_INVALID_ARG_VALUE ... ['underline','gray']`; Node 22.11.0 + `onLog` config error) — pre-existing toolchain issue | Med | Rely on `tsc`, eslint, `npm run build`, and manual/UI verification; runtime logic kept small and reviewed |
-| WhatsApp interactive limits (≤3 buttons, ≤10 list items, label lengths) | Med | Reuse existing `meta-send.ts`/`meta-api.ts` validation; enforce in UI + POST |
-| Existing `dispatch_workflow_node` automation rows become legacy | Low | Data migration rewrites them to `dispatch_test`; orphaned `node_id` values naturally become unset tests to re-pick |
-| RLS helpers missing in new migration's context | Low | Reuse `get_user_business_id()` / `is_admin_view_all()` exactly as migration 052 does |
-| Old `workflow_nodes`/`node_options` tables left unused | Low | Kept (not dropped) to avoid data loss this iteration; no code reads them after Task 9 |
+| `proxy.ts` migration subtly changes auth behavior | High | Port `middleware.ts` logic with zero functional changes; verify dashboard/login/onboarding redirects manually before moving on |
+| `docs.hopechat2.vercel.app` subdomain not addable/routeable via Vercel dashboard alone | High | Confirm domain addition early (handoff task); fallback: add the domain in Vercel and keep host-agnostic `/docs` reachable as backup |
+| Content drifts from the real product (labels/flows change) | Med | Each guide is written against current source (`whatsapp-config.tsx`, `settings/page.tsx`, builder components, `runtime.ts`) before implementation |
+| Duplicating design system instead of reusing it | Med | Reuse existing Tailwind classes, `cn`, button/link variants, Inter font, brand colors from the landing page |
+| Docs accidentally require auth (middleware overlap) | Low | `/docs` is absent from `protectedPaths`; Proxy rewrite short-circuits before auth checks |
 
 ## Open Questions
 
-- Should the old `workflow_nodes` / `node_options` tables be **dropped** in a later migration, or kept forever? (Default: keep, deprecate.)
-- Route URL: keep `/dashboard/menus` as the Tests & Practice home, or move to `/tests`? (Default: keep `/dashboard/menus` to avoid breaking nav/breadcrumbs.)
+- Should `/docs` also remain reachable on the main domain (`hopechat2.vercel.app/docs`), or redirect/404 there in favour of the subdomain only? (Default: keep reachable — dev/preview friendly, zero extra work.)
+- Canonical base URL for docs metadata — `NEXT_PUBLIC_SITE_URL` vs hardcoding the subdomain? (Default: hardcode the docs subdomain for canonical/OG.)
