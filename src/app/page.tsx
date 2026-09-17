@@ -39,7 +39,7 @@ import {
 
 import { cn } from "@/lib/utils";
 
-const DOCS_URL = "https://docs.hopechat2.vercel.app";
+const DOCS_URL = "https://docs.hopechat.net";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
