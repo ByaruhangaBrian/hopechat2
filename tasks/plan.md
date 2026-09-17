@@ -121,6 +121,28 @@ Typecheck/build/tests checkpoint after T1-T3.
 - [x] Task 5: Landing page + docs copy
 - [ ] Checkpoint: full spec review with human
 
+## Live-fix (17 Sep): engine `assign_to_ai` path
+
+Live testing showed the AI never offered tests. Root cause: for this deployment the
+actual responder is the `new_message_received` **automation** ("AI", `assign_to_ai`
+step in `engine.ts`) — not `ai-worker.ts`. The engine builds its own system prompt
+and called `generateGeminiResponse` with only the default `search_business_data`
+tool, so it never saw AVAILABLE TESTS / `start_test`.
+
+Fix applied in `engine.ts` `assign_to_ai`:
+- AVAILABLE TESTS prompt block gated on `enable_ai_test_offers` (default on)
+- `tools: ['search_business_data', 'start_test']` when offers are enabled
+- after the model replies, sniff `user_sessions.stage === 'confirm'`; when a test
+  offer was staged, send the confirmation via `engineSendInteractive` (Start / Not
+  Now) instead of plain text
+
+`ai-worker.ts` keeps the same integration for conversations WITHOUT an assign-to-AI
+automation (trial path). Confirm/decline consumption stays in ai-worker's
+`handleIncomingMessageSaving` (runs for every inbound message).
+
+Retest after redeploy: "I want to try the test" → Start / Not Now buttons → tap
+Start runs the quiz; a pending timed exam already attempted is never re-offered.
+
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |

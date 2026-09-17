@@ -23,6 +23,7 @@ import type {
 import { supabaseAdmin } from './admin-client'
 import { engineSendText, engineSendTemplate, engineSendInteractive, engineSendFlow } from './meta-send'
 import { startTest } from '@/lib/tests/runtime'
+import { getBusinessSettings } from '@/lib/tests/settings'
 import { generateGeminiResponse } from './gemini-client'
 import { getOrSetCache } from '@/lib/whatsapp/gemini-cache'
 import { logHttpEvent } from '@/lib/logs/http-logs'
@@ -761,6 +762,35 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         }
       }
 
+      // AI↔tests integration (per-business switch). When enabled and the
+      // business has active tests, the model sees them and can offer one via the
+      // `start_test` tool. Offers are confirm-first — the model must never claim
+      // a test started.
+      const businessSettings = await getBusinessSettings(args.businessId)
+      let hasAiTestOffers = false
+      if (businessSettings.enable_ai_test_offers) {
+        const { data: tests } = await db
+          .from('tests')
+          .select('id, title, description, mode, duration_minutes, is_entry')
+          .eq('business_id', args.businessId)
+          .eq('is_active', true)
+          .order('title')
+        if (tests && tests.length > 0) {
+          hasAiTestOffers = true
+          systemInstruction += `\nAVAILABLE TESTS (offer via the start_test tool):\n`;
+          tests.forEach((t: any, i: number) => {
+            let info = `"${t.title}" (id: ${t.id})`;
+            if (t.description) info += ` — ${t.description}`;
+            info +=
+              t.mode === 'test' && t.duration_minutes
+                ? ` [timed ${t.duration_minutes} min, once per phone number]`
+                : ` [${t.mode === 'practice' ? 'practice' : 'test'}]`;
+            systemInstruction += `${i + 1}. ${info}\n`;
+          });
+          systemInstruction += `\nWhen a customer clearly wants to take a test/quiz/exam/assessment, call start_test with the matching test id. If several could fit, ask which one first. NEVER start a test directly — always offer it, then confirm with the customer before it runs.\n`;
+        }
+      }
+
       const { data: messages } = await db
         .from('messages')
         .select('sender_type, content_text')
@@ -814,6 +844,7 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
               contact_id: args.contactId,
               automation_id: args.automation.id,
             },
+            ...(hasAiTestOffers ? { tools: ['search_business_data', 'start_test'] as const } : {}),
           },
         )
 
@@ -829,6 +860,32 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         })
         if (!creditResult.ok) {
           throw new Error(`Insufficient credits: ${creditResult.reason}`)
+        }
+
+        // Did the model just stage a test offer (start_test tool call)? If so,
+        // deliver the confirmation question as WhatsApp buttons so the customer
+        // can Start or decline without typing. handleTestReply consumes the
+        // pending offer on their next message.
+        const { data: pendingSession } = await db
+          .from('user_sessions')
+          .select('session_data')
+          .eq('contact_id', args.contactId)
+          .maybeSingle()
+        const pendingOffer =
+          ((pendingSession?.session_data as { stage?: string } | null | undefined)?.stage === 'confirm')
+
+        if (pendingOffer) {
+          const { whatsapp_message_id: offerMessageId } = await engineSendInteractive({
+            userId: args.automation.user_id,
+            conversationId,
+            contactId: args.contactId,
+            body: replyText,
+            items: [
+              { id: 'test:confirm', label: 'Start' },
+              { id: 'test:cancel', label: 'Not Now' },
+            ],
+          })
+          return `AI test offer sent via Meta (${offerMessageId})`
         }
 
         const { whatsapp_message_id } = await engineSendText({
