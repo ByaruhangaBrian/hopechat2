@@ -273,13 +273,13 @@ export async function sendDemoRequestConfirmation(input: {
       Our team will reach out within 1 business day to schedule your demo and, if you're interested, walk you through our concierge setup service.
     </p>
     <p style="margin:0;color:#3f3f46;font-size:14px;line-height:1.6;">
-      Need us sooner? Call or WhatsApp us on <strong>+256 763 149 276</strong> or email <strong>hopetechsolutionsltd@gmail.com</strong>.
+      Need us sooner? Call or WhatsApp us on <strong>+256 763 149 276</strong> or email <strong>info@hopechat.net</strong>.
     </p>
   `;
   return sendEmail({
     to,
     subject: "We received your HopeChat demo request",
-    text: `Hi ${name}, thanks for requesting a demo of HopeChat for ${businessName}. Our team will reach out within 1 business day. Need us sooner? Call/WhatsApp +256 763 149 276 or email hopetechsolutionsltd@gmail.com.`,
+    text: `Hi ${name}, thanks for requesting a demo of HopeChat for ${businessName}. Our team will reach out within 1 business day. Need us sooner? Call/WhatsApp +256 763 149 276 or email info@hopechat.net.`,
     html: layout("Demo request received", body),
   });
 }

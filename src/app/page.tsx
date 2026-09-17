@@ -978,8 +978,8 @@ export default function LandingPage() {
                 <a href="tel:+256763149276" className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors">
                   <Phone className="h-3.5 w-3.5 text-primary" /> +256 763 149 276
                 </a>
-                <a href="mailto:hopetechsolutionsltd@gmail.com" className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors">
-                  <Mail className="h-3.5 w-3.5 text-primary" /> hopetechsolutionsltd@gmail.com
+                <a href="mailto:info@hopechat.net" className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors">
+                  <Mail className="h-3.5 w-3.5 text-primary" /> info@hopechat.net
                 </a>
               </div>
             </div>
@@ -1026,7 +1026,7 @@ export default function LandingPage() {
                 <li><a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">Docs & Guides</a></li>
                 <li><Link href="#setup-service" className="hover:text-primary transition-colors">Setup Service</Link></li>
                 <li><a href="tel:+256763149276" className="hover:text-primary transition-colors">+256 763 149 276</a></li>
-                <li><a href="mailto:hopetechsolutionsltd@gmail.com" className="hover:text-primary transition-colors">Email Us</a></li>
+                <li><a href="mailto:info@hopechat.net" className="hover:text-primary transition-colors">Email Us</a></li>
                 <li><Link href="#" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
                 <li><Link href="#" className="hover:text-primary transition-colors">Terms of Service</Link></li>
                 <li><Link href="#" className="hover:text-primary transition-colors">Refund Policy</Link></li>

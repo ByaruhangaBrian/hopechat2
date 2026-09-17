@@ -44,8 +44,8 @@ export default function DocsHomePage() {
       <DocParagraph>
         Stuck at any step? The <a href="/docs/faq" className="font-bold text-primary hover:underline">FAQ &amp; troubleshooting guide</a> covers
         the most common problems, and you can always reach our team at{" "}
-        <a href="mailto:hopetechsolutionsltd@gmail.com" className="font-bold text-primary hover:underline">
-          hopetechsolutionsltd@gmail.com
+        <a href="mailto:info@hopechat.net" className="font-bold text-primary hover:underline">
+          info@hopechat.net
         </a>
         .
       </DocParagraph>

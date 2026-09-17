@@ -70,7 +70,7 @@ export async function POST(req: Request) {
 
     if (!notification.ok) {
       return NextResponse.json(
-        { error: "We couldn't send your request right now. Please reach us directly at hopetechsolutionsltd@gmail.com or call/WhatsApp +256 763 149 276." },
+        { error: "We couldn't send your request right now. Please reach us directly at info@hopechat.net or call/WhatsApp +256 763 149 276." },
         { status: 500 }
       );
     }

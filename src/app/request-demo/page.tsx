@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 const CONTACT_PHONE = "+256 763 149 276";
-const CONTACT_EMAIL = "hopetechsolutionsltd@gmail.com";
+const CONTACT_EMAIL = "info@hopechat.net";
 
 const COMPANY_SIZES = [
   { value: "1-5", label: "1–5 staff (Small business)" },

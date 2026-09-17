@@ -95,8 +95,8 @@ export default function DocsFAQPage() {
 
       <DocCallout type="note">
         Still stuck? Reach out at{" "}
-        <a href="mailto:hopetechsolutionsltd@gmail.com" className="font-bold text-primary hover:underline">
-          hopetechsolutionsltd@gmail.com
+        <a href="mailto:info@hopechat.net" className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors">
+          info@hopechat.net
         </a>{" "}
         or call{" "}
         <a href="tel:+256763149276" className="font-bold text-primary hover:underline">
