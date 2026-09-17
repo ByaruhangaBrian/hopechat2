@@ -29,7 +29,7 @@ interface TestSessionState {
   flow_id?: string | null
   /** routing answers collected by the flow that led here */
   flow_answers?: Record<string, string>
-  stage: 'intro' | 'question'
+  stage: 'intro' | 'question' | 'confirm'
   index: number
   /** consecutive un-answerable replies (audio, gibberish) — throttles re-prompts */
   invalid_replies?: number
@@ -184,6 +184,28 @@ function normalize(s: string): string {
   return String(s ?? '').trim().toLowerCase()
 }
 
+const CONFIRM_WORDS = new Set(['yes', 'y', 'yeah', 'sure', 'ok', 'okay', 'start', 'begin', 'take', 'go', 'go ahead', 'lets go', 'sounds good', 'why not'])
+const DECLINE_WORDS = new Set(['no', 'n', 'nah', 'not now', 'no thanks', 'no thank you', 'cancel', 'skip', 'later', 'not yet', 'maybe later', 'no way', 'dont', 'stop', 'never mind'])
+
+/** Normalize free text for offer matching — lowercase, trimmed, apostrophes stripped. */
+function normalizeOfferText(s: string): string {
+  return String(s ?? '').trim().toLowerCase().replace(/[’']/g, '')
+}
+
+/** True when free-text matches a confirmation of an offer. */
+export function isConfirmReply(text: string): boolean {
+  const t = normalizeOfferText(text)
+  if (!t) return false
+  return CONFIRM_WORDS.has(t) || /^(yes|y|yeah|sure|ok|okay|start|begin|take it|go ahead)\b/.test(t)
+}
+
+/** True when free-text matches a decline of an offer. */
+export function isDeclineReply(text: string): boolean {
+  const t = normalizeOfferText(text)
+  if (!t) return false
+  return DECLINE_WORDS.has(t) || /^(no|n|nah|not now|cancel|skip|later)\b/.test(t)
+}
+
 /**
  * Guardrail helpers for messages a student sends that are NOT a valid answer:
  * audio notes, attachments, empty text, gibberish, or a typed label that
@@ -263,7 +285,92 @@ export async function startTest(contactId: string, testId: string): Promise<void
     if (!expired) return
   }
 
-  await beginSession(contactId, test)
+await beginSession(contactId, test)
+}
+
+export interface TestOfferResult {
+  ok: boolean
+  /** present when ok: true — the test title (for AI echo/confirmation copy). */
+  title?: string
+  test_id?: string
+  /** present when ok: false — machine-readable reason for the AI prompt. */
+  reason?: 'already_in_test' | 'already_attempted' | 'test_unavailable' | 'error'
+}
+
+/**
+ * Stage an AI-offered test for a contact WITHOUT starting it.
+ *
+ * The AI's confirmation question arrives as WhatsApp buttons; this only writes
+ * a short-lived `stage:'confirm'` session row. `handleTestReply` consumes it on
+ * the next inbound message: confirm → `beginSession` (the normal test path),
+ * decline → row deleted and AI resumes. Idempotent — a second offer for the
+ * same contact simply replaces the pending row.
+ */
+export async function stageTestOffer(input: {
+  businessId: string
+  contactId: string
+  conversationId: string
+  testId: string
+}): Promise<TestOfferResult> {
+  const db = supabaseAdmin()
+  const { businessId, contactId, testId } = input
+
+  const { data: test } = await db
+    .from('tests')
+    .select('id, business_id, title, mode, duration_minutes, is_active')
+    .eq('id', testId)
+    .single()
+  if (!test || test.is_active !== true || test.business_id !== businessId) {
+    return { ok: false, reason: 'test_unavailable' }
+  }
+
+  const { data: existing } = await db
+    .from('user_sessions')
+    .select('session_data')
+    .eq('business_id', businessId)
+    .eq('contact_id', contactId)
+    .maybeSingle()
+  const esd = existing?.session_data as TestSessionState | null | undefined
+  if (esd?.module === 'test' && esd?.status === 'active' && esd?.stage !== 'confirm') {
+    return { ok: false, reason: 'already_in_test' }
+  }
+
+  if (await isAttemptBlocked(contactId, test)) {
+    return { ok: false, reason: 'already_attempted' }
+  }
+
+  try {
+    const { userId, conversationId } = await resolveUserAndConversation(businessId, contactId)
+    const state: TestSessionState = {
+      module: 'test',
+      status: 'active',
+      test_id: test.id,
+      stage: 'confirm',
+      index: 0,
+      intro_answers: [],
+      current_score: 0,
+      answered: [],
+      started_at: new Date().toISOString(),
+      conversation_id: conversationId,
+      user_id: userId,
+      business_id: businessId,
+    }
+    await db.from('user_sessions').upsert(
+      {
+        business_id: businessId,
+        contact_id: contactId,
+        current_node_id: null,
+        quiz_score: 0,
+        session_data: state,
+        last_interaction_at: new Date().toISOString(),
+      },
+      { onConflict: 'business_id,contact_id' },
+    )
+    return { ok: true, test_id: test.id, title: test.title }
+  } catch (err) {
+    console.error('[tests/runtime] stageTestOffer error:', err)
+    return { ok: false, reason: 'error' }
+  }
 }
 
 async function resolveUserAndConversation(businessId: string, contactId: string): Promise<{ userId: string; conversationId: string }> {
@@ -454,9 +561,56 @@ const state = session?.session_data as TestSessionState | null | undefined
     return { handled: true }
   }
 
-  const questions = sortQuestions(test.test_questions as TestQuestionRow[])
+const questions = sortQuestions(test.test_questions as TestQuestionRow[])
   const introFields = introFieldsOf(test)
   const isEntry = test.is_entry === true
+
+  // --- AI-OFFER CONFIRM STAGE ---
+  // The session was staged by `stageTestOffer` (AI offered the test). Consume
+  // the customer's reply: confirm starts the real test via `beginSession`;
+  // decline deletes the offer and hands the message back to the AI; anything
+  // else re-asks the confirmation (throttled, then it declines itself so the
+  // conversation can move on).
+  if (state.stage === 'confirm') {
+    const typed = String(messageText ?? '').trim()
+    const confirmed = selectedOptionKey === 'test:confirm' || (selectedOptionKey === null && isConfirmReply(typed))
+    const declined = selectedOptionKey === 'test:cancel' || (selectedOptionKey === null && isDeclineReply(typed))
+
+    if (confirmed) {
+      // Race guard: the student may have finished the timed exam between the
+      // offer and this confirm. `beginSession` also checks this, but if it bails
+      // we must clear the pending row or the next reply re-prompts forever.
+      if (await isAttemptBlocked(contactId, test)) {
+        await db.from('user_sessions').delete().eq('contact_id', contactId)
+        await engineSendText({
+          userId: state.user_id,
+          conversationId: state.conversation_id,
+          contactId,
+          text: attemptLimitMessage(test.title),
+        })
+        return { handled: true }
+      }
+      await beginSession(contactId, test)
+      return { handled: true }
+    }
+
+    if (declined) {
+      await db.from('user_sessions').delete().eq('contact_id', contactId)
+      return { handled: false }
+    }
+
+    state.invalid_replies = (state.invalid_replies ?? 0) + 1
+    if (state.invalid_replies >= 3) {
+      await db.from('user_sessions').delete().eq('contact_id', contactId)
+      return { handled: false }
+    }
+    await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
+    await sendInteractive(state.user_id, state.conversation_id, contactId, `Would you like to start "${test.title}"?`, [
+      { id: 'test:confirm', label: 'Start' },
+      { id: 'test:cancel', label: 'Not Now' },
+    ])
+    return { handled: true }
+  }
 
   // Timed test: enforce the deadline server-side.
   if (test.mode === 'test' && test.duration_minutes) {

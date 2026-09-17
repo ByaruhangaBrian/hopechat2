@@ -5,6 +5,8 @@ export const DEFAULT_SESSION_TIMEOUT_HOURS = 2
 export interface BusinessSettings {
   /** Hours of inactivity before an untimed session is discarded. */
   session_timeout_hours: number
+  /** When true, the AI assistant can offer this business's tests (confirm-first). */
+  enable_ai_test_offers: boolean
 }
 
 /**
@@ -24,6 +26,7 @@ export async function getBusinessSettings(businessId: string): Promise<BusinessS
   return {
     session_timeout_hours:
       Number.isFinite(hours) && hours > 0 ? hours : DEFAULT_SESSION_TIMEOUT_HOURS,
+    enable_ai_test_offers: v.enable_ai_test_offers !== false,
   }
 }
 

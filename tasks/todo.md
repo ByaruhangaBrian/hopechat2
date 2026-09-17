@@ -1,229 +1,177 @@
-# Task List — Docs Site for New Business Setup
+# Task List — AI-Driven Test Offers With Confirmation
 
 Legend: `[ ]` pending, `[x]` done. Each task is independently verifiable.
-Deployment: single app; docs served on `docs.hopechat2.vercel.app` via Next.js Proxy host rewrite. Content: hand-written TSX pages.
+Commands: typecheck `npm run typecheck`, build `npm run build`, lint `npm run lint`, tests `npm test`.
 
 ---
 
-## Task 1: Proxy migration + docs host routing
-**Description:** Rename `src/middleware.ts` → `src/proxy.ts`, porting all existing auth logic unchanged (named `proxy` export, same `matcher` config). Add host-based routing: when `request.nextUrl.hostname` starts with `docs.` and ends with `hopechat2.vercel.app`, rewrite to `/docs/<path>` (pass through when path already starts with `/docs`). Existing auth redirects/protections must behave identically.
+## Task 1: Runtime staging & confirm handling in the tests runtime
+**Description:** Add AI-offer support to `src/lib/tests/runtime.ts`. (a) Export
+`stageTestOffer({ businessId, contactId, conversationId, testId })` that
+validates the test (active + belongs to the business), rejects when the contact
+already has an active test session and when a timed exam was already attempted
+(`isAttemptBlocked`), then upserts the `user_sessions` row with
+`session_data: { module:'test', status:'active', stage:'confirm', test_id,... }`.
+(b) In `handleTestReply`, after the CAS claim and the inactivity-timeout block, handle `stage==='confirm'`: button `test:confirm`
+or a normalized Yes-ish text → reload the test, re-check the attempt gate, call
+`beginSession(contactId, test)` and return `{ handled:true }`; button
+`test:cancel` or a normalized No-ish reply → delete the `user_sessions` row and
+return `{ handled:false }` (AI resumes); anything else → re-ask the confirmation
+question (nudge pattern) and return `{ handled:true }`. Add `'confirm'` to the
+`stage` union. Confirmation text matching lives in small pure helpers so they are
+unit-testable.
 
 **Acceptance criteria:**
-- [ ] `src/proxy.ts` exists with `export function proxy(...)`; `src/middleware.ts` removed
-- [ ] Docs-host requests rewrite to `/docs/*`; main domain unaffected for all existing routes
-- [ ] Auth behavior byte-for-byte identical (login/signup/onboarding/dashboard redirects, admin guard, API auth)
+- [ ] `stageTestOffer` upserts a `stage:'confirm'` session; rejects already-in-test and already-attempted with distinct `ok:false` reasons
+- [ ] Confirm (button or typed yes) starts the real test via `beginSession`; `handled` stays true
+- [ ] Decline (button or typed no) deletes the offer row and returns `handled:false`
+- [ ] Unrecognized reply re-asks the confirmation and stays `handled:true`
 
 **Verification:**
-- [ ] `npx tsc --noEmit` passes
+- [ ] `npm run typecheck` passes
 - [ ] `npm run build` passes
-- [ ] Manual: landing + dashboard + auth flows unchanged; direct `docs.hopechat2.vercel.app/about` style request hits `/docs` (test via localhost `Host: docs.hopechat2.vercel.app` header equivalent / preview)
+- [ ] New unit test (vitest) for confirm/decline text normalization passes: `npm test`
+- [ ] Manual: offer staged → tap Start → test runs to completion; tap Not Now → no session row remains
 
 **Dependencies:** None
 
 **Files likely touched:**
-- `src/middleware.ts` (rename → `src/proxy.ts`)
+- `src/lib/tests/runtime.ts`
+- `src/lib/tests/confirm.test.ts` (new)
 
-**Estimated scope:** Small (1-2 files)
+**Estimated scope:** Medium (2-3 files)
 
 ---
 
-## Task 2: Docs shell (layout + sidebar + nav registry)
-**Description:** `src/app/docs/layout.tsx` rendering a docs chrome: top bar with brand + "Back to HopeChat", responsive sidebar (desktop fixed, mobile collapsible) listing every guide from a typed nav registry (`src/components/docs/nav.ts`), active-page highlight, styled to match the landing page design system. Docs metadata: `%s — HopeChat Docs` title template, description, `robots: index`.
+## Task 2: Gemini `start_test` tool in gemini-client
+**Description:** In `src/lib/automations/gemini-client.ts`, add an opt-in
+`tools?: Array<'search_business_data' | 'start_test'>` option to
+`GeminiCallOptions`. When `start_test` is enabled, include a `start_test`
+function declaration (`test_id`, `test_title`) and, in the function-call branch,
+handle it by loading the test, verifying business ownership, calling
+`stageTestOffer` from Task 1 (using `options.metadata.contact_id` /
+`conversation_id`), and returning a `functionResponse` that either directs the
+model to confirm with the customer ("offer pending — ask them to confirm") or
+tells it the test can't be offered (already in a test / already attempted once)
+so it doesn't push. Default behavior (no `tools` option) stays exactly as today.
 
 **Acceptance criteria:**
-- [ ] Sidebar auto-renders all pages from the nav registry; active page highlighted
-- [ ] Mobile: sidebar collapses behind a toggle; content remains readable
-- [ ] Metadata title/description + robots:index set on the docs layout
+- [ ] `tools` option defaults to today's behavior; both existing call sites compile unchanged
+- [ ] Enabling `start_test` adds the declaration; the handler calls `stageTestOffer` and never starts a test itself
+- [ ] Tool response text routes the model to confirm-first or to back off
 
 **Verification:**
-- [ ] `npx tsc --noEmit` passes
+- [ ] `npm run typecheck` passes
 - [ ] `npm run build` passes
-- [ ] Manual: navigate docs in desktop + mobile widths
+- [ ] Manual/log check: model chooses test → functionCall logged → offer row appears with correct test_id
 
 **Dependencies:** Task 1
 
 **Files likely touched:**
-- `src/app/docs/layout.tsx`
-- `src/components/docs/nav.ts`
-- `src/components/docs/sidebar.tsx`
-- `src/components/docs/docs-header.tsx`
-
-**Estimated scope:** Medium (3-4 files)
-
----
-
-## Task 3: Overview / Getting started page
-**Description:** `/docs` index page — what HopeChat is, prerequisites (WhatsApp Business account, Meta developer app, phone number to connect), and a numbered high-level setup path with cards/links to each guide page.
-
-**Acceptance criteria:**
-- [ ] Page renders at `/docs` root with introduction + prerequisites
-- [ ] Every setup step links to its corresponding guide page (registry-driven where sensible)
-- [ ] No references to features/behaviors that don't exist in the product
-
-**Verification:**
-- [ ] `npx tsc --noEmit` passes
-- [ ] Manual: all links resolve; page matches landing-page visual language
-
-**Dependencies:** Task 2
-
-**Files likely touched:**
-- `src/app/docs/page.tsx`
+- `src/lib/automations/gemini-client.ts`
 
 **Estimated scope:** Small (1 file)
 
 ---
 
-## Task 4: Essential setup guides (account + WhatsApp)
-**Description:** `/docs/account` — sign up, name your workspace (onboarding screen), enter dashboard, first checklist. `/docs/whatsapp` — what's needed, where to find Phone Number ID / WABA ID / System User token in Meta, pasting into Settings → WhatsApp Config, verifying connection, common errors (content verified against `whatsapp-config.tsx`).
+## Task 3: AI worker — intent context + confirmation buttons
+**Description:** In `src/lib/whatsapp/ai-worker.ts` `executeAiJob`: (a) read the
+per-business switch via `getBusinessSettings` (default on); only when enabled,
+query the business's active tests and append an `AVAILABLE TESTS` block to
+`systemInstruction` (same pattern as spreadsheets at lines 381-388), instructing
+the model to call `start_test` when the customer expresses intent to take a
+test/quiz/exam/assessment and to ask which one if ambiguous — always obtain
+confirmation first; (b) pass `tools: ['search_business_data', 'start_test']` to
+`generateGeminiResponse` only when the switch is on; (c) after credits are
+consumed and the reply text is ready, check the contact's `user_sessions` row: if
+`stage==='confirm'`, send the confirmation text as a WhatsApp buttons payload via
+`engineSendInteractive` (items `test:confirm` → label `Start`, `test:cancel` →
+label `Not Now`, button labels ≤20 chars) instead of plain text, and keep the
+text send as the fallback path when no offer is pending.
 
 **Acceptance criteria:**
-- [ ] Account guide covers signup → workspace naming → dashboard entry accurately
-- [ ] WhatsApp guide names the exact fields shown in `whatsapp-config.tsx` and where each value lives in Meta; describes connection states + error recovery
-- [ ] Both pages appear in the sidebar nav
+- [ ] Tests appear in the AI context only when the business switch is on; the prompt tells the model to offer on intent and confirm first
+- [ ] `start_test` tool enabled only at this call site and only when the switch is on (`engine.ts` unchanged)
+- [ ] Pending confirm state ⇒ reply sent as interactive buttons; otherwise plain text exactly as today
+- [ ] Timed tests the contact already finished are excluded/not offered
+- [ ] Credits unchanged: exactly 1 `ai_chat` credit for the confirmation reply; 0 AI credits consumed DURING the test (`handledByTest` short-circuit); 1 `test_attempt` credit at test completion
 
 **Verification:**
-- [ ] `npx tsc --noEmit` passes
-- [ ] Manual: read-through matches the actual settings screen
-
-**Dependencies:** Task 3
-
-**Files likely touched:**
-- `src/app/docs/account/page.tsx`
-- `src/app/docs/whatsapp/page.tsx`
-- `src/components/docs/nav.ts`
-
-**Estimated scope:** Medium (3 files)
-
----
-
-## Checkpoint: Core Path (after Tasks 1-4)
-- [ ] `npx tsc --noEmit` passes
+- [ ] `npm run typecheck` passes
 - [ ] `npm run build` passes
-- [ ] Manual: docs.hopechat2.vercel.app root serves overview; sidebar navigates account + WhatsApp guides; main domain unchanged
-- [ ] Review with human before proceeding
+- [ ] Manual end-to-end via a test phone number: hint at a test → AI asks + buttons appear → Start runs the test → Done/Start-over as today; verify credit log shows 1 ai_chat + 1 test_attempt and no AI cost mid-test
 
----
-
-## Task 5: Team, templates, contacts guides
-**Description:** `/docs/team` — roles/permissions, seats by plan, adding members (Settings → Users). `/docs/templates` — creating Meta-approved message templates, variable substitution, status. `/docs/contacts` — importing CSV, tags, custom fields, dedupe.
-
-**Acceptance criteria:**
-- [ ] Each page describes the real flow with the real labels (verify against `user-management.tsx`, `template-manager.tsx`, contacts components)
-- [ ] All three appear in the sidebar with internal cross-links where relevant
-
-**Verification:**
-- [ ] `npx tsc --noEmit` passes
-- [ ] Manual: steps reproducible in the app
-
-**Dependencies:** Task 4
+**Dependencies:** Tasks 1, 2
 
 **Files likely touched:**
-- `src/app/docs/team/page.tsx`
-- `src/app/docs/templates/page.tsx`
-- `src/app/docs/contacts/page.tsx`
-- `src/components/docs/nav.ts`
+- `src/lib/whatsapp/ai-worker.ts`
 
-**Estimated scope:** Medium (4 files)
+**Estimated scope:** Medium (1-2 files)
 
 ---
 
-## Task 6: Automations, AI, tests guides
-**Description:** `/docs/automations` — triggers, conditions, steps incl. `dispatch_test`, builder walkthrough, run logs. `/docs/ai` — knowledge base uploads, training, escalation to humans. `/docs/tests` — practice drills vs timed exams, entry-test routing, once-per-number rule, how students experience it, credit cost.
+### Checkpoint: Core flow (after Tasks 1-3)
+- [ ] `npm run typecheck` passes
+- [ ] `npm run build` passes
+- [ ] `npm test` passes
+- [ ] Manual WhatsApp flow: offer → confirm → test runs; offer → decline → AI continues; repeated offer of an already-taken timed exam never appears
+- [ ] Credit log: 1 `ai_chat` on the confirmation, 1 `test_attempt` on completion, no AI cost during the test
+- [ ] Human reviews before Phase 2
+
+---
+
+## Task 4: Per-business enable switch for the AI↔tests integration
+**Description:** Add `enable_ai_test_offers` to the business settings surface so
+the integration can be switched on/off per business. In
+`src/lib/tests/settings.ts`: extend `BusinessSettings` and
+`getBusinessSettings` to read `enable_ai_test_offers` (default: `true`). In
+`src/components/settings/test-settings.tsx`: add a `Switch` (import from
+`@/components/ui/switch`, used as in `ai-config.tsx`) persisted in the same
+`business_settings.value` upsert as `session_timeout_hours` (card copy explains
+what the switch does). This is the single source of truth read by `executeAiJob`
+(Task 3) — no other gating paths.
 
 **Acceptance criteria:**
-- [ ] Automation guide documents triggers/branches/waits/dispatch-test using builder vocabulary from `automation-builder.tsx`
-- [ ] AI guide matches the AI config/knowledge manager screens
-- [ ] Tests guide reflects `runtime.ts` behavior (practice vs timed, routing, attempt limit) and credit cost
+- [ ] Switch appears in Test Settings; toggling + Save persists `enable_ai_test_offers` in `business_settings.value`
+- [ ] Default when no setting exists: enabled (feature on for existing businesses with active tests)
+- [ ] Off ⇒ Task 3 omits AVAILABLE TESTS block and `start_test` tool for that business; deterministic keyword/entry-test automations unchanged
 
 **Verification:**
-- [ ] `npx tsc --noEmit` passes
-- [ ] Manual: walkthroughs reproducible
+- [ ] `npm run typecheck` passes
+- [ ] `npm run build` passes
+- [ ] Manual: switch off → AI never offers tests (hint at a test → normal AI chat), existing keyword-automation test still starts; switch back on → offers resume
 
-**Dependencies:** Task 5
+**Dependencies:** Task 3 (consumes the toggle)
 
 **Files likely touched:**
-- `src/app/docs/automations/page.tsx`
-- `src/app/docs/ai/page.tsx`
-- `src/app/docs/tests/page.tsx`
-- `src/components/docs/nav.ts`
+- `src/lib/tests/settings.ts`
+- `src/components/settings/test-settings.tsx`
 
-**Estimated scope:** Medium (4 files)
+**Estimated scope:** Small (2 files)
 
 ---
 
-## Task 7: Broadcasts, billing, FAQ guides
-**Description:** `/docs/broadcasts` — approved templates, audience selection, scheduling, SMS channel. `/docs/billing` — plans/tiers, Pesapal payments (Mobile Money/card), credit top-up, how message sends + test attempts consume credits. `/docs/faq` — common setup/troubleshooting questions.
+## Task 5: Landing page + docs copy (parity)
+**Description:** AGENTS.md requires landing-page parity for new capabilities and
+the docs live next to the app. Update `src/app/page.tsx` (Features/FAQ or Tests
+copy) to mention that the AI assistant can offer the business's tests on demand
+with a confirmation (and is switchable in Test Settings), and update
+`src/app/docs/tests/page.tsx` to document the AI-driven flow alongside the
+existing keyword/entry-test paths.
 
 **Acceptance criteria:**
-- [ ] Broadcast guide matches the broadcast builder steps (template → audience → personalize → schedule)
-- [ ] Billing guide reflects `subscriptions/index.ts`, credit model, and Pesapal integration
-- [ ] FAQ covers the highest-signal setup questions (WhatsApp connect issues, template approval, timing out, credits)
+- [ ] Landing page mentions AI-offered tests with confirmation
+- [ ] Docs tests page documents the AI-offered flow and the enable/disable switch
 
 **Verification:**
-- [ ] `npx tsc --noEmit` passes
-- [ ] Manual: FAQ answers are accurate against current behavior
+- [ ] `npm run typecheck` passes
+- [ ] `npm run build` passes
+- [ ] Manual: landing + docs render the new copy
 
-**Dependencies:** Task 6
-
-**Files likely touched:**
-- `src/app/docs/broadcasts/page.tsx`
-- `src/app/docs/billing/page.tsx`
-- `src/app/docs/faq/page.tsx`
-- `src/components/docs/nav.ts`
-
-**Estimated scope:** Medium (4 files)
-
----
-
-## Checkpoint: Guides Complete (after Tasks 5-7)
-- [ ] All 12 guide pages render; sidebar lists every page; cross-links resolve
-- [ ] `npx tsc --noEmit` passes
-- [ ] Content spot-checked against real product labels/flows
-- [ ] Review with human before proceeding
-
----
-
-## Task 8: Landing page parity (docs link)
-**Description:** Add a "Docs" link to the landing page header and footer pointing at `https://docs.hopechat2.vercel.app` (new service → must be promoted per AGENTS.md parity rule). Keep mobile menu consistent.
-
-**Acceptance criteria:**
-- [ ] "Docs" visible in header nav + footer; opens the subdomain in a new tab (external link)
-- [ ] Mobile nav includes the same link
-
-**Verification:**
-- [ ] `npx tsc --noEmit` passes; `npm run build` passes
-- [ ] Manual: click from landing header + footer + mobile menu
-
-**Dependencies:** Task 7 (docs content complete)
+**Dependencies:** Tasks 1-4 (feature shipped)
 
 **Files likely touched:**
 - `src/app/page.tsx`
+- `src/app/docs/tests/page.tsx`
 
-**Estimated scope:** Small (1 file)
-
----
-
-## Task 9: Deploy + subdomain wiring (manual handoff)
-**Description:** Add `docs.hopechat2.vercel.app` under Vercel Project → Domains, deploy, and verify: subdomain serves docs, main domain serves landing + dashboard unchanged.
-
-**Acceptance criteria:**
-- [ ] `docs.hopechat2.vercel.app` resolves and serves the docs site
-- [ ] `hopechat2.vercel.app` still serves landing + dashboard; auth flows unaffected
-- [ ] Landing "Docs" link works from production
-
-**Verification:**
-- [ ] Manual browser check on both hosts
-
-**Dependencies:** Task 8
-
-**Files likely touched:** (none — Vercel dashboard)
-
-**Estimated scope:** XS (external)
-
----
-
-## Final Checkpoint
-- [ ] All acceptance criteria met
-- [ ] `npx tsc --noEmit`, `npx eslint`, `npm run build` all pass
-- [ ] docs.hopechat2.vercel.app live, linked from landing, content accurate
-- [ ] Ready for human review
+**Estimated scope:** Small (2 files)

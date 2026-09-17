@@ -3,6 +3,7 @@ import { searchSheets } from '@/lib/integrations/google-sheets';
 import { supabaseAdmin } from '@/lib/automations/admin-client';
 import { logAIUsage, type AIUsageAction } from '@/lib/ai-usage';
 import { getCreditCost, type CreditAction } from '@/lib/credits';
+import { stageTestOffer } from '@/lib/tests/runtime';
 
 const MAX_RETRIES = 3;
 
@@ -19,6 +20,12 @@ export interface GeminiCallOptions {
   action?: AIUsageAction
   /** Extra context stored in ai_usage_logs.metadata (conversation_id, contact_id, ...). */
   metadata?: Record<string, unknown>
+  /**
+   * Which business tools to make available to the model. Defaults to
+   * `['search_business_data']` when a businessId is present (unchanged
+   * behavior). Callers that want the AI to offer tests must opt in explicitly.
+   */
+  tools?: ReadonlyArray<'search_business_data' | 'start_test'>
 }
 
 async function getGlobalGeminiKey(): Promise<string> {
@@ -129,30 +136,53 @@ export async function generateGeminiResponse(
     }
   }
 
-  const tools: any = businessId ? [
-    {
-      functionDeclarations: [
-        {
-          name: 'search_business_data',
-          description: 'Search the business spreadsheet for information like inventory, pricing, or order status.',
-          parameters: {
-            type: Type.OBJECT,
-            properties: {
-              query: {
-                type: Type.STRING,
-                description: toolDescription
-              },
-              spreadsheet: {
-                type: Type.STRING,
-                description: 'The name of the spreadsheet to search (e.g., "Products", "Orders"). Optional — if omitted, all spreadsheets are searched.'
-              }
-            },
-            required: ['query']
+  const enabledTools = options.tools ?? (businessId ? ['search_business_data'] : [])
+  const declarations: Array<Record<string, unknown>> = []
+
+  if (enabledTools.includes('search_business_data')) {
+    declarations.push({
+      name: 'search_business_data',
+      description: 'Search the business spreadsheet for information like inventory, pricing, or order status.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          query: {
+            type: Type.STRING,
+            description: toolDescription
+          },
+          spreadsheet: {
+            type: Type.STRING,
+            description: 'The name of the spreadsheet to search (e.g., "Products", "Orders"). Optional — if omitted, all spreadsheets are searched.'
           }
-        }
-      ]
-    }
-  ] : undefined;
+        },
+        required: ['query']
+      }
+    })
+  }
+
+  if (enabledTools.includes('start_test')) {
+    declarations.push({
+      name: 'start_test',
+      description:
+        'Offer one of this business\'s tests (quiz/exam/assessment/screening) to the customer. Call this ONLY when the customer clearly expresses intent to take a test. It stages the offer for confirmation — it does NOT start anything; the customer must confirm first.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          test_id: {
+            type: Type.STRING,
+            description: 'The id of the test to offer, taken from the AVAILABLE TESTS list in your instructions.'
+          },
+          test_title: {
+            type: Type.STRING,
+            description: 'The exact title of the test, so you can name it in your confirmation question.'
+          }
+        },
+        required: ['test_id']
+      }
+    })
+  }
+
+  const tools: any = declarations.length > 0 ? [{ functionDeclarations: declarations }] : undefined;
 
   const contents: MessageContent[] = [
     ...history,
@@ -193,6 +223,30 @@ export async function generateGeminiResponse(
           const spreadsheetName = (functionCall.args as any)?.spreadsheet;
           if (query) {
             result = await searchSheets(businessId, query, spreadsheetName);
+          }
+        } else if (functionCall.name === 'start_test') {
+          if (!businessId) {
+            result = 'Tests cannot be offered here. Do not call this tool.';
+          } else {
+            const testId = String((functionCall.args as any)?.test_id ?? '').trim();
+            const contactId = String(options.metadata?.contact_id ?? '').trim();
+            const conversationId = String(options.metadata?.conversation_id ?? '').trim();
+            if (!testId || !contactId || !conversationId) {
+              result = 'Missing context to stage the test offer. Do not call this tool.'
+            } else {
+              const offer = await stageTestOffer({ businessId, contactId, conversationId, testId });
+              if (offer.ok) {
+                result = `Offer for "${offer.title}" is staged and waiting; the customer has NOT started yet. Confirm with a short question naming the test — the customer will confirm before it begins.`;
+              } else if (offer.reason === 'already_in_test') {
+                result = 'The customer is already inside an active test right now. Do not offer another one at this time.';
+              } else if (offer.reason === 'already_attempted') {
+                result = 'That test is once per phone number and this customer has already finished it. Do not offer it.';
+              } else if (offer.reason === 'test_unavailable') {
+                result = 'That test id is not active or does not belong to this business. Do not offer it; pick from AVAILABLE TESTS only.';
+              } else {
+                result = 'The test could not be offered right now. Do not offer it.';
+              }
+            }
           }
         }
 

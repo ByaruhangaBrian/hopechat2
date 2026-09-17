@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Save, Clock } from 'lucide-react';
+import { Loader2, Save, Clock, Bot } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 const DEFAULT_TIMEOUT_HOURS = 2;
@@ -20,6 +21,7 @@ export function TestSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [timeoutHours, setTimeoutHours] = useState<number>(DEFAULT_TIMEOUT_HOURS);
+  const [enableAiOffers, setEnableAiOffers] = useState(true);
 
   useEffect(() => {
     async function load() {
@@ -35,6 +37,7 @@ export function TestSettings() {
 
       const hours = Number(data?.value?.session_timeout_hours);
       if (Number.isFinite(hours) && hours > 0) setTimeoutHours(hours);
+      setEnableAiOffers(data?.value?.enable_ai_test_offers !== false);
       setLoading(false);
     }
     load();
@@ -48,7 +51,10 @@ export function TestSettings() {
       .from('business_settings')
       .upsert({
         business_id: businessId,
-        value: { session_timeout_hours: hours },
+        value: {
+          session_timeout_hours: hours,
+          enable_ai_test_offers: enableAiOffers,
+        },
         updated_at: new Date().toISOString(),
       });
 
@@ -56,9 +62,7 @@ export function TestSettings() {
       toast.error('Failed to save test settings');
     } else {
       toast.success(
-        hours > 0
-          ? `Test sessions now close after ${hours} hour(s) of inactivity`
-          : 'Test sessions never close from inactivity',
+        `Saved. AI ${enableAiOffers ? 'can' : 'cannot'} offer tests; idle sessions close after ${hours} hour(s).`,
       );
     }
     setSaving(false);
@@ -72,10 +76,34 @@ export function TestSettings() {
           Tests &amp; Practice Session Settings
         </CardTitle>
         <CardDescription>
-          Control how long an idle WhatsApp session stays open for your students.
+          Control how your WhatsApp tests behave for your students.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Bot className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <div>
+                <Label className="text-foreground">AI can offer your tests</Label>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  When on, the AI assistant recognizes when a student wants to take
+                  a test and asks to confirm with <strong>Start</strong> /{' '}
+                  <strong>Not Now</strong> buttons before it runs. Off keeps tests
+                  AI-independent (keyword automations and entry-test screening
+                  still work exactly as before).
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={enableAiOffers}
+              onCheckedChange={setEnableAiOffers}
+              disabled={loading}
+              aria-label="Allow the AI assistant to offer your tests"
+            />
+          </div>
+        </div>
+
         <div className="bg-muted/50 border border-border rounded-lg p-4 text-xs leading-relaxed text-muted-foreground">
           <p className="mb-2">
             When a student goes quiet mid-test, their session stays open and can block the

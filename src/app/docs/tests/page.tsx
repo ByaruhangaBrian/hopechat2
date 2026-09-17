@@ -108,6 +108,53 @@ export default function DocsTestsPage() {
         </DocParagraph>
       </DocSection>
 
+      <DocSection title="AI-offered tests">
+        <DocParagraph>
+          With the <b>Tests &amp; Practice</b> switch &quot;AI can offer your tests&quot; enabled
+          (on by default), your AI assistant recognizes when a student wants to take a{" "}
+          <b>test / quiz / exam / assessment</b> and responds with a confirmation question. It
+          never starts anything without the student&apos;s agreement.
+        </DocParagraph>
+        <DocSteps
+          steps={[
+            {
+              title: "The student asks for a test",
+              body: (
+                <DocParagraph>
+                  E.g. &quot;can I take the math quiz?&quot; — the AI picks the matching test from
+                  your active list (or asks which one if several could fit).
+                </DocParagraph>
+              ),
+            },
+            {
+              title: "Confirmation with buttons",
+              body: (
+                <DocParagraph>
+                  The AI sends the offer with <b>Start</b> / <b>Not Now</b> WhatsApp buttons.
+                  Nothing has started yet.
+                </DocParagraph>
+              ),
+            },
+            {
+              title: "Start or Not Now",
+              body: (
+                <DocParagraph>
+                  Tapping <b>Start</b> begins the normal test flow (intro questions, then graded
+                  questions). Tapping <b>Not Now</b> closes the offer and the AI keeps chatting.
+                  A typed &quot;yes&quot; / &quot;no&quot; also works.
+                </DocParagraph>
+              ),
+            },
+          ]}
+        />
+        <DocCallout type="note">
+          Turning the switch off keeps tests fully AI-independent — keyword automations,
+          entry-test screening, and routing flows all keep working exactly as before. The
+          confirmation reply costs one AI credit and the finished attempt one test credit,
+          unchanged from the rest of the platform.
+        </DocCallout>
+      </DocSection>
+
       <DocSection title="Credit cost">
         <DocParagraph>
           Every completed test attempt consumes one message credit, whether the student passes or

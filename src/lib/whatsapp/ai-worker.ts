@@ -6,7 +6,9 @@ import { generateGeminiResponse } from '@/lib/automations/gemini-client';
 import { getBusinessAiConfig } from './ai-config-cache';
 import { getOrSetCache, deleteCache } from './gemini-cache';
 import { runAutomationsForTrigger, resumeAutomationWithInteraction } from '@/lib/automations/engine';
+import { engineSendInteractive } from '@/lib/automations/meta-send';
 import { handleTestReply, handleFlowReply } from '@/lib/tests/runtime';
+import { getBusinessSettings } from '@/lib/tests/settings';
 import { decrypt } from './encryption';
 import { consumeCredits, checkCredits } from '@/lib/credits';
 // @google/genai used via gemini-client.ts
@@ -403,6 +405,42 @@ async function executeAiJob(job: any): Promise<void> {
 
   systemInstruction += `RULES:\n1. Be concise.\n2. If user is angry or asks for a refund, say "I am escalating this to a human manager" and end your message with [ESCALATE].\n3. Never repeat yourself.`;
 
+  // 3b. AI↔tests integration (per-business switch). When enabled the model sees
+  // the business's active tests and can offer them via the `start_test` tool.
+  // The offer is confirm-first — the model must never claim a test started.
+  const businessSettings = await getBusinessSettings(job.business_id);
+  let hasAiTestOffers = false;
+  if (businessSettings.enable_ai_test_offers) {
+    const { data } = await db
+      .from('tests')
+      .select('id, title, description, mode, duration_minutes, is_entry')
+      .eq('business_id', job.business_id)
+      .eq('is_active', true)
+      .order('title');
+    const tests = (data ?? []) as Array<{
+      id: string
+      title: string
+      description?: string | null
+      mode?: string | null
+      duration_minutes?: number | null
+      is_entry?: boolean
+    }>;
+    if (tests.length > 0) {
+      hasAiTestOffers = true;
+      systemInstruction += `AVAILABLE TESTS (offer via the start_test tool):\n`;
+      tests.forEach((t, i) => {
+        let info = `"${t.title}" (id: ${t.id})`;
+        if (t.description) info += ` — ${t.description}`;
+        info +=
+          t.mode === 'test' && t.duration_minutes
+            ? ` [timed ${t.duration_minutes} min, once per phone number]`
+            : ` [${t.mode === 'practice' ? 'practice' : 'test'}]`;
+        systemInstruction += `${i + 1}. ${info}\n`;
+      });
+      systemInstruction += `\nWhen a customer clearly wants to take a test/quiz/exam/assessment, call start_test with the matching test id. If several could fit, ask which one first. NEVER start a test directly — always offer it, then confirm with the customer before it runs.\n\n`;
+    }
+  }
+
   // 4a. Gemini Context Caching (free-tier safe — skips when toggle OFF)
   let cacheName: string | undefined
   try {
@@ -438,6 +476,7 @@ async function executeAiJob(job: any): Promise<void> {
         conversation_id: job.conversation_id,
         contact_id: conv.contact_id,
       },
+      ...(hasAiTestOffers ? { tools: ['search_business_data', 'start_test'] as const } : {}),
     }
   );
 
@@ -485,19 +524,65 @@ async function executeAiJob(job: any): Promise<void> {
 
   const cleanAiText = aiText.replace('[ESCALATE]', '').trim();
 
-  // 6. Save & Send
-  const { data: msg } = await db.from('messages').insert({
-    conversation_id: job.conversation_id,
-    sender_type: 'bot',
-    content_text: cleanAiText,
-    is_ai_response: true,
-    status: 'sending'
-  }).select().single();
+  // Did the model just stage a test offer (start_test tool call)? If so, the
+  // confirmation question is delivered as WhatsApp buttons so the customer can
+  // Start or decline without typing.
+  const { data: pendingSession } = await db
+    .from('user_sessions')
+    .select('session_data')
+    .eq('contact_id', conv.contact_id)
+    .maybeSingle();
+  const pendingOffer =
+    ((pendingSession?.session_data as { stage?: string } | null | undefined)?.stage === 'confirm');
+
+  let msg: { id: string } | null = null;
+  if (!pendingOffer) {
+    // 6a. Save the bot message (the buttons path persists its own copy).
+    msg = (await db.from('messages').insert({
+      conversation_id: job.conversation_id,
+      sender_type: 'bot',
+      content_text: cleanAiText,
+      is_ai_response: true,
+      status: 'sending'
+    }).select().single())?.data ?? null;
+  }
 
   const { data: whatsappConfig } = await db.from('whatsapp_config').select('access_token').eq('user_id', job.user_id).single();
   const { data: contact } = await db.from('contacts').select('phone').eq('id', conv.contact_id).single();
 
   if (whatsappConfig && contact) {
+    if (pendingOffer) {
+      try {
+        // Deliver via the automation sender: phone-variant retry + message
+        // persistence are inherited. The pending offer is consumed by
+        // handleTestReply on the customer's next message.
+        await engineSendInteractive({
+          userId: job.user_id,
+          conversationId: job.conversation_id,
+          contactId: conv.contact_id,
+          body: cleanAiText,
+          items: [
+            { id: 'test:confirm', label: 'Start' },
+            { id: 'test:cancel', label: 'Not Now' },
+          ],
+        });
+
+        void logHttpEvent({
+          userId: job.user_id,
+          businessId: job.business_id,
+          direction: 'outgoing',
+          service: 'ai',
+          endpoint: 'send_interactive_confirm',
+          payload: { stage: 'ai_test_offer_sent', conv_id: job.conversation_id, contact_id: conv.contact_id },
+          note: 'ai_test_offer_sent',
+        });
+      } catch (sendErr: any) {
+        console.error('[ai-worker] Failed to send AI test offer:', sendErr);
+        throw sendErr; // Rethrow to mark job as failed; offer stays pending.
+      }
+      return;
+    }
+
     try {
       const accessToken = decrypt(whatsappConfig.access_token);
       const { messageId } = await sendTextMessage({
@@ -507,7 +592,7 @@ async function executeAiJob(job: any): Promise<void> {
         text: cleanAiText
       });
       
-      await db.from('messages').update({ status: 'sent', message_id: messageId }).eq('id', msg.id);
+      await db.from('messages').update({ status: 'sent', message_id: messageId }).eq('id', msg!.id);
 
       // Update conversation with AI response
       await db.from('conversations').update({
@@ -526,7 +611,7 @@ async function executeAiJob(job: any): Promise<void> {
       });
     } catch (sendErr: any) {
       console.error('[ai-worker] Failed to send AI response:', sendErr);
-      await db.from('messages').update({ status: 'failed' }).eq('id', msg.id);
+      await db.from('messages').update({ status: 'failed' }).eq('id', msg!.id);
       throw sendErr; // Rethrow to mark job as failed
     }
   } else {

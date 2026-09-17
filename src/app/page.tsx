@@ -91,6 +91,10 @@ export default function LandingPage() {
       a: "Yes. Create an entry screening test that asks two intro questions (for example: which class? → which subject?). Each regular test then declares routing rules, so the moment a student answers the last question they are routed straight into the matching test automatically. Idle sessions close automatically after your configured timeout so they never block the next student, and every completed test attempt uses one credit from your plan.",
     },
     {
+      q: "Can my AI assistant offer a test mid-conversation?",
+      a: "Yes. When a customer mentions they want to take a test or quiz, the AI assistant recognizes the intent and offers the right test with a confirmation question — Start / Not Now buttons. Nothing starts until the customer confirms, so a passing mention of 'test' never triggers an exam by accident. You control it with a single switch in Test Settings, and the confirmation reply costs one AI credit while the finished attempt costs one test credit.",
+    },
+    {
       q: "How does the AI train on my business data?",
       a: "Upload your product catalogues, price lists, FAQs, and website URLs. HopeChat AI learns your business automatically and answers customer questions based on what you teach it. It escalates to a human when it doesn't know the answer.",
     },
@@ -454,6 +458,7 @@ export default function LandingPage() {
                   "Timed test mode enforces a deadline and reports time used",
                   "Configurable intro questions (class, subject, etc.) before the test starts",
                   "Auto-dispatch any test from automations — keyword triggers launch tests on demand",
+                  "AI assistant offers tests on demand with Start / Not Now confirmation",
                   "Bulk import questions from CSV"
                 ],
                 reverse: true,
