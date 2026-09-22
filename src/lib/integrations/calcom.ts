@@ -190,8 +190,10 @@ async function calFetch(
   init: RequestInit = {},
   businessId: string,
 ): Promise<any> {
-  const base = config.api_base_url?.trim() || CALCOM_BASE_URL
-  const url = `${base.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
+  const base = (config.api_base_url?.trim() || CALCOM_BASE_URL).replace(/\/+$/, '')
+  let p = path.trim()
+  if (base.endsWith('/v2') && p.startsWith('/v2/')) p = p.slice(3)
+  const url = `${base}/${p.replace(/^\//, '')}`
 
   const headers = new Headers(init.headers)
   headers.set('Authorization', `Bearer ${config.api_key}`)
