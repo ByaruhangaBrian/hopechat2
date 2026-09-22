@@ -1,125 +1,175 @@
-# Implementation Plan: Google Sheets Lookup Credit Charges
+# Implementation Plan: Cal.com Scheduling / Bookings Integration
 
 ## Overview
 
-Today Google Sheets is a **free** integration: every time a business's data is
-queried through the Sheets API — via the AI's `search_business_data` tool or a
-`lookup_spreadsheet` automation step — no credits are deducted. But each of
-those calls is real *paid* Google Cloud usage (Sheets API + OAuth are billed to
-whatever GCP project hosts the service account). This plan adds a new credit
-action, **`spreadsheet_lookup`**, deducted once per successful Sheets API query,
-mirroring how `ai_chat` / `test_attempt` are already metered.
+Add a **Calendar / Bookings** module to the HopeChat CRM integrated with **Cal.com**.
+Per confirmed decisions:
 
-Scope is deliberately tight: grep confirms exactly **two** call sites invoke the
-Sheets API —
-`searchSheets` from `src/lib/automations/gemini-client.ts:225` (AI tool) and
-`lookupRow` from `src/lib/automations/engine.ts:936` (`lookup_spreadsheet` step).
-`getBusinessSpreadsheets` and `searchSingleSheet` are private helpers, and there
-is **no** `appendRow`/`syncFromSheet` path anywhere in the codebase.
+1. **Credentials live in Settings → Integrations** (`type = 'calcom'`, API key + username,
+   stored encrypted, following the Google Sheets pattern).
+2. **Management lives on a new `/bookings` page + sidebar menu item**
+   (new `bookings` permission key). The page lists Cal.com event types, lets the
+   business toggle each enabled/disabled, and shows a copy-ready booking link
+   (`https://cal.com/{username}/{slug}`).
+3. **Sharing is copy-and-post**: the booking link is copied to the clipboard and the
+   UI points to pasting it into the AI assistant prompt / a chat message — no dedicated
+   send route in v1.
+4. A **Cal.com webhook** syncs created/rescheduled/cancelled bookings into a
+   business-scoped `cal_bookings` table, surfaced as a recent-bookings list on the
+   `/bookings` page.
 
-## Architecture Decisions
+Everything follows existing conventions: `business_integrations` for credentials,
+`google-sheets.ts` as the third-party API lib template, the WhatsApp webhook route +
+`webhook-signature.ts` as the inbound-HMAC template, `resolveBusinessId()` for
+server-side scoping, and the AGENTS.md landing-page parity rule.
 
-- **New credit action `spreadsheet_lookup`, default cost 1.** Added to the
-  `CreditAction` union, the `CreditCosts` interface, `DEFAULT_COSTS`, and the
-  `getCreditCosts` merge. Configurable by the super admin under Admin →
-  Settings → Credit System Configuration (Task 3). No new DB table: the
-  `credit_costs` row in `system_settings` is already a JSONB value that the admin
-  UI upserts whole.
-- **Gate *before* the API call, consume *after* success.** Paid-API billing
-  rule: never let a Sheets query run for a business that can't pay for it, and
-  never charge when the API didn't actually run.
-  - `checkCredits(businessId, 'spreadsheet_lookup')` before calling,
-    short-circuiting the call when credits are low (the AI is told "insufficient
-    credits" instead of querying for free).
-  - `consumeCredits(businessId, 'spreadsheet_lookup', { ... })` after a genuine,
-    successful API response. Existing atomic-guarded deduction + `credit_usage_logs`
-    ledger write are reused untouched.
-- **`searchSheets` reports whether the API was actually invoked.** It has two
-  early-return paths that make *zero* API calls ("No spreadsheets configured",
-  and "Spreadsheet X not found"); those must not charge. Change its return type
-  to `{ text: string; apiCalled: boolean }` — the function already has only one
-  consumer (`gemini-client.ts`), so this is an internal, safe interface change.
-  `apiCalled` becomes true the moment a `values.get` is attempted by
-  `searchSingleSheet` (success or caught error — the API was billed either way).
-- **`lookupRow` charges on any normal return AND on API-level errors.**
-  A normal return (row found *or* null) means the API answered — charge. A
-  throw after the API (e.g. "Column not found") also means Google billed the
-  `values.get` — charge, then rethrow. The only exempt throw is the pre-API
-  "No spreadsheets configured" case, which becomes a distinct
-  `SheetsNotConfiguredError` so the engine can tell a real API call from a pure
-  config error (per user Q3 decision: charge on student-facing get errors,
-  never on zero-API-call paths).
-- **Dashboard + admin billing UIs show the new action.** `ACTION_LABELS` in
-  `src/components/settings/billing-plan.tsx` and the admin credits page action
-  map get a `spreadsheet_lookup` entry (with the already-missing `test_attempt`
-  added too — both currently fall back to raw action names in the UI).
-- **Both paths use the existing ledger fields**: `referenceId` =
-  conversation_id, `contactId` from context, `metadata` with sheet/query detail.
-  `user_id` is null from `gemini-client` (it has no user context), matching
-  today's pattern.
-- **Stacking with existing charges is intended.** An AI reply that queries a
-  spreadsheet now costs `ai_chat` (1) + `spreadsheet_lookup` (1); a
-  `lookup_spreadsheet` step inside an interactive form flow costs
-  `interactive_form` + `spreadsheet_lookup`. That is the point: the paid Google
-  call is metered regardless of which feature triggered it. Failed or
-  zero-result searches where no API call happened are free.
-- **Migration 058 extends the `credit_usage_logs.action` CHECK.** Currently the
-  constraint (last set in `044_sms_broadcasts.sql`) allows only
-  `('ai_chat','interactive_form','bulk_broadcast','sms')`. This is a **latent
-  bug**: the shipped tests feature consumes `test_attempt`, whose ledger inserts
-  are silently rejected by the CHECK today. 058 drops + recreates the constraint
-  to include `test_attempt` (fix) and `spreadsheet_lookup` (new), and seeds the
-  default `spreadsheet_lookup` cost into `system_settings` when absent (merging,
-  never clobbering admin-edited values).
+## Architecture Decisions (confirmed)
+
+- **Auth: Cal.com API key (v1 API) + username.** API key encrypted with
+  `ENCRYPTION_KEY`, never returned to the client. Transport encapsulated in
+  `calcom.ts` so an OAuth upgrade stays possible.
+- **Config storage: reuse `business_integrations`** (`type = 'calcom'`, unique per
+  business). Config JSON: `{ calcom_api_key (enc), calcom_username, webhook_secret (enc) }`.
+  Optional `system_settings` global fallback row.
+- **New DB object: only `cal_bookings`.** RLS per-operation with
+  `get_user_business_id() OR is_admin_view_all()` plus explicit
+  `FOR ALL TO service_role USING (true)` (migration 048 gotcha: never an empty role list).
+- **UI split: Settings → Integrations = connect pane only; `/bookings` = manage.**
+  New `bookings` PermissionKey (business-config, not granted to agents by default),
+  sidebar entry, and `pathGates` entry in `dashboard-shell.tsx`.
+- **Sharing: clipboard copy + AI-prompt hint.** Build the Cal.com scheduling URL,
+  copy to clipboard; hint text tells the business to drop it into the AI assistant
+  prompt or a chat.
+- **Webhook: Cal.com shared-secret HMAC.** `src/lib/calcom/webhook-signature.ts`
+  (fail closed, constant-time compare) modeled on the WhatsApp webhook.
+  Assumption: header `X-Cal-Signature-256: SHA256=<hex>` — verify manually in Task 8.
+- **Env vars** (`.env.local.example`, OPTIONAL): `CALCOM_API_BASE`
+  (default `https://api.cal.com/v1`), optional global `CALCOM_WEBHOOK_SECRET`.
+- **Tests**: colocated `*.test.ts` under `src/lib/...`. NOTE: the vitest runner is
+  broken on this machine (rolldown `styleText`) — tests are written and run only if
+  the runner works; verification leans on `npm run typecheck` + `npm run build`
+  + manual checks.
+
+## Task List
+
+### Phase 0: Foundation
+
+- [ ] **Task 1: DB migration `060_calcom_scheduling.sql`**
+  - Create `cal_bookings` (business-scoped, JSONB payload, unique
+    `(business_id, cal_event_id)`), indexes, `update_updated_at_column()` trigger.
+  - RLS per-op policies + explicit `TO service_role` full-access policy.
+  - Seed optional `system_settings` fallback row for calcom.
+- [ ] **Task 2: Cal.com API client lib `src/lib/integrations/calcom.ts` + tests**
+  - Encrypted-config loader (mirror `google-sheets.ts`: lazy admin, decrypt,
+    env/global fallback, `logHttpEvent`).
+  - `fetchEventTypes`, `patchEventType(id, {disabled, length?})`,
+    `buildBookingLink(username, slug)`, typed `EventType`.
+  - `calcom.test.ts` for URL building + response parsing (mocked fetch).
+
+### Checkpoint: Foundation
+- [ ] Migration clean; `npm run typecheck` + `npm run build` pass.
+
+### Phase 1: Connect & Navigate
+
+- [ ] **Task 3: Config API `src/app/api/integrations/calcom/route.ts`**
+  - GET: decrypts config → connection status (+ live event types when configured).
+  - POST: upserts config (encrypt keys, blank fields keep existing), tests the
+    connection; clean 4xx on invalid key/username.
+  - DELETE: clears the integration.
+- [ ] **Task 4: Settings connect UI `src/components/settings/calcom-form.tsx` + hub**
+  - Connect pane only: API key + username inputs, masked saved-state,
+    Save & Test with toasts, Disconnect.
+  - Flip the `calendly` stub card in `integrations-hub.tsx` → **Cal.com**
+    ("Configure"), with a hint that management lives on the Bookings page.
+- [ ] **Task 5: `bookings` permission + sidebar + `/bookings` page shell**
+  - `permissions.ts`: add `bookings` to `PermissionKey`, `PERMISSION_DEFINITIONS`,
+    `FULL_ACCESS`, `AGENT_DEFAULT` (false), `BUSINESS_CONFIG_PERMISSIONS`.
+  - Sidebar nav item "Bookings" (+ `permissionByPath`), `pathGates` entry in
+    `dashboard-shell.tsx`.
+  - `src/app/(dashboard)/bookings/page.tsx` skeleton: client page, permission-clamped,
+    loading/empty states, panel placeholders.
+
+### Checkpoint: Connect & Navigate
+- [ ] Connect a real Cal.com account from Settings; sidebar shows Bookings;
+      unpermissioned users are bounced from `/bookings`.
+
+### Phase 2: Manage & Share
+
+- [ ] **Task 6: Event-type toggle API
+        `src/app/api/integrations/calcom/event-types/[id]/route.ts`**
+  - PATCH `{ disabled: boolean }` (+ optional `length`) via Cal.com; 4xx with
+    Cal.com error detail on failure.
+- [ ] **Task 7: `/bookings` manage UI**
+  - Event-type list: title, duration, enabled/disabled toggle (optimistic + rollback),
+    booking link with **Copy** button, hint "Paste this link into your AI assistant
+    prompt or a chat to share it."
+  - Empty/no-integration state links back to Settings → Integrations.
+
+### Checkpoint: Manage Flow
+- [ ] Toggling enable/disable reflects on Cal.com and in the UI; copy link works.
+
+### Phase 3: Track Bookings
+
+- [ ] **Task 8: Cal.com webhook**
+  - `src/lib/calcom/webhook-signature.ts` + `webhook-signature.test.ts`
+    (HMAC-SHA256, fail closed, constant-time compare).
+  - `src/app/api/calcom/webhook/route.ts`: verify raw-body signature; parse
+    `BOOKING_CREATED / BOOKING_RESCHEDULED / BOOKING_CANCELLED`; upsert
+    `cal_bookings` via admin client; `logHttpEvent`; always 200 for acknowledged.
+- [ ] **Task 9: Bookings list API + `/bookings` panel**
+  - `src/app/api/calcom/bookings/route.ts`: recent bookings per business
+    (status: booked | rescheduled | cancelled).
+  - Recent-bookings panel on the `/bookings` page: attendee, event, time, status pill.
+
+### Checkpoint: Shipped Slice
+- [ ] A booking made via a shared link appears in-app; reschedule/cancel dedupes.
+
+### Phase 4: Parity & Polish
+
+- [ ] **Task 10: Landing page parity (AGENTS.md mandatory)**
+  - `src/app/page.tsx`: feature card for appointment booking, matching FAQ entry,
+    Cal.com under Integrations chips/footer.
+- [ ] **Task 11: Hardening pass**
+  - RLS/service-role policies, rate-limit usage, no keys in client bundles,
+    dark/light contrast, reduced-motion; final `lint`/`typecheck`/`build`.
+
+### Checkpoint: Complete
+- [ ] All acceptance criteria met; human reviews before merge.
 
 ## Dependency Graph
 
 ```
-Credit lib: spreadsheet_lookup action + defaults (T1)   ◄── foundation
-    │
-    ├── Admin settings: cost editor row (T3)
-    ├── AI call site: searchSheets apiCalled + gate/consume (T4)
-    ├── Automation call site: lookup_spreadsheet gate/consume (T5)
-    └── Docs + landing copy (T6)
-Migration 058 (T2)   ◄── independent of code; applied to auth on the DB
-Checkpoint after T1, T3-T5: typecheck/build + engine/run short-circuit verify
+Task 1 (migration) ───────────────┐
+Task 2 (calcom lib) ──────────────┼──► Task 3 ─► Task 4 (settings connect UI)
+         │                        │              Task 5 (nav + /bookings shell)
+         └──────────► Task 6 (toggle API) ─────────► Task 7 (/bookings manage UI)
+         └──────────► Task 8 (webhook lib + route) ─► Task 9 (bookings list + panel)
+Tasks 1–9 ────────────────────────────────────────────► Task 10, Task 11
 ```
-
-## Task List
-
-### Phase 1: Foundation
-- [ ] Task 1: `spreadsheet_lookup` action in `src/lib/credits/index.ts` (union type + defaults + `getCreditCosts` merge)
-- [ ] Task 2: migration `supabase/migrations/058_sheet_lookup_credits.sql` (CHECK constraint incl. `test_attempt` + `spreadsheet_lookup`; seed default cost) — apply to the DB
-
-### Phase 2: Charging call sites
-- [ ] Task 3: Admin Settings → Credit System Configuration UI row for `spreadsheet_lookup`
-- [ ] Task 4: `google-sheets.ts` `searchSheets` → `{ text, apiCalled }`; `gemini-client.ts` gate-then-consume around the `search_business_data` handler
-- [ ] Task 5: `engine.ts` `lookup_spreadsheet` gate-then-consume, incl. consume on API-level throws (not on `SheetsNotConfiguredError`)
-
-### Checkpoint: Core charging
-- [ ] `npm run typecheck` passes
-- [ ] `npm run build` passes
-- [ ] Manual: AI data query deducts 1 `spreadsheet_lookup` credit while reply deducts `ai_chat`; automation `lookup_spreadsheet` deducts 1 (row found, not-found, and column-error all charge; misconfigured/no-spreadsheet never charges); business with 0 credits gets no spreadsheet query
-
-### Phase 3: Parity
-- [ ] Task 6: docs `billing` page bullet + landing page pricing/FAQ line + `billing-plan.tsx` / admin credits page action labels (`spreadsheet_lookup` + `test_attempt`)
-- [ ] Checkpoint: full spec review with human; then push (approved commit)
 
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| `searchSheets` return-shape change breaks its consumer | Med | Single consumer confirmed by grep; TypeScript surfaces the break; bumped in the same commit as T4 |
-| Over-charging spreadsheets: setup/preview or retry loops count as billable | Med | Charge strictly on "API actually answered" (`apiCalled`); no-charge for no-spreadsheet/not-found early returns to reduce noise |
-| Double charge within one user action | Low | Each Sheets API call is billed once by whichever path invoked it; AI + step never both run for one message because the engine handles the reply once |
-| Admin-set costs lost | Low | Migration merges (`NOT value ? 'spreadsheet_lookup'`), never overwrites the whole JSONB |
-| `test_attempt` constraint drift on prod (if 058 not applied) | Low | 058 is a required, separate DB step; the ledger failure is silent-and-recoverable (balance still correct) |
+| Cal.com v1 API variability/possible deprecation | Med | Encapsulate transport in `calcom.ts`; env-overridable `CALCOM_API_BASE`; mock-based tests; document endpoints. |
+| Username scoping when a key owns multiple calendars/orgs | Med | Always pass `username` param; surface Cal.com errors plainly in UI. |
+| Webhook signature header assumption (`SHA256=<hex>`) | Med | Fail-closed verification + fixtures; manual replay check in Task 8; per-business secret in config. |
+| RLS service-role policy omission (048 gotcha) | High | Explicit `FOR ALL TO service_role USING (true) WITH CHECK (true)`. |
+| vitest runner broken on this machine | Low | Tests written but gated; verified via typecheck/build/manual. |
+| New permission key affects existing profiles | Low | `normalizePermissions()` fills missing keys from role defaults; agents default to `bookings: false`. |
+| Landing page parity required (AGENTS.md) | Med | Task 10 is mandatory before "done". |
+| API key leaking to client bundles | High | Key encrypted in DB; routes decrypt server-side; client sees only status + event types. |
 
-## Open Questions
+## Resolved Decisions
 
-- **Default cost = 1 credit per Sheets lookup** — confirmed 1 credit by the human.
-- **Dashboard Billing screen shows `spreadsheet_lookup`** — confirmed; also fix
-  the invisible `test_attempt` label while editing the action maps.
-- **Charge on API-error results** — confirmed for both sites (AI path charges
-  when `apiCalled` even on error text; engine step charges on API-level throws,
-  excluding the pre-API `SheetsNotConfiguredError`).
+- Auth: **API key + username** (encrypted, admin-owned).
+- UI: credentials in **Settings → Integrations**; management on a new **`/bookings` menu item**.
+- Schedule depth: **view + toggle event types, share links** (no availability editing in v1).
+- Sharing: **copy the link** and paste into the AI assistant prompt or a chat (no send route in v1).
+
+## Parallelization Opportunities
+
+- Tasks 1 and 2 are independent → parallel.
+- Task 5 (nav/permission) is independent of Tasks 3–4 → can run in parallel.
+- Task 6 depends on Task 2 only; Task 7 depends on 5 + 6; Task 8 depends on 2;
+  Task 9 depends on 8 (+ 7 for the panel). Tasks 10–11 after the feature slices land.

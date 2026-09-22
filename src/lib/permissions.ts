@@ -16,6 +16,7 @@ export type PermissionKey =
   | "broadcasts"
   | "automations"
   | "ai"
+  | "bookings"
   | "settings";
 
 export type Permissions = Record<PermissionKey, boolean>;
@@ -32,6 +33,7 @@ export const PERMISSION_DEFINITIONS: {
   { key: "broadcasts", label: "Broadcasts", description: "Send and manage broadcasts" },
   { key: "automations", label: "Automations", description: "Build and manage no-code automations" },
   { key: "ai", label: "AI Hub", description: "Configure the AI assistant and knowledge base" },
+  { key: "bookings", label: "Appointment Bookings", description: "Manage Cal.com booking links and view scheduled appointments" },
   { key: "settings", label: "Settings", description: "WhatsApp, templates, tags, integrations and billing" },
 ];
 
@@ -43,6 +45,7 @@ export const ALL_PERMISSION_KEYS: PermissionKey[] = PERMISSION_DEFINITIONS.map(
 export const BUSINESS_CONFIG_PERMISSIONS: PermissionKey[] = [
   "automations",
   "ai",
+  "bookings",
   "settings",
 ];
 
@@ -54,6 +57,7 @@ const FULL_ACCESS: Permissions = {
   broadcasts: true,
   automations: true,
   ai: true,
+  bookings: true,
   settings: true,
 };
 
@@ -65,6 +69,7 @@ const AGENT_DEFAULT: Permissions = {
   broadcasts: true,
   automations: false,
   ai: false,
+  bookings: false,
   settings: false,
 };
 

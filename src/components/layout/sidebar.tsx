@@ -24,6 +24,7 @@ import {
   Moon,
   ChevronLeft,
   ChevronRight,
+  CalendarCheck,
 } from "lucide-react";
 import {
   Avatar,
@@ -53,6 +54,7 @@ const navItems = [
   { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/pipelines", label: "Pipelines", icon: GitBranch },
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
+  { href: "/bookings", label: "Bookings", icon: CalendarCheck },
   { href: "/automations", label: "Automations", icon: Zap },
   { href: "/dashboard/menus", label: "Tests & Practice", icon: FolderTree },
   { href: "/ai", label: "AI Hub", icon: Cpu },
@@ -64,6 +66,7 @@ const permissionByPath: Record<string, PermissionKey> = {
   "/contacts": "contacts",
   "/pipelines": "pipelines",
   "/broadcasts": "broadcasts",
+  "/bookings": "bookings",
   "/automations": "automations",
   "/dashboard/menus": "automations",
   "/ai": "ai",

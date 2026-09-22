@@ -15,6 +15,7 @@ const pathGates: { path: string; permission: PermissionKey }[] = [
   { path: "/ai", permission: "ai" },
   { path: "/automations", permission: "automations" },
   { path: "/broadcasts", permission: "broadcasts" },
+  { path: "/bookings", permission: "bookings" },
 ];
 
 // Auth-gated dashboard shell. Extracted from the layout so the layout

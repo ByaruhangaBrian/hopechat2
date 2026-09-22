@@ -5,15 +5,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { TableProperties, Calendar, ShoppingCart, ArrowRight } from 'lucide-react';
 import { GoogleSheetsForm } from './google-sheets-form';
+import { CalComForm } from './calcom-form';
 
 export function IntegrationsHub() {
   const [activeIntegration, setActiveIntegration] = useState<string | null>(null);
   const [spreadsheetCount, setSpreadsheetCount] = useState<number | null>(null);
+  const [calcomConnected, setCalcomConnected] = useState<boolean>(false);
 
   useEffect(() => {
     fetch('/api/integrations/google-sheets/spreadsheets')
       .then(res => res.json())
       .then(data => setSpreadsheetCount(data.spreadsheets?.length ?? null))
+      .catch(() => {});
+    fetch('/api/integrations/calcom', { cache: 'no-store' })
+      .then(res => res.json())
+      .then(data => setCalcomConnected(data.configured === true))
       .catch(() => {});
   }, []);
 
@@ -32,6 +38,21 @@ export function IntegrationsHub() {
     );
   }
 
+  if (activeIntegration === 'calcom') {
+    return (
+      <div className="space-y-6">
+        <Button 
+          variant="ghost" 
+          onClick={() => setActiveIntegration(null)}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          ← Back to Integrations
+        </Button>
+        <CalComForm />
+      </div>
+    );
+  }
+
   const integrations = [
     {
       id: 'google_sheets',
@@ -43,12 +64,12 @@ export function IntegrationsHub() {
       badge: spreadsheetCount !== null ? `${spreadsheetCount} sheet${spreadsheetCount !== 1 ? 's' : ''}` : undefined,
     },
     {
-      id: 'calendly',
-      name: 'Calendly',
-      description: 'Allow customers to book appointments directly via WhatsApp.',
+      id: 'calcom',
+      name: 'Cal.com',
+      description: 'Let customers book appointments and share booking links over WhatsApp.',
       icon: Calendar,
       iconColor: 'text-blue-500',
-      status: 'Coming Soon',
+      status: calcomConnected ? 'Connected' : 'Available',
     },
     {
       id: 'shopify',

@@ -35,6 +35,7 @@ import {
   Phone,
   FolderTree,
   Route,
+  CalendarCheck,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -113,6 +114,14 @@ export default function LandingPage() {
     {
       q: "Do you offer setup or onboarding help?",
       a: "Yes. Our concierge onboarding team can configure your Meta / WhatsApp API credentials, set up automations, and train your AI assistant for you. It's a one-time fee based on company size, starting at 300,000 UGX. Request a free demo and we'll send you a tailored quote.",
+    },
+    {
+      q: "Can customers book appointments through WhatsApp?",
+      a: "Yes. Connect your Cal.com account once in Settings → Integrations, choose which event types are bookable, and copy a booking link to share with customers — paste it into the AI assistant prompt or a chat and the assistant sends it for you. Appointments appear on the Bookings page with the attendee, event, and time, and reschedules or cancellations sync automatically.",
+    },
+    {
+      q: "Can the AI book or send appointments for me?",
+      a: "Your AI assistant can send booking links from the Bookings page when a customer asks for an appointment, and conversations can hand off straight into an open booking link. Managing availability stays on the Cal.com side while HopeChat handles the chat-side sharing and tracking.",
     },
     {
       q: "Can HopeChat send SMS as well as WhatsApp messages?",
@@ -559,6 +568,40 @@ export default function LandingPage() {
                 ),
               },
               {
+                icon: CalendarCheck,
+                title: "Appointment Bookings",
+                desc: "Connect Cal.com and turn your availability into bookable links you can share over WhatsApp. Bookings, reschedules, and cancellations sync into your dashboard automatically.",
+                points: [
+                  "Toggle which event types are bookable at any time",
+                  "Copy-ready Cal.com booking links to paste into chats or the AI assistant prompt",
+                  "Appointments land on the Bookings page with attendee, event, and time",
+                  "Reschedules and cancellations update in place via webhook",
+                  "Paste a booking link into the AI prompt and the assistant sends it for you"
+                ],
+                reverse: true,
+                mock: (
+                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
+                    <div className="flex justify-between items-center border-b border-border pb-2">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5"><CalendarCheck className="h-4 w-4 text-primary" /> Upcoming bookings</span>
+                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">Live</span>
+                    </div>
+                    {[
+                      { name: "Amina Nakato", event: "Consultation — 30 min", time: "Today 3:00 PM" },
+                      { name: "Brian Okello", event: "Product Demo — 30 min", time: "Tomorrow 10:30 AM" },
+                      { name: "Cathy Achieng", event: "Strategy Call — 60 min", time: "Thu 2:00 PM" },
+                    ].map((b, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs">
+                        <div className="h-7 w-7 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">{b.name[0]}</div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-foreground truncate">{b.name} · {b.event}</div>
+                          <div className="text-muted-foreground">{b.time}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ),
+              },
+              {
                 icon: Timer,
                 title: "Automated Drip Sequences",
                 desc: "Multi-step follow-ups scheduled on Day 1, Day 3, Day 7 to revive cold leads and boost conversions.",
@@ -632,6 +675,7 @@ export default function LandingPage() {
                 ["HubSpot", Globe],
                 ["Zoho CRM", Database],
                 ["Google Sheets", Database],
+                ["Cal.com", CalendarCheck],
                 ["Zapier", Zap],
                 ["Make", Workflow],
                 ["n8n", Workflow],

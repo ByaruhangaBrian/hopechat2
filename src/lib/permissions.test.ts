@@ -14,6 +14,7 @@ describe("defaultPermissionsForRole", () => {
     const perms = defaultPermissionsForRole("agent");
     expect(perms.automations).toBe(false);
     expect(perms.ai).toBe(false);
+    expect(perms.bookings).toBe(false);
     expect(perms.settings).toBe(false);
     for (const key of ["dashboard", "inbox", "contacts", "pipelines", "broadcasts"]) {
       expect(perms[key as keyof typeof perms]).toBe(true);
@@ -84,14 +85,14 @@ describe("summarizePermissions", () => {
 
   it("lists disabled business configuration for restricted agents", () => {
     const summary = summarizePermissions(null, "agent");
-    expect(summary).toContain("no Automations, AI Hub, Settings");
+    expect(summary).toContain("no Automations, AI Hub, Appointment Bookings, Settings");
   });
 
 });
 
 describe("BUSINESS_CONFIG_PERMISSIONS", () => {
   it("covers the business configuration modules agents should not get by default", () => {
-    expect(BUSINESS_CONFIG_PERMISSIONS.sort()).toEqual(["ai", "automations", "settings"]);
+    expect(BUSINESS_CONFIG_PERMISSIONS.sort()).toEqual(["ai", "automations", "bookings", "settings"]);
     expect(isUnrestrictedRole("owner")).toBe(true);
     expect(isUnrestrictedRole("agent")).toBe(false);
   });
