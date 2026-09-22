@@ -1,10 +1,34 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { format, addDays } from "date-fns";
+import {
+  format,
+  addDays,
+  addMonths,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  isSameDay,
+  isSameMonth,
+  isToday,
+  startOfMonth,
+  startOfWeek,
+  subMonths,
+} from "date-fns";
 import { toast } from "sonner";
-import { CalendarCheck, CalendarPlus, Copy, Info, Loader2, RefreshCw, Settings2 } from "lucide-react";
+import {
+  CalendarCheck,
+  CalendarPlus,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  ExternalLink,
+  Info,
+  Loader2,
+  RefreshCw,
+  Settings2,
+} from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -234,6 +258,17 @@ export default function BookingsPage() {
                     variant="outline"
                     size="sm"
                     className="border-border"
+                    render={
+                      <a href={url} target="_blank" rel="noopener noreferrer" title="Open booking page in a new tab" />
+                    }
+                  >
+                    <ExternalLink className="size-3.5" />
+                    Open
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-border"
                     onClick={() => handleCopy(url)}
                   >
                     <Copy className="size-3.5" />
@@ -241,12 +276,8 @@ export default function BookingsPage() {
                   </Button>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Paste this link into your AI assistant prompt or a chat to share it.
-                  {externalHost ? (
-                    <>
-                      {" "}Share links open on {externalHost}.
-                    </>
-                  ) : null}
+                  Paste this link into your AI assistant prompt or a chat to share it. Share links open on{" "}
+                  <span className="font-mono text-xs">{externalHost || "cal.com"}</span> in a new tab.
                 </p>
               </CardContent>
             </Card>
@@ -262,37 +293,7 @@ export default function BookingsPage() {
         ) : null}
       </div>
 
-      <div className="space-y-3">
-        <div>
-          <h2 className="text-lg font-bold tracking-tight text-foreground">Recent bookings</h2>
-          <p className="text-sm text-muted-foreground">
-            Synced automatically from Cal.com. Reschedules and cancellations update in place.
-          </p>
-        </div>
-        {bookings.length === 0 ? (
-          <Card className="border-border bg-card">
-            <CardContent className="p-6 text-sm text-muted-foreground">
-              No bookings yet. Share one of your links or use New booking to schedule an appointment.
-            </CardContent>
-          </Card>
-        ) : (
-          bookings.map((b) => (
-            <Card key={b.id} className="border-border bg-card">
-              <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-foreground">{b.event_title || "Appointment"}</p>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
-                    {b.attendee_name ?? "Attendee"}
-                    {b.attendee_email ? ` · ${b.attendee_email}` : ""}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">{formatWhen(b.start_time)}</p>
-                </div>
-                <StatusPill status={b.status} />
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+      <CalendarSection bookings={bookings} />
 
       <NewBookingDialog
         open={dialogOpen}
@@ -301,6 +302,159 @@ export default function BookingsPage() {
         onCreated={() => loadBookings(false)}
       />
     </>,
+  );
+}
+
+function CalendarSection({ bookings }: { bookings: BookingRow[] }) {
+  const [viewDate, setViewDate] = useState(() => startOfMonth(new Date()));
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+
+  const bookingsByDay = useMemo(() => {
+    const map: Record<string, BookingRow[]> = {};
+    for (const b of bookings) {
+      if (!b.start_time) continue;
+      const key = format(new Date(b.start_time), "yyyy-MM-dd");
+      (map[key] ??= []).push(b);
+    }
+    return map;
+  }, [bookings]);
+
+  const gridDays = eachDayOfInterval({
+    start: startOfWeek(startOfMonth(viewDate)),
+    end: endOfWeek(endOfMonth(viewDate)),
+  });
+
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const selectedKey = format(selectedDate, "yyyy-MM-dd");
+  const selectedBookings = bookingsByDay[selectedKey] ?? [];
+  const counts = Object.values(bookingsByDay).reduce((n, list) => n + list.filter((b) => b.status !== "cancelled").length, 0);
+
+  const chip = (b: BookingRow) => (
+    <span
+      key={b.id}
+      className={cn(
+        "block truncate rounded px-1 text-[10px] leading-4 font-medium",
+        b.status === "cancelled"
+          ? "bg-muted text-muted-foreground line-through"
+          : b.status === "rescheduled"
+            ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+            : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+      )}
+    >
+      {b.event_title || "Appointment"}
+    </span>
+  );
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <h2 className="text-lg font-bold tracking-tight text-foreground">Calendar</h2>
+        <p className="text-sm text-muted-foreground">
+          {bookings.length === 0
+            ? "No bookings yet. Share one of your links or use New booking to schedule an appointment."
+            : `Synced automatically from Cal.com. Reschedules and cancellations update in place (${counts} upcoming).`}
+        </p>
+      </div>
+
+      {bookings.length === 0 ? (
+        <Card className="border-border bg-card">
+          <CardContent className="p-6 text-sm text-muted-foreground">
+            No bookings to show yet. Bookings appear here once arranged.
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-border bg-card">
+          <CardContent className="p-4 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon-sm" onClick={() => setViewDate((d) => subMonths(d, 1))} aria-label="Previous month">
+                  <ChevronLeft />
+                </Button>
+                <Button variant="ghost" size="icon-sm" onClick={() => setViewDate((d) => addMonths(d, 1))} aria-label="Next month">
+                  <ChevronRight />
+                </Button>
+              </div>
+              <p className="text-sm font-bold text-foreground">{format(viewDate, "MMMM yyyy")}</p>
+              <Button variant="outline" size="sm" onClick={() => { setViewDate(startOfMonth(new Date())); setSelectedDate(new Date()); }}>
+                Today
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1">
+              {weekdays.map((wd) => (
+                <p key={wd} className="text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {wd}
+                </p>
+              ))}
+              {gridDays.map((day) => {
+                const key = format(day, "yyyy-MM-dd");
+                const dayBookings = bookingsByDay[key] ?? [];
+                const inMonth = isSameMonth(day, viewDate);
+                const selected = isSameDay(day, selectedDate);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setSelectedDate(day)}
+                    className={cn(
+                      "flex min-h-16 flex-col items-stretch gap-1 rounded-lg border p-1 text-left transition-colors",
+                      selected
+                        ? "border-ring bg-accent ring-1 ring-ring"
+                        : "border-border hover:bg-accent/50",
+                      !inMonth && "opacity-40",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "h-5 w-5 rounded-full text-xs font-medium leading-5 text-center",
+                        isToday(day) && "bg-primary text-primary-foreground",
+                        !isToday(day) && "text-foreground",
+                      )}
+                    >
+                      {format(day, "d")}
+                    </span>
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      {dayBookings.slice(0, 2).map(chip)}
+                      {dayBookings.length > 2 ? (
+                        <span className="px-1 text-[10px] text-muted-foreground">+{dayBookings.length - 2} more</span>
+                      ) : null}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="border-border bg-card">
+        <CardContent className="p-4 space-y-3">
+          <p className="font-semibold text-foreground">
+            {format(selectedDate, "EEEE, MMMM d")}
+            {isToday(selectedDate) ? " · Today" : ""}
+          </p>
+          {selectedBookings.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No bookings on this day.</p>
+          ) : (
+            <div className="space-y-2">
+              {selectedBookings.map((b) => (
+                <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/50 p-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-foreground">{b.event_title || "Appointment"}</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
+                      {formatWhen(b.start_time)}
+                      {b.attendee_name ? ` · ${b.attendee_name}` : ""}
+                      {b.attendee_email ? ` (${b.attendee_email})` : ""}
+                    </p>
+                  </div>
+                  <StatusPill status={b.status} />
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
