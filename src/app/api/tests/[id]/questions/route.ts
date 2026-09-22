@@ -1,32 +1,7 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
-import { supabaseAdmin } from '@/lib/automations/admin-client'
+import { resolveBusinessId } from '@/lib/business-context'
 
 const NO_CACHE = { 'Cache-Control': 'no-store, no-cache, must-revalidate' }
-
-async function resolveBusinessId() {
-  const supabase = await createClient()
-  const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-
-  const admin = supabaseAdmin()
-  let { data: profile } = await supabase
-    .from('profiles').select('business_id').eq('user_id', user.id).maybeSingle()
-
-  if (!profile?.business_id) {
-    const { data: adminProfile } = await admin
-      .from('profiles').select('business_id').eq('user_id', user.id).maybeSingle()
-    profile = adminProfile
-  }
-
-  const cookieStore = await cookies()
-  const impersonatedId = cookieStore.get('impersonated_business_id')?.value
-  const effectiveBusinessId = impersonatedId || profile?.business_id
-  if (!effectiveBusinessId) return { error: NextResponse.json({ error: 'Business not found' }, { status: 400 }) }
-
-  return { admin, effectiveBusinessId }
-}
 
 export async function POST(
   request: Request,

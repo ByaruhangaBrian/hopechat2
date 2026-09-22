@@ -1,32 +1,7 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
-import { supabaseAdmin } from '@/lib/automations/admin-client'
+import { resolveBusinessId } from '@/lib/business-context'
 
 const NO_CACHE = { 'Cache-Control': 'no-store, no-cache, must-revalidate' }
-
-async function resolveBusinessId() {
-  const supabase = await createClient()
-  const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-
-  const admin = supabaseAdmin()
-  let { data: profile } = await supabase
-    .from('profiles').select('business_id').eq('user_id', user.id).maybeSingle()
-
-  if (!profile?.business_id) {
-    const { data: adminProfile } = await admin
-      .from('profiles').select('business_id').eq('user_id', user.id).maybeSingle()
-    profile = adminProfile
-  }
-
-  const cookieStore = await cookies()
-  const impersonatedId = cookieStore.get('impersonated_business_id')?.value
-  const effectiveBusinessId = impersonatedId || profile?.business_id
-  if (!effectiveBusinessId) return { error: NextResponse.json({ error: 'Business not found' }, { status: 400 }) }
-
-  return { admin, effectiveBusinessId }
-}
 
 export async function PATCH(
   request: Request,
@@ -36,6 +11,14 @@ export async function PATCH(
     const { id: testId, qid } = await params
     const { admin, effectiveBusinessId, error } = await resolveBusinessId()
     if (error) return error
+
+    const { data: test } = await admin
+      .from('tests')
+      .select('id')
+      .eq('id', testId)
+      .eq('business_id', effectiveBusinessId)
+      .maybeSingle()
+    if (!test) return NextResponse.json({ error: 'Test not found' }, { status: 404 })
 
     const { data: existing, error: findErr } = await admin
       .from('test_questions')
@@ -68,6 +51,7 @@ export async function PATCH(
       .from('test_questions')
       .update(updates)
       .eq('id', qid)
+      .eq('test_id', testId)
       .select()
       .single()
 
@@ -88,18 +72,31 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; qid: string }> }
 ) {
   try {
-    const { qid } = await params
+    const { id: testId, qid } = await params
     const { admin, effectiveBusinessId, error } = await resolveBusinessId()
     if (error) return error
+
+    const { data: test } = await admin
+      .from('tests')
+      .select('id')
+      .eq('id', testId)
+      .eq('business_id', effectiveBusinessId)
+      .maybeSingle()
+    if (!test) return NextResponse.json({ error: 'Test not found' }, { status: 404 })
 
     const { data: existing, error: findErr } = await admin
       .from('test_questions')
       .select('id')
       .eq('id', qid)
+      .eq('test_id', testId)
       .maybeSingle()
     if (findErr || !existing) return NextResponse.json({ error: 'Question not found' }, { status: 404 })
 
-    const { error: delErr } = await admin.from('test_questions').delete().eq('id', qid)
+    const { error: delErr } = await admin
+      .from('test_questions')
+      .delete()
+      .eq('id', qid)
+      .eq('test_id', testId)
     if (delErr) {
       console.error('[questions/[qid]] DELETE error:', delErr)
       return NextResponse.json({ error: delErr.message }, { status: 500 })
