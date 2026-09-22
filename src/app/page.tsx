@@ -121,7 +121,7 @@ export default function LandingPage() {
     },
     {
       q: "Can the AI book or send appointments for me?",
-      a: "Your AI assistant can send booking links from the Bookings page when a customer asks for an appointment, and conversations can hand off straight into an open booking link. Managing availability stays on the Cal.com side while HopeChat handles the chat-side sharing and tracking.",
+      a: "Your AI assistant can send booking links from the Bookings page when a customer asks for an appointment, and conversations can hand off straight into an open booking link. You can set your weekly availability and time zone right in the Bookings page — available slots drop automatically from your Cal.com calendar — while HopeChat handles the chat-side sharing and tracking.",
     },
     {
       q: "Can HopeChat send SMS as well as WhatsApp messages?",
@@ -570,10 +570,11 @@ export default function LandingPage() {
               {
                 icon: CalendarCheck,
                 title: "Appointment Bookings",
-                desc: "Connect Cal.com and turn your availability into bookable links you can share over WhatsApp. Book, sync, and track every appointment right from your dashboard.",
+                desc: "Connect Cal.com and turn your availability into bookable links you can share over WhatsApp. Book, sync, set your weekly hours, and track every appointment right from your dashboard.",
                 points: [
                   "Toggle which event types are bookable at any time",
                   "Book an appointment on a customer's behalf with a picker of live slots",
+                  "Set weekly availability and time zone — slots update on your booking links instantly",
                   "Sync pulls your bookings from Cal.com so nothing is ever missed",
                   "Appointments land on the Bookings page with attendee, event, and time",
                   "Reschedules and cancellations update in place via webhook"

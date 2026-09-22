@@ -19,12 +19,15 @@ import {
 import { toast } from "sonner";
 import {
   CalendarCheck,
+  CalendarDays,
   CalendarPlus,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Copy,
   ExternalLink,
   Info,
+  Link2,
   Loader2,
   RefreshCw,
   Settings2,
@@ -84,6 +87,7 @@ export default function BookingsPage() {
   const [eventTypes, setEventTypes] = useState<CalEventType[]>([]);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [tab, setTab] = useState<"links" | "calendar" | "availability">("links");
 
   const loadBookings = useCallback(async (withSync: boolean) => {
     setSyncing(withSync);
@@ -212,88 +216,118 @@ export default function BookingsPage() {
 
   return panel(
     <>
-      <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-4 flex gap-3">
-        <Info className="size-5 text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-sm text-blue-600 dark:text-blue-100 leading-relaxed">
-          Toggle an event type to make it bookable (or hide it), then copy its link and paste it into the{" "}
-          <span className="font-medium">AI assistant prompt</span> or a chat message to share it with customers. Use{" "}
-          <span className="font-medium">New booking</span> to book an appointment on a customer&apos;s behalf — it syncs back automatically.
-        </p>
+      <div className="flex flex-wrap gap-1 rounded-xl border border-border bg-muted/50 p-1">
+        {(
+          [
+            { value: "links", label: "Event Types & Links", icon: Link2 },
+            { value: "calendar", label: "Calendar", icon: CalendarDays },
+            { value: "availability", label: "Availability", icon: Clock },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.value}
+            type="button"
+            onClick={() => setTab(t.value)}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-all",
+              tab === t.value
+                ? "bg-card text-primary shadow-sm shadow-primary/10"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <t.icon className="h-4 w-4" />
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      <div className="space-y-3">
-        {eventTypes.map((et) => {
-          const url = bookingLink(et, status.username);
-          return (
-            <Card key={et.id} className="border-border bg-card">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-foreground">{et.title}</p>
-                    {et.description ? (
-                      <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">{et.description}</p>
-                    ) : null}
-                    <p className="mt-1 text-xs text-muted-foreground">{et.lengthInMinutes} min</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={cn(
-                        "text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5",
-                        et.hidden
-                          ? "bg-muted text-muted-foreground"
-                          : "bg-emerald-500/10 text-emerald-500",
-                      )}
-                    >
-                      {et.hidden ? "Disabled" : "Live"}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">Bookable</span>
-                      <Switch checked={!et.hidden} onCheckedChange={() => handleToggle(et)} />
+      {tab === "links" ? (
+        <>
+          <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-4 flex gap-3">
+            <Info className="size-5 text-blue-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-blue-600 dark:text-blue-100 leading-relaxed">
+              Toggle an event type to make it bookable (or hide it), then copy its link and paste it into the{" "}
+              <span className="font-medium">AI assistant prompt</span> or a chat message to share it with customers. Use{" "}
+              <span className="font-medium">New booking</span> to book an appointment on a customer&apos;s behalf — it syncs back automatically.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {eventTypes.map((et) => {
+              const url = bookingLink(et, status.username);
+              return (
+                <Card key={et.id} className="border-border bg-card">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-foreground">{et.title}</p>
+                        {et.description ? (
+                          <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">{et.description}</p>
+                        ) : null}
+                        <p className="mt-1 text-xs text-muted-foreground">{et.lengthInMinutes} min</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={cn(
+                            "text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5",
+                            et.hidden
+                              ? "bg-muted text-muted-foreground"
+                              : "bg-emerald-500/10 text-emerald-500",
+                          )}
+                        >
+                          {et.hidden ? "Disabled" : "Live"}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">Bookable</span>
+                          <Switch checked={!et.hidden} onCheckedChange={() => handleToggle(et)} />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/50 p-2">
-                  <code className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">{url}</code>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-border"
-                    render={
-                      <a href={url} target="_blank" rel="noopener noreferrer" title="Open booking page in a new tab" />
-                    }
-                  >
-                    <ExternalLink className="size-3.5" />
-                    Open
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-border"
-                    onClick={() => handleCopy(url)}
-                  >
-                    <Copy className="size-3.5" />
-                    Copy
-                  </Button>
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Paste this link into your AI assistant prompt or a chat to share it. Share links open on{" "}
-                  <span className="font-mono text-xs">{externalHost || "cal.com"}</span> in a new tab.
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-        {eventTypes.length === 0 ? (
-          <Card className="border-border bg-card">
-            <CardContent className="p-6 text-sm text-muted-foreground">
-              No event types were returned by your Cal.com account. Create one at{" "}
-              <span className="font-mono text-xs">cal.com</span> and refresh.
-            </CardContent>
-          </Card>
-        ) : null}
-      </div>
+                    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/50 p-2">
+                      <code className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">{url}</code>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-border"
+                        render={
+                          <a href={url} target="_blank" rel="noopener noreferrer" title="Open booking page in a new tab" />
+                        }
+                      >
+                        <ExternalLink className="size-3.5" />
+                        Open
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-border"
+                        onClick={() => handleCopy(url)}
+                      >
+                        <Copy className="size-3.5" />
+                        Copy
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Paste this link into your AI assistant prompt or a chat to share it. Share links open on{" "}
+                      <span className="font-mono text-xs">{externalHost || "cal.com"}</span> in a new tab.
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {eventTypes.length === 0 ? (
+              <Card className="border-border bg-card">
+                <CardContent className="p-6 text-sm text-muted-foreground">
+                  No event types were returned by your Cal.com account. Create one at{" "}
+                  <span className="font-mono text-xs">cal.com</span> and refresh.
+                </CardContent>
+              </Card>
+            ) : null}
+          </div>
+        </>
+      ) : null}
 
-      <CalendarSection bookings={bookings} />
+      {tab === "calendar" ? <CalendarSection bookings={bookings} /> : null}
+      {tab === "availability" ? <AvailabilitySection /> : null}
 
       <NewBookingDialog
         open={dialogOpen}
@@ -302,6 +336,227 @@ export default function BookingsPage() {
         onCreated={() => loadBookings(false)}
       />
     </>,
+  );
+}
+
+const WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+
+interface CalScheduleWindow {
+  days: string[];
+  startTime: string;
+  endTime: string;
+}
+
+interface CalSchedule {
+  id: number;
+  name: string;
+  timeZone: string;
+  isDefault: boolean;
+  availability: CalScheduleWindow[];
+}
+
+interface DayAvailability {
+  enabled: boolean;
+  start: string;
+  end: string;
+}
+
+function AvailabilitySection() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [schedule, setSchedule] = useState<CalSchedule | null>(null);
+  const [timeZone, setTimeZone] = useState("");
+  const [days, setDays] = useState<DayAvailability[]>(
+    WEEKDAY_NAMES.map(() => ({ enabled: false, start: "09:00", end: "17:00" })),
+  );
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/calcom/schedules", { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not load your availability");
+      const remote = (data.schedule as CalSchedule | null) ?? null;
+      setSchedule(remote);
+      if (remote && remote.id) {
+        const byDay = new Map<string, { start: string; end: string }>();
+        for (const w of remote.availability) {
+          for (const d of w.days) {
+            if (!byDay.has(d)) byDay.set(d, { start: w.startTime, end: w.endTime });
+          }
+        }
+        setDays(
+          WEEKDAY_NAMES.map((d) => {
+            const slot = byDay.get(d);
+            return slot
+              ? { enabled: true, start: slot.start, end: slot.end }
+              : { enabled: false, start: "09:00", end: "17:00" };
+          }),
+        );
+        setTimeZone(remote.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+      }
+    } catch (err: any) {
+      console.error("[bookings] availability load failed:", err);
+      toast.error(err.message || "Could not load your availability");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const updateDay = (index: number, patch: Partial<DayAvailability>) => {
+    setDays((prev) => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)));
+  };
+
+  const handleSave = async () => {
+    if (!schedule?.id || saving) return;
+    const dense = days.some((d) => d.enabled);
+    if (!dense) {
+      toast.error("Enable at least one day or leave everyone free.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/calcom/schedules", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          days: WEEKDAY_NAMES.map((day, i) => ({
+            day,
+            enabled: days[i].enabled,
+            start: days[i].start,
+            end: days[i].end,
+          })),
+          timeZone,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not save your availability");
+      setSchedule(data.schedule ?? schedule);
+      toast.success("Availability saved. It is now live on your booking links.");
+    } catch (err: any) {
+      console.error("[bookings] availability save failed:", err);
+      toast.error(err.message || "Could not save your availability");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center rounded-lg border border-border bg-card py-16">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!schedule || !schedule.id) {
+    return (
+      <Card className="border-border bg-card">
+        <CardContent className="p-6 text-sm text-muted-foreground">
+          No Cal.com schedule found. Create one on{" "}
+          <span className="font-mono text-xs">cal.com</span> first, then come back to set your
+          weekly hours here.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const activeCount = days.filter((d) => d.enabled).length;
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-4 flex gap-3">
+        <Info className="size-5 text-blue-400 shrink-0 mt-0.5" />
+        <p className="text-sm text-blue-600 dark:text-blue-100 leading-relaxed">
+          Choose the hours customers can book. Turn a day on and pick a start and end time — slots
+          are created automatically on your Cal.com booking links. Changes apply immediately.
+        </p>
+      </div>
+
+      <Card className="border-border bg-card">
+        <CardContent className="p-4 space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="font-semibold text-foreground">{schedule.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {activeCount} day{activeCount === 1 ? "" : "s"} available · {schedule.timeZone}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="availability-tz">Schedule time zone</Label>
+              <Input
+                id="availability-tz"
+                value={timeZone}
+                onChange={(e) => setTimeZone(e.target.value)}
+                placeholder="e.g. Africa/Kampala"
+                className="w-56"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {WEEKDAY_NAMES.map((day, i) => (
+              <div
+                key={day}
+                className={cn(
+                  "flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 transition-colors",
+                  days[i].enabled ? "border-border bg-muted/40" : "border-border bg-muted/20 opacity-70",
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={days[i].enabled}
+                    onCheckedChange={(v) => updateDay(i, { enabled: v })}
+                    aria-label={`${day} available`}
+                  />
+                  <span className="w-20 text-sm font-medium text-foreground">{day}</span>
+                </div>
+                {days[i].enabled ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="time"
+                      value={days[i].start}
+                      onChange={(e) => updateDay(i, { start: e.target.value })}
+                      className="w-32"
+                      aria-label={`${day} start time`}
+                    />
+                    <span className="text-sm text-muted-foreground">to</span>
+                    <Input
+                      type="time"
+                      value={days[i].end}
+                      onChange={(e) => updateDay(i, { end: e.target.value })}
+                      className="w-32"
+                      aria-label={`${day} end time`}
+                    />
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Unavailable</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex items-center gap-3">
+        <Button
+          className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
+          onClick={handleSave}
+          disabled={saving}
+        >
+          {saving ? <Loader2 className="size-4 animate-spin" /> : <Clock className="size-4" />}
+          Save availability
+        </Button>
+        <Button variant="outline" onClick={load} disabled={saving}>
+          <RefreshCw className="size-4" />
+          Reload from Cal.com
+        </Button>
+      </div>
+    </div>
   );
 }
 

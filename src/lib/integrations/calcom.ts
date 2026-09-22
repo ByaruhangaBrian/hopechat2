@@ -46,6 +46,7 @@ export const CALCOM_API_VERSION = '2026-06-12'
 const CAL_VERSION_SLOTS = '2024-09-04'
 const CAL_VERSION_BOOKINGS_LIST = '2026-05-01'
 const CAL_VERSION_BOOKINGS_CREATE = '2026-02-25'
+const CAL_VERSION_SCHEDULES = '2024-06-11'
 
 const TAG = '[calcom]'
 
@@ -298,6 +299,167 @@ export async function updateEventType(businessId: string, eventTypeId: number, b
     businessId,
   )
   return parseEventType(response?.data)
+}
+
+/** One availability window in a Cal.com schedule. Day names are full names ('Monday' … 'Sunday'). */
+export interface CalAvailabilityWindow {
+  days: string[]
+  startTime: string
+  endTime: string
+}
+
+export interface CalSchedule {
+  id: number
+  name: string
+  timeZone: string
+  isDefault: boolean
+  availability: CalAvailabilityWindow[]
+}
+
+const WEEKDAY_NAMES = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+] as const
+
+export type CalWeekday = (typeof WEEKDAY_NAMES)[number]
+
+const isWeekdayName = (value: unknown): value is CalWeekday =>
+  typeof value === 'string' && (WEEKDAY_NAMES as readonly string[]).includes(value)
+
+/** Parse a v2 ScheduleOutput into a normalized schedule. */
+export function parseSchedule(raw: unknown): CalSchedule {
+  const d = (raw || {}) as Record<string, any>
+  if (typeof d.id !== 'number') {
+    throw new Error('Unexpected Cal.com schedule response')
+  }
+  const availability: CalAvailabilityWindow[] = Array.isArray(d.availability)
+    ? d.availability
+        .map((a: any) => ({
+          days: Array.isArray(a?.days) ? a.days.filter((day: unknown) => isWeekdayName(day)) : [],
+          startTime: typeof a?.startTime === 'string' ? a.startTime : '09:00',
+          endTime: typeof a?.endTime === 'string' ? a.endTime : '17:00',
+        }))
+        .filter((a: CalAvailabilityWindow) => a.days.length > 0)
+    : []
+  return {
+    id: d.id,
+    name: typeof d.name === 'string' ? d.name : 'Default',
+    timeZone: typeof d.timeZone === 'string' ? d.timeZone : 'UTC',
+    isDefault: d.isDefault === true,
+    availability,
+  }
+}
+
+/**
+ * Load the account's default schedule (falls back to the first schedule).
+ * If the link is disconnected we still return an object with empty slots so
+ * the UI can show the account has no usable schedule.
+ */
+export async function getDefaultSchedule(
+  businessId: string,
+  opts: { fallbackEmpty?: boolean } = {},
+): Promise<CalSchedule | null> {
+  let config: CalComConfig
+  try {
+    config = await getCalComConfig(businessId)
+  } catch (err) {
+    if (opts.fallbackEmpty && err instanceof CalComNotConfiguredError) {
+      return {
+        id: 0,
+        name: 'Default',
+        timeZone: '',
+        isDefault: true,
+        availability: [],
+      }
+    }
+    throw err
+  }
+
+  const body = await calFetch('/v2/schedules', config, {}, businessId, CAL_VERSION_SCHEDULES)
+  const list = Array.isArray(body?.data) ? body.data : []
+  const defaultOrFirst = list.find((s: any) => s?.isDefault === true) || list[0] || null
+  if (!defaultOrFirst) {
+    if (opts.fallbackEmpty) {
+      return {
+        id: 0,
+        name: 'Default',
+        timeZone: '',
+        isDefault: true,
+        availability: [],
+      }
+    }
+    throw new CalComApiError('Cal.com returned no schedules. Create one on cal.com and retry.', 404)
+  }
+  return parseSchedule(defaultOrFirst)
+}
+
+/**
+ * Update a schedule's availability windows. Sends the whole slot set —
+ * Cal.com replaces the schedule's availability with the payload sent.
+ */
+export async function updateSchedule(
+  businessId: string,
+  scheduleId: number,
+  input: { name?: string; timeZone?: string; availability: CalAvailabilityWindow[] },
+): Promise<CalSchedule> {
+  const config = await getCalComConfig(businessId)
+  const body = await calFetch(
+    `/v2/schedules/${scheduleId}`,
+    config,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    },
+    businessId,
+    CAL_VERSION_SCHEDULES,
+  )
+  return parseSchedule(body?.data)
+}
+
+/**
+ * Convenience: replace the default schedule's weekly availability. Merges
+ * windows sharing the same times across days.
+ */
+export async function setDefaultWeekAvailability(
+  businessId: string,
+  windows: Array<{ day: CalWeekday; startTime: string; endTime: string } | null>,
+  timeZone?: string,
+): Promise<CalSchedule> {
+  const schedule = await getDefaultSchedule(businessId)
+  if (!schedule || !schedule.id) {
+    throw new CalComApiError(
+      'No Cal.com schedule to update. Create one on cal.com first.',
+      404,
+    )
+  }
+
+  const byTimes = new Map<string, { startTime: string; endTime: string; days: CalWeekday[] }>()
+  for (const entry of windows) {
+    if (!entry) continue
+    const key = `${entry.startTime}-${entry.endTime}`
+    const existing = byTimes.get(key)
+    if (existing) {
+      existing.days.push(entry.day)
+    } else {
+      byTimes.set(key, { startTime: entry.startTime, endTime: entry.endTime, days: [entry.day] })
+    }
+  }
+
+  const availability: CalAvailabilityWindow[] = [...byTimes.values()].map((w) => ({
+    days: w.days,
+    startTime: w.startTime,
+    endTime: w.endTime,
+  }))
+
+  return updateSchedule(businessId, schedule.id, {
+    timeZone: timeZone || schedule.timeZone || undefined,
+    availability,
+  })
 }
 
 export interface CalAttendee {
