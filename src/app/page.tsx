@@ -117,7 +117,7 @@ export default function LandingPage() {
     },
     {
       q: "Can customers book appointments through WhatsApp?",
-      a: "Yes. Connect your Cal.com account once in Settings → Integrations, choose which event types are bookable, and copy a booking link to share with customers — paste it into the AI assistant prompt or a chat and the assistant sends it for you. Appointments appear on the Bookings page with the attendee, event, and time, and reschedules or cancellations sync automatically.",
+      a: "Yes. Connect your Cal.com account once in Settings → Integrations, choose which event types are bookable, and copy a booking link to share with customers — paste it into the AI assistant prompt or a chat and the assistant sends it for you. You can also book an appointment on a customer's behalf with the in-app picker, or hit Sync to pull your bookings from Cal.com at any time. Everything lands on the Bookings page with the attendee, event, and time, and reschedules or cancellations sync automatically.",
     },
     {
       q: "Can the AI book or send appointments for me?",
@@ -570,13 +570,13 @@ export default function LandingPage() {
               {
                 icon: CalendarCheck,
                 title: "Appointment Bookings",
-                desc: "Connect Cal.com and turn your availability into bookable links you can share over WhatsApp. Bookings, reschedules, and cancellations sync into your dashboard automatically.",
+                desc: "Connect Cal.com and turn your availability into bookable links you can share over WhatsApp. Book, sync, and track every appointment right from your dashboard.",
                 points: [
                   "Toggle which event types are bookable at any time",
-                  "Copy-ready Cal.com booking links to paste into chats or the AI assistant prompt",
+                  "Book an appointment on a customer's behalf with a picker of live slots",
+                  "Sync pulls your bookings from Cal.com so nothing is ever missed",
                   "Appointments land on the Bookings page with attendee, event, and time",
-                  "Reschedules and cancellations update in place via webhook",
-                  "Paste a booking link into the AI prompt and the assistant sends it for you"
+                  "Reschedules and cancellations update in place via webhook"
                 ],
                 reverse: true,
                 mock: (

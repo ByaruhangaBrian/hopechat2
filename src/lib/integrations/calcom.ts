@@ -41,6 +41,11 @@ export interface CalEventType {
 
 export const CALCOM_BASE_URL = 'https://api.cal.com/v2'
 export const CALCOM_API_VERSION = '2026-06-12'
+// Cal.com pins each endpoint's behavior to a specific `cal-api-version`
+// release; using the documented value per endpoint avoids drift.
+const CAL_VERSION_SLOTS = '2024-09-04'
+const CAL_VERSION_BOOKINGS_LIST = '2026-05-01'
+const CAL_VERSION_BOOKINGS_CREATE = '2026-02-25'
 
 const TAG = '[calcom]'
 
@@ -189,6 +194,7 @@ async function calFetch(
   config: CalComConfig,
   init: RequestInit = {},
   businessId: string,
+  calVersion: string = CALCOM_API_VERSION,
 ): Promise<any> {
   const base = (config.api_base_url?.trim() || CALCOM_BASE_URL).replace(/\/+$/, '')
   let p = path.trim()
@@ -197,7 +203,7 @@ async function calFetch(
 
   const headers = new Headers(init.headers)
   headers.set('Authorization', `Bearer ${config.api_key}`)
-  headers.set('cal-api-version', CALCOM_API_VERSION)
+  headers.set('cal-api-version', calVersion)
   if (init.body) headers.set('Content-Type', 'application/json')
 
   let res: Response
@@ -292,4 +298,186 @@ export async function updateEventType(businessId: string, eventTypeId: number, b
     businessId,
   )
   return parseEventType(response?.data)
+}
+
+export interface CalAttendee {
+  name: string
+  email: string
+  timeZone: string
+  language?: string
+}
+
+export interface CalBooking {
+  id: number
+  uid: string
+  title: string
+  status: 'booked' | 'rescheduled' | 'cancelled'
+  start: string | null
+  end: string | null
+  eventTypeId: number | null
+  eventTypeSlug: string | null
+  attendeeName: string | null
+  attendeeEmail: string | null
+  raw: unknown
+}
+
+/** Map a v2 BookingOutput (+ webhook-shaped) payload to a normalized booking. */
+export function parseBooking(raw: unknown): CalBooking {
+  const d = (raw || {}) as Record<string, any>
+  if (typeof d.uid !== 'string' || !d.uid) {
+    throw new Error('Unexpected Cal.com booking response (missing uid)')
+  }
+
+  const calStatus = typeof d.status === 'string' ? d.status.toLowerCase() : ''
+  let status: CalBooking['status'] = 'booked'
+  if (calStatus === 'cancelled' || calStatus === 'rejected') status = 'cancelled'
+  else if (typeof d.rescheduledFromUid === 'string') status = 'rescheduled'
+
+  const eventType = (d.eventType || {}) as Record<string, unknown>
+  const attendees = Array.isArray(d.attendees) ? (d.attendees as Array<Record<string, unknown>>) : []
+  const attendee = attendees[0] || {}
+
+  return {
+    id: typeof d.id === 'number' ? d.id : 0,
+    uid: d.uid,
+    title: typeof d.title === 'string' ? d.title : 'Appointment',
+    status,
+    start: asIsoStr(d.start),
+    end: asIsoStr(d.end),
+    eventTypeId: typeof eventType.id === 'number' ? eventType.id : typeof d.eventTypeId === 'number' ? d.eventTypeId : null,
+    eventTypeSlug: typeof eventType.slug === 'string' ? eventType.slug : null,
+    attendeeName: typeof attendee.name === 'string' ? attendee.name : null,
+    attendeeEmail: typeof attendee.email === 'string' ? attendee.email : null,
+    raw,
+  }
+}
+
+function asIsoStr(value: unknown): string | null {
+  return typeof value === 'string' && !Number.isNaN(Date.parse(value)) ? value : null
+}
+
+/**
+ * List bookings for the authenticated Cal.com account. Omitting `status`
+ * walks all statuses from most recent backwards (cursor paginated).
+ */
+export async function listBookings(
+  businessId: string,
+  opts: {
+    status?: 'upcoming' | 'recurring' | 'past' | 'cancelled' | 'unconfirmed'
+    afterStart?: string
+    beforeEnd?: string
+    limit?: number
+  } = {},
+): Promise<CalBooking[]> {
+  const config = await getCalComConfig(businessId)
+
+  const params = new URLSearchParams()
+  if (opts.status) params.set('status', opts.status)
+  if (opts.afterStart) params.set('afterStart', opts.afterStart)
+  if (opts.beforeEnd) params.set('beforeEnd', opts.beforeEnd)
+  params.set('limit', String(Math.min(Math.max(opts.limit ?? 100, 1), 100)))
+
+  const qs = params.toString()
+  const body = await calFetch(
+    `/v2/bookings${qs ? `?${qs}` : ''}`,
+    config,
+    {},
+    businessId,
+    CAL_VERSION_BOOKINGS_LIST,
+  )
+  const list = Array.isArray(body?.data) ? body.data : []
+  return list.map((item: unknown) => parseBooking(item))
+}
+
+/** Available start times (UTC ISO strings) for an event type in a range. */
+export async function getSlots(
+  businessId: string,
+  input: { eventTypeId: number; start: string; end: string; timeZone?: string },
+): Promise<string[]> {
+  const config = await getCalComConfig(businessId)
+
+  const params = new URLSearchParams()
+  params.set('eventTypeId', String(input.eventTypeId))
+  params.set('start', input.start)
+  params.set('end', input.end)
+  if (input.timeZone) params.set('timeZone', input.timeZone)
+
+  const body = await calFetch(`/v2/slots?${params.toString()}`, config, {}, businessId, CAL_VERSION_SLOTS)
+  const slotsByDay = (body?.data?.slots || {}) as Record<string, Array<Record<string, unknown>>>
+
+  const starts = new Set<string>()
+  for (const day of Object.values(slotsByDay)) {
+    if (!Array.isArray(day)) continue
+    for (const slot of day) {
+      if (typeof slot?.start === 'string') starts.add(slot.start)
+    }
+  }
+  return [...starts].sort()
+}
+
+/** Create a booking on the customer's behalf (Cal.com API v2). */
+export async function createBooking(
+  businessId: string,
+  input: { eventTypeId: number; start: string; attendee: CalAttendee },
+): Promise<CalBooking> {
+  const config = await getCalComConfig(businessId)
+
+  const body = await calFetch(
+    '/v2/bookings',
+    config,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        eventTypeId: input.eventTypeId,
+        start: input.start,
+        attendee: {
+          name: input.attendee.name,
+          email: input.attendee.email,
+          timeZone: input.attendee.timeZone,
+          ...(input.attendee.language ? { language: input.attendee.language } : {}),
+        },
+      }),
+    },
+    businessId,
+    CAL_VERSION_BOOKINGS_CREATE,
+  )
+  return parseBooking(body?.data)
+}
+
+/** Upsert normalized bookings into `cal_bookings` (same shape the webhook writes). */
+export async function upsertCalBookings(businessId: string, bookings: CalBooking[]): Promise<number> {
+  if (bookings.length === 0) return 0
+  const db = supabaseAdmin()
+
+  const { count, error } = await db
+    .from('cal_bookings')
+    .upsert(
+      bookings.map((b) => ({
+        business_id: businessId,
+        cal_uid: b.uid,
+        cal_booking_id: b.id || null,
+        cal_event_type_id: b.eventTypeId,
+        event_title: b.title,
+        start_time: b.start,
+        end_time: b.end,
+        attendee_name: b.attendeeName,
+        attendee_email: b.attendeeEmail,
+        status: b.status,
+        raw: b.raw,
+        updated_at: new Date().toISOString(),
+      })),
+      { onConflict: 'business_id, cal_uid' },
+    )
+
+  if (error) {
+    throw new Error(`Failed to write Cal.com bookings: ${error.message}`)
+  }
+  return count ?? bookings.length
+}
+
+/** Pull recent bookings from Cal.com and mirror them into `cal_bookings`. */
+export async function syncCalBookings(businessId: string): Promise<{ synced: number }> {
+  const bookings = await listBookings(businessId)
+  const synced = await upsertCalBookings(businessId, bookings)
+  return { synced }
 }
