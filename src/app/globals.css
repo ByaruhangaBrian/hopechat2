@@ -1,6 +1,6 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -70,7 +70,7 @@
   --input: oklch(0.9 0.02 170);
   --ring: oklch(0.5 0.15 170);
   --radius: 1rem;
-  
+
   --sidebar: oklch(0.96 0.01 170);
   --sidebar-foreground: oklch(0.2 0.04 170);
   --sidebar-primary: oklch(0.5 0.15 170);
@@ -124,9 +124,17 @@
   }
   body {
     @apply bg-background text-foreground selection:bg-primary/20;
-    background-image: 
-      radial-gradient(at 0% 0%, color-mix(in oklch, var(--primary), transparent 95%) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, color-mix(in oklch, var(--primary), transparent 97%) 0px, transparent 50%);
+    background-image:
+      radial-gradient(
+        at 0% 0%,
+        color-mix(in oklch, var(--primary), transparent 95%) 0px,
+        transparent 50%
+      ),
+      radial-gradient(
+        at 100% 0%,
+        color-mix(in oklch, var(--primary), transparent 97%) 0px,
+        transparent 50%
+      );
   }
   html {
     @apply font-sans;
@@ -135,54 +143,106 @@
 
 /* Floating animation for hero particles */
 @keyframes float {
-  0%, 100% { transform: translateY(0px) translateX(0px); }
-  25% { transform: translateY(-20px) translateX(10px); }
-  50% { transform: translateY(-10px) translateX(-5px); }
-  75% { transform: translateY(-25px) translateX(5px); }
+  0%,
+  100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-20px) translateX(10px);
+  }
+  50% {
+    transform: translateY(-10px) translateX(-5px);
+  }
+  75% {
+    transform: translateY(-25px) translateX(5px);
+  }
 }
 
 @keyframes float-delayed {
-  0%, 100% { transform: translateY(0px) translateX(0px); }
-  25% { transform: translateY(15px) translateX(-10px); }
-  50% { transform: translateY(5px) translateX(15px); }
-  75% { transform: translateY(20px) translateX(-5px); }
+  0%,
+  100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(15px) translateX(-10px);
+  }
+  50% {
+    transform: translateY(5px) translateX(15px);
+  }
+  75% {
+    transform: translateY(20px) translateX(-5px);
+  }
 }
 
 @keyframes pulse-glow {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.05); }
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slide-down {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes fade-in-scale {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 @layer utilities {
   .glass {
-    @apply bg-background/60 backdrop-blur-md border-border/50;
+    @apply bg-background/60 border-border/50 backdrop-blur-md;
   }
-  
+
   .squircle {
     border-radius: var(--radius);
   }
@@ -190,12 +250,16 @@
   .mesh-glow {
     position: relative;
   }
-  
+
   .mesh-glow::before {
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at center, color-mix(in oklch, var(--primary), transparent 85%), transparent 70%);
+    background: radial-gradient(
+      circle at center,
+      color-mix(in oklch, var(--primary), transparent 85%),
+      transparent 70%
+    );
     z-index: -1;
     @apply pointer-events-none;
   }
@@ -242,13 +306,31 @@
     @apply -translate-y-1 shadow-lg;
   }
 
+  /* Dashboard panel gradient top hairline — micro-border detail that
+     reads as a soft highlight in both light and dark modes. */
+  .hairline-top::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      color-mix(in oklch, var(--primary), transparent 55%),
+      transparent
+    );
+    pointer-events: none;
+  }
+
   /* FAQ accordion animation */
   .faq-content {
     display: grid;
     grid-template-rows: 0fr;
     transition: grid-template-rows 0.3s ease-out;
   }
-  .faq-content[data-open="true"] {
+  .faq-content[data-open='true'] {
     grid-template-rows: 1fr;
   }
   .faq-content > div {

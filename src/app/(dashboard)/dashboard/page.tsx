@@ -1,8 +1,9 @@
-"use client"
+'use client';
 
-import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { MotionConfig, motion, type Variants } from 'framer-motion';
+import { createClient } from '@/lib/supabase/client';
 import {
   MessageSquare,
   UserPlus,
@@ -12,9 +13,9 @@ import {
   Clock,
   AlertTriangle,
   XCircle,
-} from 'lucide-react'
-import { useAuth } from '@/hooks/use-auth'
-import { WelcomeGuide } from '@/components/dashboard/welcome-guide'
+} from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { WelcomeGuide } from '@/components/dashboard/welcome-guide';
 
 import {
   loadActivity,
@@ -22,53 +23,67 @@ import {
   loadMetrics,
   loadPipelineDonut,
   loadResponseTime,
-} from '@/lib/dashboard/queries'
+} from '@/lib/dashboard/queries';
 import type {
   ActivityItem,
   ConversationsSeriesPoint,
   MetricsBundle,
   PipelineDonutData,
   ResponseTimeSummary,
-} from '@/lib/dashboard/types'
+} from '@/lib/dashboard/types';
 
-import { MetricCard } from '@/components/dashboard/metric-card'
-import { SkeletonCard } from '@/components/dashboard/skeleton'
-import { QuickActions } from '@/components/dashboard/quick-actions'
-import { ConversationsChart } from '@/components/dashboard/conversations-chart'
-import { PipelineDonut } from '@/components/dashboard/pipeline-donut'
-import { ResponseTimeChart } from '@/components/dashboard/response-time-chart'
-import { ActivityFeed } from '@/components/dashboard/activity-feed'
+import { MetricCard } from '@/components/dashboard/metric-card';
+import { SkeletonCard } from '@/components/dashboard/skeleton';
+import { QuickActions } from '@/components/dashboard/quick-actions';
+import { ConversationsChart } from '@/components/dashboard/conversations-chart';
+import { PipelineDonut } from '@/components/dashboard/pipeline-donut';
+import { ResponseTimeChart } from '@/components/dashboard/response-time-chart';
+import { ActivityFeed } from '@/components/dashboard/activity-feed';
 
-type RangeDays = 7 | 30 | 90
+type RangeDays = 7 | 30 | 90;
+
+const pageContainer: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.04 } },
+};
+
+const sectionItem: Variants = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+};
 
 export default function DashboardPage() {
-  const { profile, refreshProfile } = useAuth()
-  const router = useRouter()
-  const [metrics, setMetrics] = useState<MetricsBundle | null>(null)
-  const [metricsLoading, setMetricsLoading] = useState(true)
+  const { profile, refreshProfile } = useAuth();
+  const router = useRouter();
+  const [metrics, setMetrics] = useState<MetricsBundle | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(true);
 
-  const [range, setRange] = useState<RangeDays>(30)
+  const [range, setRange] = useState<RangeDays>(30);
   // Keep a cache per range so switching tabs doesn't re-fetch what we
   // already have. Ranges the user hasn't opened yet stay null and
   // trigger a fetch on first view.
-  const [series, setSeries] = useState<Record<RangeDays, ConversationsSeriesPoint[] | null>>({
+  const [series, setSeries] = useState<
+    Record<RangeDays, ConversationsSeriesPoint[] | null>
+  >({
     7: null,
     30: null,
     90: null,
-  })
-  const [seriesLoading, setSeriesLoading] = useState(true)
+  });
+  const [seriesLoading, setSeriesLoading] = useState(true);
 
-  const [pipeline, setPipeline] = useState<PipelineDonutData | null>(null)
-  const [pipelineLoading, setPipelineLoading] = useState(true)
+  const [pipeline, setPipeline] = useState<PipelineDonutData | null>(null);
+  const [pipelineLoading, setPipelineLoading] = useState(true);
 
-  const [responseTime, setResponseTime] = useState<ResponseTimeSummary | null>(null)
-  const [responseTimeLoading, setResponseTimeLoading] = useState(true)
+  const [responseTime, setResponseTime] = useState<ResponseTimeSummary | null>(
+    null
+  );
+  const [responseTimeLoading, setResponseTimeLoading] = useState(true);
 
-  const [activity, setActivity] = useState<ActivityItem[] | null>(null)
-  const [activityLoading, setActivityLoading] = useState(true)
+  const [activity, setActivity] = useState<ActivityItem[] | null>(null);
+  const [activityLoading, setActivityLoading] = useState(true);
 
   const loadAll = useCallback(() => {
-    const db = createClient()
+    const db = createClient();
 
     // Kick everything off in parallel. Each block has its own
     // setState + finally so a slow query doesn't hold up faster
@@ -76,22 +91,22 @@ export default function DashboardPage() {
     void loadMetrics(db)
       .then((m) => setMetrics(m))
       .catch((err) => console.error('[dashboard] metrics failed:', err))
-      .finally(() => setMetricsLoading(false))
+      .finally(() => setMetricsLoading(false));
 
     void loadConversationsSeries(db, 30)
       .then((s) => setSeries((prev) => ({ ...prev, 30: s })))
       .catch((err) => console.error('[dashboard] series failed:', err))
-      .finally(() => setSeriesLoading(false))
+      .finally(() => setSeriesLoading(false));
 
     void loadPipelineDonut(db)
       .then((p) => setPipeline(p))
       .catch((err) => console.error('[dashboard] pipeline failed:', err))
-      .finally(() => setPipelineLoading(false))
+      .finally(() => setPipelineLoading(false));
 
     void loadResponseTime(db)
       .then((r) => setResponseTime(r))
       .catch((err) => console.error('[dashboard] response time failed:', err))
-      .finally(() => setResponseTimeLoading(false))
+      .finally(() => setResponseTimeLoading(false));
 
     // Fetch up to 50 so the biggest page-size option in the feed
     // (50 rows) is already in memory — switching sizes then becomes
@@ -99,12 +114,12 @@ export default function DashboardPage() {
     void loadActivity(db, 50)
       .then((a) => setActivity(a))
       .catch((err) => console.error('[dashboard] activity failed:', err))
-      .finally(() => setActivityLoading(false))
-  }, [])
+      .finally(() => setActivityLoading(false));
+  }, []);
 
   useEffect(() => {
-    loadAll()
-  }, [loadAll])
+    loadAll();
+  }, [loadAll]);
 
   // Range switch handler — kept in an event callback (not an effect)
   // so the setState calls stay out of the react-hooks/set-state-in-effect
@@ -112,183 +127,221 @@ export default function DashboardPage() {
   // previously-viewed range is instant and doesn't re-fetch.
   const handleRangeChange = useCallback(
     (r: RangeDays) => {
-      setRange(r)
-      if (series[r] !== null) return
-      setSeriesLoading(true)
-      const db = createClient()
+      setRange(r);
+      if (series[r] !== null) return;
+      setSeriesLoading(true);
+      const db = createClient();
       loadConversationsSeries(db, r)
         .then((s) => setSeries((prev) => ({ ...prev, [r]: s })))
         .catch((err) => console.error('[dashboard] series failed:', err))
-        .finally(() => setSeriesLoading(false))
+        .finally(() => setSeriesLoading(false));
     },
-    [series],
-  )
+    [series]
+  );
 
   // Keep the credits-remaining badge fresh: credits are deducted server-side
   // as messages/broadcasts run, so re-sync the cached profile periodically.
   useEffect(() => {
     const interval = setInterval(() => {
-      void refreshProfile()
-    }, 30000)
-    return () => clearInterval(interval)
-  }, [refreshProfile])
+      void refreshProfile();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [refreshProfile]);
 
   return (
-    <div className="space-y-5">
-      {profile?.business?.status === 'trialing' && <WelcomeGuide />}
+    <MotionConfig reducedMotion="user">
+      <motion.div
+        variants={pageContainer}
+        initial="hidden"
+        animate="show"
+        className="space-y-5"
+      >
+        {profile?.business?.status === 'trialing' && <WelcomeGuide />}
 
-      {/* Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Live analytics across conversations, contacts, deals, broadcasts, and automations.
-          </p>
-        </div>
-        {profile?.business?.credits_remaining !== undefined && (
-          <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-500 self-start sm:self-center">
-            <Coins className="h-4 w-4" />
-            <span>{profile.business.credits_remaining.toLocaleString()} Credits Remaining</span>
+        {/* Header */}
+        <motion.div
+          variants={sectionItem}
+          className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div>
+            <h1 className="text-foreground text-2xl font-bold">Dashboard</h1>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Live analytics across conversations, contacts, deals, broadcasts,
+              and automations.
+            </p>
+          </div>
+          {profile?.business?.credits_remaining !== undefined && (
+            <div className="flex items-center gap-2 self-start rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-600 shadow-lg shadow-emerald-500/10 sm:self-center dark:text-emerald-400">
+              <Coins className="h-4 w-4" />
+              <span>
+                {profile.business.credits_remaining.toLocaleString()} Credits
+                Remaining
+              </span>
+            </div>
+          )}
+        </motion.div>
+
+        {profile?.business?.status === 'trialing' && (
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-600 shadow-lg shadow-blue-500/5 dark:text-blue-400">
+            <span>
+              <span className="flex items-center gap-1.5 font-semibold">
+                <Clock className="h-4 w-4" />
+                Trial Period —
+              </span>
+              Your business is on a free trial. Upgrade to unlock all features.
+            </span>
+            <button
+              onClick={() => router.push('/settings?tab=billing')}
+              className="shrink-0 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
+            >
+              View Plans
+            </button>
           </div>
         )}
-      </div>
 
-      {profile?.business?.status === 'trialing' && (
-        <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-600 dark:text-blue-400 flex items-center justify-between gap-4">
-          <span>
-            <span className="font-semibold flex items-center gap-1.5">
-              <Clock className="h-4 w-4" />
-              Trial Period —
+        {profile?.business?.status === 'canceled' && (
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 shadow-lg shadow-red-500/5 dark:text-red-400">
+            <span>
+              <span className="flex items-center gap-1.5 font-semibold">
+                <XCircle className="h-4 w-4" />
+                Subscription Canceled —
+              </span>
+              Your subscription has been canceled. Some features may be
+              unavailable.
             </span>
-            Your business is on a free trial. Upgrade to unlock all features.
-          </span>
-          <button
-            onClick={() => router.push('/settings?tab=billing')}
-            className="shrink-0 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
-          >
-            View Plans
-          </button>
-        </div>
-      )}
-
-      {profile?.business?.status === 'canceled' && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400 flex items-center justify-between gap-4">
-          <span>
-            <span className="font-semibold flex items-center gap-1.5">
-              <XCircle className="h-4 w-4" />
-              Subscription Canceled —
-            </span>
-            Your subscription has been canceled. Some features may be unavailable.
-          </span>
-          <button
-            onClick={() => router.push('/settings?tab=billing')}
-            className="shrink-0 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 transition-colors"
-          >
-            Reactivate
-          </button>
-        </div>
-      )}
-
-      {profile?.business?.status === 'past_due' && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 dark:text-amber-400 flex items-center justify-between gap-4">
-          <span>
-            <span className="font-semibold flex items-center gap-1.5">
-              <AlertTriangle className="h-4 w-4" />
-              Payment Past Due —
-            </span>
-            Your payment is overdue. Please update your billing information to avoid service interruption.
-          </span>
-          <button
-            onClick={() => router.push('/settings?tab=billing')}
-            className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 transition-colors"
-          >
-            Update Billing
-          </button>
-        </div>
-      )}
-
-      {/* Metric cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {metricsLoading || !metrics ? (
-          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
-        ) : (
-          <>
-            <MetricCard
-              title="Active Conversations"
-              value={metrics.activeConversations.current.toLocaleString()}
-              icon={MessageSquare}
-              delta={{
-                sign: metrics.activeConversations.previous,
-                label: deltaLabel(metrics.activeConversations.previous, 'new today vs yesterday'),
-              }}
-            />
-            <MetricCard
-              title="New Contacts Today"
-              value={metrics.newContactsToday.current.toLocaleString()}
-              icon={UserPlus}
-              delta={{
-                sign:
-                  metrics.newContactsToday.current - metrics.newContactsToday.previous,
-                label: deltaLabel(
-                  metrics.newContactsToday.current - metrics.newContactsToday.previous,
-                  'vs yesterday',
-                ),
-              }}
-            />
-            <MetricCard
-              title="Open Deals Value"
-              value={formatCurrency(metrics.openDealsValue)}
-              icon={DollarSign}
-              subtitle={`${metrics.openDealsCount} open deal${metrics.openDealsCount === 1 ? '' : 's'}`}
-            />
-            <MetricCard
-              title="Messages Sent Today"
-              value={metrics.messagesSentToday.current.toLocaleString()}
-              icon={Send}
-              delta={{
-                sign:
-                  metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
-                label: deltaLabel(
-                  metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
-                  'vs yesterday',
-                ),
-              }}
-            />
-          </>
+            <button
+              onClick={() => router.push('/settings?tab=billing')}
+              className="shrink-0 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700"
+            >
+              Reactivate
+            </button>
+          </div>
         )}
-      </div>
 
-      {/* Quick actions */}
-      <QuickActions />
+        {profile?.business?.status === 'past_due' && (
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 shadow-lg shadow-amber-500/5 dark:text-amber-400">
+            <span>
+              <span className="flex items-center gap-1.5 font-semibold">
+                <AlertTriangle className="h-4 w-4" />
+                Payment Past Due —
+              </span>
+              Your payment is overdue. Please update your billing information to
+              avoid service interruption.
+            </span>
+            <button
+              onClick={() => router.push('/settings?tab=billing')}
+              className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-amber-700"
+            >
+              Update Billing
+            </button>
+          </div>
+        )}
 
-      {/* Charts row */}
-      {/* items-stretch (the grid default) stretches the two columns to
+        {/* Metric cards */}
+        <motion.div
+          variants={sectionItem}
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          {metricsLoading || !metrics ? (
+            Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+          ) : (
+            <>
+              <MetricCard
+                title="Active Conversations"
+                value={metrics.activeConversations.current.toLocaleString()}
+                icon={MessageSquare}
+                delta={{
+                  sign: metrics.activeConversations.previous,
+                  label: deltaLabel(
+                    metrics.activeConversations.previous,
+                    'new today vs yesterday'
+                  ),
+                }}
+              />
+              <MetricCard
+                title="New Contacts Today"
+                value={metrics.newContactsToday.current.toLocaleString()}
+                icon={UserPlus}
+                delta={{
+                  sign:
+                    metrics.newContactsToday.current -
+                    metrics.newContactsToday.previous,
+                  label: deltaLabel(
+                    metrics.newContactsToday.current -
+                      metrics.newContactsToday.previous,
+                    'vs yesterday'
+                  ),
+                }}
+              />
+              <MetricCard
+                title="Open Deals Value"
+                value={formatCurrency(metrics.openDealsValue)}
+                icon={DollarSign}
+                subtitle={`${metrics.openDealsCount} open deal${metrics.openDealsCount === 1 ? '' : 's'}`}
+              />
+              <MetricCard
+                title="Messages Sent Today"
+                value={metrics.messagesSentToday.current.toLocaleString()}
+                icon={Send}
+                delta={{
+                  sign:
+                    metrics.messagesSentToday.current -
+                    metrics.messagesSentToday.previous,
+                  label: deltaLabel(
+                    metrics.messagesSentToday.current -
+                      metrics.messagesSentToday.previous,
+                    'vs yesterday'
+                  ),
+                }}
+              />
+            </>
+          )}
+        </motion.div>
+
+        {/* Quick actions */}
+        <motion.div variants={sectionItem}>
+          <QuickActions />
+        </motion.div>
+
+        {/* Charts row */}
+        {/* items-stretch (the grid default) stretches the two columns to
           match the tallest sibling; adding h-full on each wrapper and
           on the inner panels makes both cards actually fill that
           stretched height so their rounded borders line up. Without
           this, the pipeline card rendered at its natural (shorter)
           height while the line chart drove the row height. */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <div className="h-full lg:col-span-3">
-          <ConversationsChart
-            series={series}
-            loading={seriesLoading}
-            range={range}
-            onRangeChange={handleRangeChange}
+        <motion.div
+          variants={sectionItem}
+          className="grid grid-cols-1 gap-4 lg:grid-cols-5"
+        >
+          <div className="h-full lg:col-span-3">
+            <ConversationsChart
+              series={series}
+              loading={seriesLoading}
+              range={range}
+              onRangeChange={handleRangeChange}
+            />
+          </div>
+          <div className="h-full lg:col-span-2">
+            <PipelineDonut data={pipeline} loading={pipelineLoading} />
+          </div>
+        </motion.div>
+
+        {/* Response time */}
+        <motion.div variants={sectionItem}>
+          <ResponseTimeChart
+            data={responseTime}
+            loading={responseTimeLoading}
           />
-        </div>
-        <div className="h-full lg:col-span-2">
-          <PipelineDonut data={pipeline} loading={pipelineLoading} />
-        </div>
-      </div>
+        </motion.div>
 
-      {/* Response time */}
-      <ResponseTimeChart data={responseTime} loading={responseTimeLoading} />
-
-      {/* Activity feed */}
-      <ActivityFeed items={activity} loading={activityLoading} />
-    </div>
-  )
+        {/* Activity feed */}
+        <motion.div variants={sectionItem}>
+          <ActivityFeed items={activity} loading={activityLoading} />
+        </motion.div>
+      </motion.div>
+    </MotionConfig>
+  );
 }
 
 // ------------------------------------------------------------
@@ -299,11 +352,11 @@ function formatCurrency(v: number): string {
     currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(v)
+  }).format(v);
 }
 
 function deltaLabel(delta: number, suffix: string): string {
-  if (delta === 0) return `No change ${suffix}`
-  const sign = delta > 0 ? '+' : ''
-  return `${sign}${delta.toLocaleString()} ${suffix}`
+  if (delta === 0) return `No change ${suffix}`;
+  const sign = delta > 0 ? '+' : '';
+  return `${sign}${delta.toLocaleString()} ${suffix}`;
 }
