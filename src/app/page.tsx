@@ -19,7 +19,6 @@ import {
   Radio,
   Quote,
   Mail,
-  ShoppingCart,
   Webhook,
   Target,
   Brain,
@@ -73,7 +72,7 @@ export default function LandingPage() {
   const faqs = [
     {
       q: "What is HopeChat?",
-      a: "HopeChat is a WhatsApp CRM and automation platform that helps businesses automate customer conversations, follow up on leads instantly, run broadcast campaigns, and build no-code workflows — all powered by the official WhatsApp Business API. It includes a shared inbox, AI assistant, knowledge base, chatbot builder, and 20+ integrations.",
+      a: "HopeChat is a WhatsApp CRM and automation platform that helps businesses automate customer conversations, follow up on leads instantly, run broadcast campaigns, and build no-code workflows — all powered by the official WhatsApp Business API. It includes a shared inbox, AI assistant, knowledge base, chatbot builder, and native integrations for Google Sheets and Cal.com.",
     },
     {
       q: "Do I need coding skills to use HopeChat?",
@@ -664,22 +663,14 @@ export default function LandingPage() {
             <motion.div className="text-center space-y-4 max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
               <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Connects to the tools you already run</motion.h2>
               <motion.p variants={fadeUp} custom={0.1} className="text-base text-muted-foreground leading-relaxed font-medium">
-                HopeChat connects smoothly with your payment gateways, CRM, e-commerce store, and Google Sheets.
+                HopeChat connects smoothly with Google Sheets for your data and Cal.com for customer scheduling.
               </motion.p>
             </motion.div>
 
             <motion.div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
               {([
-                ["Shopify", ShoppingCart],
-                ["WooCommerce", ShoppingCart],
-                ["Stripe", Zap],
-                ["HubSpot", Globe],
-                ["Zoho CRM", Database],
                 ["Google Sheets", Database],
                 ["Cal.com", CalendarCheck],
-                ["Zapier", Zap],
-                ["Make", Workflow],
-                ["n8n", Workflow],
               ] as [string, any][]).map(([name, Icon], i) => (
                 <motion.div key={i} variants={fadeUp} custom={i * 0.03} className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-white border border-border shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300">
                   <Icon className="h-5 w-5 text-primary" />
@@ -735,7 +726,7 @@ export default function LandingPage() {
               <motion.p variants={fadeUp} custom={0.1} className="text-base text-muted-foreground leading-relaxed font-medium">
                 Our concierge onboarding team handles your Meta / WhatsApp API configuration,
                 automation setup, and AI assistant training for you — a one-time setup fee based
-                on company size, starting at 300,000 UGX. You focus on your business.
+                on company size, starting at 800,000 UGX. You focus on your business.
               </motion.p>
             </motion.div>
 
@@ -744,20 +735,20 @@ export default function LandingPage() {
                 {
                   size: "1–5 staff",
                   tag: "Small business",
-                  price: "300,000",
+                  price: "800,000",
                   features: ["Meta / WhatsApp API configuration", "AI assistant training on your business", "Welcome message & basic automations", "1-hour team onboarding session"],
                 },
                 {
                   size: "6–20 staff",
                   tag: "Growing business",
-                  price: "500,000",
+                  price: "1,200,000",
                   popular: true,
                   features: ["Everything in Small", "Broadcast & SMS campaign setup", "Flow-builder automations & drip sequences", "Team training (up to 3 hours)"],
                 },
                 {
                   size: "21+ staff",
                   tag: "Large business",
-                  price: "800,000",
+                  price: "1,500,000",
                   features: ["Everything in Growing", "Full Meta Business configuration", "Custom integrations (CRM, Sheets, webhooks)", "Dedicated onboarding engineer"],
                 },
               ].map((tier, i) => (
@@ -1057,9 +1048,7 @@ export default function LandingPage() {
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-foreground mb-4">Integrations</h4>
               <ul className="space-y-2.5 text-xs text-muted-foreground font-semibold">
                 <li><Link href="#integrations" className="hover:text-primary transition-colors">Google Sheets</Link></li>
-                <li><Link href="#integrations" className="hover:text-primary transition-colors">Zapier</Link></li>
-                <li><Link href="#integrations" className="hover:text-primary transition-colors">Shopify</Link></li>
-                <li><Link href="#integrations" className="hover:text-primary transition-colors">HubSpot</Link></li>
+                <li><Link href="#integrations" className="hover:text-primary transition-colors">Cal.com</Link></li>
                 <li><Link href="#integrations" className="hover:text-primary transition-colors">REST API</Link></li>
               </ul>
             </div>
