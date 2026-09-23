@@ -5,6 +5,25 @@ import { createAdminAlert } from "@/lib/admin-alerts";
 /** Where demo / setup-service requests are delivered. */
 export const DEMO_REQUEST_RECIPIENT = "hopetechsolutionsltd@gmail.com";
 
+/** Brand palette — mirrors the app theme (teal/forest primary). */
+const BRAND = "#10b8a2";
+const BRAND_DEEP = "#0e9483";
+const INK = "#18181b";
+const MUTED_TEXT = "#71717a";
+const BORDER = "#e4e4e7";
+
+/**
+ * Canonical site origin for links in emails and payment redirects.
+ * Prefers the documented NEXT_PUBLIC_SITE_URL; falls back to the legacy
+ * NEXT_PUBLIC_APP_URL so existing deployments keep working; never returns
+ * an empty string (which would produce a broken "http:///login" href).
+ */
+function appBaseUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "";
+  const cleaned = raw.trim().replace(/[/\\]+$/, "");
+  return cleaned || "http://localhost:3000";
+}
+
 export interface EmailSettings {
   host: string;
   port: number;
@@ -127,18 +146,29 @@ function layout(subject: string, bodyHtml: string): string {
         <td align="center">
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;">
             <tr>
-              <td style="background-color:#6d28d9;padding:20px 32px;">
-                <span style="color:#ffffff;font-size:18px;font-weight:bold;">HopeChat</span>
+              <td style="background:linear-gradient(135deg, ${BRAND} 0%, ${BRAND_DEEP} 100%);padding:20px 32px;">
+                <table role="presentation" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding-right:12px;">
+                      <span style="display:inline-block;width:34px;height:34px;line-height:34px;text-align:center;background-color:#ffffff;color:${BRAND_DEEP};border-radius:8px;font-size:16px;font-weight:bold;">HC</span>
+                    </td>
+                    <td>
+                      <span style="color:#ffffff;font-size:18px;font-weight:bold;">Hope<span style="opacity:0.85;">Chat</span></span>
+                      <br/>
+                      <span style="color:#ffffff;opacity:0.8;font-size:11px;">WhatsApp automation for growing businesses</span>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
             <tr>
               <td style="padding:32px;">
-                <h1 style="margin:0 0 12px;font-size:20px;color:#18181b;">${subject}</h1>
+                <h1 style="margin:0 0 12px;font-size:20px;color:${INK};">${subject}</h1>
                 ${bodyHtml}
               </td>
             </tr>
             <tr>
-              <td style="padding:16px 32px;border-top:1px solid #e4e4e7;color:#71717a;font-size:12px;">
+              <td style="padding:16px 32px;border-top:1px solid ${BORDER};color:${MUTED_TEXT};font-size:12px;">
                 You are receiving this email because you have an account on HopeChat.
                 If you did not expect this email, you can ignore it.
               </td>
@@ -285,11 +315,11 @@ export async function sendDemoRequestConfirmation(input: {
 }
 
 function recoverySignupLink(): string {
-  return `${process.env.NEXT_PUBLIC_APP_URL || ""}/signup`;
+  return `${appBaseUrl()}/signup`;
 }
 
 function recoveryLoginLink(): string {
-  return `${process.env.NEXT_PUBLIC_APP_URL || ""}/login`;
+  return `${appBaseUrl()}/login`;
 }
 
 /**
@@ -313,7 +343,7 @@ export async function sendSignupReminder(input: {
       Picking up where you left off takes less than a minute — connect WhatsApp, train your AI assistant, and start automating replies.
     </p>
     <p style="margin:0 0 24px;">
-      <a href="${recoverySignupLink()}" style="background-color:#6d28d9;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">Complete your signup</a>
+      <a href="${recoverySignupLink()}" style="background-color:${BRAND};color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">Complete your signup</a>
     </p>
     <p style="margin:0;color:#3f3f46;font-size:14px;">Questions? Reply to this email and our team will help you get set up.</p>
   `;
@@ -352,7 +382,7 @@ export async function sendSetupReminder(input: {
       <li>Let the AI assistant greet &amp; answer your customers</li>
     </ol>
     <p style="margin:0 0 24px;">
-      <a href="${recoveryLoginLink()}" style="background-color:#6d28d9;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">Finish setup</a>
+      <a href="${recoveryLoginLink()}" style="background-color:${BRAND};color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">Finish setup</a>
     </p>
     <p style="margin:0;color:#3f3f46;font-size:14px;">Need a hand? We offer a concierge setup service — just reply to this email.</p>
   `;
@@ -391,7 +421,7 @@ export async function sendEngagementReminder(input: {
       <li>Import your contacts and send your first broadcast</li>
     </ul>
     <p style="margin:0 0 24px;">
-      <a href="${recoveryLoginLink()}" style="background-color:#6d28d9;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">Open your dashboard</a>
+      <a href="${recoveryLoginLink()}" style="background-color:${BRAND};color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">Open your dashboard</a>
     </p>
     <p style="margin:0;color:#3f3f46;font-size:14px;">Want us to set it all up for you? Reply to this email to book a free setup session.</p>
   `;
