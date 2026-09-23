@@ -26,7 +26,6 @@ import {
   Layers,
   Smartphone,
   Search,
-  Database,
   Timer,
   MessageSquareText,
   Check,
@@ -35,6 +34,8 @@ import {
   FolderTree,
   Route,
   CalendarCheck,
+  Database,
+  ShoppingCart,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -663,18 +664,24 @@ export default function LandingPage() {
             <motion.div className="text-center space-y-4 max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
               <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Connects to the tools you already run</motion.h2>
               <motion.p variants={fadeUp} custom={0.1} className="text-base text-muted-foreground leading-relaxed font-medium">
-                HopeChat connects smoothly with Google Sheets for your data and Cal.com for customer scheduling.
+                HopeChat plugs straight into WhatsApp, your spreadsheets, scheduling, and the rest of your stack — no code required.
               </motion.p>
             </motion.div>
 
             <motion.div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
               {([
-                ["Google Sheets", Database],
-                ["Cal.com", CalendarCheck],
-              ] as [string, any][]).map(([name, Icon], i) => (
+                ["WhatsApp", MessageSquare, null],
+                ["Google Sheets", Database, null],
+                ["Cal.com", CalendarCheck, null],
+                ["Webhooks & REST API", Webhook, null],
+                ["Shopify", ShoppingCart, "Coming soon"],
+              ] as [string, any, string | null][]).map(([name, Icon, status], i) => (
                 <motion.div key={i} variants={fadeUp} custom={i * 0.03} className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-white border border-border shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300">
                   <Icon className="h-5 w-5 text-primary" />
                   <span className="text-sm font-bold text-foreground">{name}</span>
+                  {status && (
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{status}</span>
+                  )}
                 </motion.div>
               ))}
             </motion.div>
@@ -1047,6 +1054,7 @@ export default function LandingPage() {
             <div>
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-foreground mb-4">Integrations</h4>
               <ul className="space-y-2.5 text-xs text-muted-foreground font-semibold">
+                <li><Link href="#integrations" className="hover:text-primary transition-colors">WhatsApp</Link></li>
                 <li><Link href="#integrations" className="hover:text-primary transition-colors">Google Sheets</Link></li>
                 <li><Link href="#integrations" className="hover:text-primary transition-colors">Cal.com</Link></li>
                 <li><Link href="#integrations" className="hover:text-primary transition-colors">REST API</Link></li>
