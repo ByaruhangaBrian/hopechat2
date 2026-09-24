@@ -1,0 +1,90 @@
+name: cron
+
+# Scheduled cron driver for HopeChat.
+#
+# ────────────────────────────────────────────────────────────────────────────
+# WHY THIS EXISTS (read before editing!)
+# ────────────────────────────────────────────────────────────────────────────
+# `vercel.json` registers crons for BOTH projects (automations + onboarding
+# funnel). Vercel Cron only executes on paid plans, and this team is on the
+# Hobby plan (verified 2026-09-25) — so Vercel Cron never fires here.
+#
+# GitHub Actions *does* run scheduled workflows on every plan, so we drive the
+# same two cron endpoints from GHA instead. The workflow calls each app host's
+# HTTP cron route with the matching `x-cron-secret` header:
+#
+#   staging host  https://dev.hopechat.net
+#   prod host     https://hopechat.net
+#   headers       x-cron-secret: <secret for THAT host's cron route>
+#
+# Each cron route (src/app/api/*/cron) compares the supplied header to its own
+# env secret (AUTOMATION_CRON_SECRET / LEAD_RECOVERY_CRON_SECRET) and 401s if
+# they differ, so weaker/longer schedules fired from the wrong branch are safe.
+#
+# SCHEDULING WINDOW BUCKET (Task 6, "target 00:05-00:20 daily"):
+#   onboarding funnel  0 5 * * *   (~daily recovery emails)
+#   automations        refreshes the queue every 30 min
+# Both fire against staging AND prod (above matrix).
+#
+# GPC SHARED-RULE NOTE: vcr.json `crons` remain in place so this stays a pure
+# "GHA-instead-of-Vercel-Cron" swap with zero diff to prod app code; if the team
+# later upgrades to Pro, Vercel Cron would double-fire — so change the schedule
+# here, or drop this trigger, whichever the runbook (Task 8) documents.
+# ────────────────────────────────────────────────────────────────────────────
+
+# Schedules ONLY evaluate from the DEFAULT BRANCH of the repo. Default = main.
+on:
+  schedule:
+    - cron: "5 0 * * *"      # onboarding-funnel / lead-recovery
+    - cron: "*/30 * * * *"   # automations queue drain
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which host(s) to run against
+        type: choice
+        default: "both"
+        options:
+          - both
+          - staging
+          - prod
+
+permissions:
+  contents: read
+
+jobs:
+  cron:
+    name: Run cron endpoints
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: staging
+            base_url: https://dev.hopechat.net
+            automation_secret: STAGING_AUTOMATION_CRON_SECRET
+            recovery_secret: STAGING_LEAD_RECOVERY_CRON_SECRET
+          - name: prod
+            base_url: https://hopechat.net
+            automation_secret: PROD_AUTOMATION_CRON_SECRET
+            recovery_secret: PROD_LEAD_RECOVERY_CRON_SECRET
+    env:
+      AUTOMATION: ${{ secrets[matrix.automation_secret] }}
+      RECOVERY: ${{ secrets[matrix.recovery_secret] }}
+    steps:
+      - name: Automation cron (queue drain)
+        if: ${{ env.AUTOMATION != '' }}
+        run: |
+          curl -fsS --retry 2 --retry-delay 5 \
+            -H "x-cron-secret: ${{ env.AUTOMATION }}" \
+            "${{ matrix.base_url }}/api/automations/cron"
+          echo " [automation ok]"
+      - name: Onboarding-funnel cron (lead recovery)
+        if: ${{ env.RECOVERY != '' }}
+        run: |
+          curl -fsS --retry 2 --retry-delay 5 \
+            -H "x-cron-secret: ${{ env.RECOVERY }}" \
+            "${{ matrix.base_url }}/api/onboarding-funnel/cron"
+          echo " [recovery ok]"
+      - name: Skip notice (no secret configured for this env)
+        if: ${{ env.AUTOMATION == '' && env.RECOVERY == '' }}
+        run: echo "::notice::No cron secrets configured for ${{ matrix.name }} — skipped (see Task 6 runbook)."
