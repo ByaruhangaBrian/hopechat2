@@ -1,175 +1,172 @@
-# Implementation Plan: Cal.com Scheduling / Bookings Integration
+# Implementation Plan: Staging / Test Environment
 
 ## Overview
 
-Add a **Calendar / Bookings** module to the HopeChat CRM integrated with **Cal.com**.
-Per confirmed decisions:
+Stand up a full pre-production environment so features can be verified before
+reaching production, using:
 
-1. **Credentials live in Settings → Integrations** (`type = 'calcom'`, API key + username,
-   stored encrypted, following the Google Sheets pattern).
-2. **Management lives on a new `/bookings` page + sidebar menu item**
-   (new `bookings` permission key). The page lists Cal.com event types, lets the
-   business toggle each enabled/disabled, and shows a copy-ready booking link
-   (`https://cal.com/{username}/{slug}`).
-3. **Sharing is copy-and-post**: the booking link is copied to the clipboard and the
-   UI points to pasting it into the AI assistant prompt / a chat message — no dedicated
-   send route in v1.
-4. A **Cal.com webhook** syncs created/rescheduled/cancelled bookings into a
-   business-scoped `cal_bookings` table, surfaced as a recent-bookings list on the
-   `/bookings` page.
+1. **Git**: single repo, `main` = production, `develop` = staging. Staging is the
+   production branch of the staging Vercel project.
+2. **Database**: a second Supabase project, provisioned from scratch with
+   `supabase/migrate.sql` + all `supabase/migrations/*.sql` in order, plus seed data.
+3. **Hosting**: a second Vercel project tracking `develop`, deployed to
+   **`dev.hopechat.net`**, with its own env vars.
+4. **CI**: first-time GitHub Actions workflow (typecheck + lint + build on PRs) —
+   no `.github/` workflows exist today.
+5. **Third parties**: shared Meta test app (per decision); Pesapal sandbox;
+   separate Cal.com test key; distinct cron/webhook secrets.
 
-Everything follows existing conventions: `business_integrations` for credentials,
-`google-sheets.ts` as the third-party API lib template, the WhatsApp webhook route +
-`webhook-signature.ts` as the inbound-HMAC template, `resolveBusinessId()` for
-server-side scoping, and the AGENTS.md landing-page parity rule.
+Confirmed decisions:
+
+- Overwrite `tasks/plan.md` / `tasks/todo.md` (old Cal.com plan retired).
+- Staging domain: **`dev.hopechat.net`**.
+- Meta: **same test app** as production (no second Meta app).
 
 ## Architecture Decisions (confirmed)
 
-- **Auth: Cal.com API key (v1 API) + username.** API key encrypted with
-  `ENCRYPTION_KEY`, never returned to the client. Transport encapsulated in
-  `calcom.ts` so an OAuth upgrade stays possible.
-- **Config storage: reuse `business_integrations`** (`type = 'calcom'`, unique per
-  business). Config JSON: `{ calcom_api_key (enc), calcom_username, webhook_secret (enc) }`.
-  Optional `system_settings` global fallback row.
-- **New DB object: only `cal_bookings`.** RLS per-operation with
-  `get_user_business_id() OR is_admin_view_all()` plus explicit
-  `FOR ALL TO service_role USING (true)` (migration 048 gotcha: never an empty role list).
-- **UI split: Settings → Integrations = connect pane only; `/bookings` = manage.**
-  New `bookings` PermissionKey (business-config, not granted to agents by default),
-  sidebar entry, and `pathGates` entry in `dashboard-shell.tsx`.
-- **Sharing: clipboard copy + AI-prompt hint.** Build the Cal.com scheduling URL,
-  copy to clipboard; hint text tells the business to drop it into the AI assistant
-  prompt or a chat.
-- **Webhook: Cal.com shared-secret HMAC.** `src/lib/calcom/webhook-signature.ts`
-  (fail closed, constant-time compare) modeled on the WhatsApp webhook.
-  Assumption: header `X-Cal-Signature-256: SHA256=<hex>` — verify manually in Task 8.
-- **Env vars** (`.env.local.example`, OPTIONAL): `CALCOM_API_BASE`
-  (default `https://api.cal.com/v1`), optional global `CALCOM_WEBHOOK_SECRET`.
-- **Tests**: colocated `*.test.ts` under `src/lib/...`. NOTE: the vitest runner is
-  broken on this machine (rolldown `styleText`) — tests are written and run only if
-  the runner works; verification leans on `npm run typecheck` + `npm run build`
-  + manual checks.
+- **Branching**: trunk-based with long-lived `develop`. Feature branches →
+  `develop` (staging) → PR → `main` (prod). No `master` usage going forward.
+- **Vercel**: two projects from one repo. Prod project = production branch `main`;
+  staging project = production branch `develop`, domain `dev.hopechat.net`
+  (+ `www` handling per `src/proxy.ts` rules).
+- **Supabase**: staging project is independent — never point staging app at the
+  prod database or vice versa. Fresh `ENCRYPTION_KEY` for staging (staging cannot
+  decrypt prod-encrypted WhatsApp/Cal.com/Pesapal tokens; that is expected).
+- **Host routing**: `src/proxy.ts` routes by hostname (apex/www → landing,
+  `app.` → dashboard, `docs.` → docs). Add `dev.hopechat.net` + `dev.app.` /
+  `dev.docs.` equivalents (or a staging-only host map) so the same code serves
+  both environments. `NEXT_PUBLIC_SITE_URL=https://dev.hopechat.net` keeps email
+  and payment absolute links on staging (the `appBaseUrl()` fix).
+- **Secrets isolation**: distinct `AUTOMATION_CRON_SECRET`, `CALCOM_WEBHOOK_SECRET`,
+  SMTP credentials (staging email should go to a test inbox or a provider subaccount
+  to avoid confusing real users). Meta app shared but with test phone numbers /
+  test businesses only. Pesapal switched to `demo.pesapal.com` via env override.
+- **CI**: GitHub Actions, no external services. Runs on PRs targeting `main` and
+  `develop`.
+
+## Env vars (staging values)
+
+| Var | Staging value |
+|-----|---------------|
+| `NEXT_PUBLIC_SITE_URL` | `https://dev.hopechat.net` |
+| `NEXT_PUBLIC_SUPABASE_URL` / `ANON_KEY` | new staging project |
+| `SUPABASE_SERVICE_ROLE_KEY` | staging service role |
+| `ENCRYPTION_KEY` | fresh 64-hex (≠ prod) |
+| `GEMINI_API_KEY` | shared or separate quota key |
+| `META_APP_SECRET` | same test app |
+| `PESAPAL_*` | sandbox credentials |
+| `AUTOMATION_CRON_SECRET`, `CALCOM_WEBHOOK_SECRET` | new random values |
+| `SMTP_*` | test inbox / subaccount |
+
+Full list: `.env.local.example` (45 usages of `process.env.*` audited).
 
 ## Task List
 
-### Phase 0: Foundation
+### Phase 0 — Branch & CI
 
-- [ ] **Task 1: DB migration `060_calcom_scheduling.sql`**
-  - Create `cal_bookings` (business-scoped, JSONB payload, unique
-    `(business_id, cal_event_id)`), indexes, `update_updated_at_column()` trigger.
-  - RLS per-op policies + explicit `TO service_role` full-access policy.
-  - Seed optional `system_settings` fallback row for calcom.
-- [ ] **Task 2: Cal.com API client lib `src/lib/integrations/calcom.ts` + tests**
-  - Encrypted-config loader (mirror `google-sheets.ts`: lazy admin, decrypt,
-    env/global fallback, `logHttpEvent`).
-  - `fetchEventTypes`, `patchEventType(id, {disabled, length?})`,
-    `buildBookingLink(username, slug)`, typed `EventType`.
-  - `calcom.test.ts` for URL building + response parsing (mocked fetch).
+- [ ] **Task 1: Create `develop` branch**
+  - `git checkout -b develop`, push with upstream, update default branch docs;
+    protect `main` (PR-only) if repo settings allow.
+  - Verify: `git branch -a` shows `develop`; push succeeds.
+- [ ] **Task 2: GitHub Actions CI `.github/workflows/ci.yml`**
+  - On PR to `main`/`develop`: install, `npm run typecheck`, lint changed files
+    (full `npm run lint` can crash natively — per-file eslint or continue-on-error),
+    `npm run build` with placeholder env vars.
+  - Verify: green run on a test PR.
 
 ### Checkpoint: Foundation
-- [ ] Migration clean; `npm run typecheck` + `npm run build` pass.
+- [ ] `develop` pushed; CI green on a PR.
 
-### Phase 1: Connect & Navigate
+### Phase 1 — Staging Supabase
 
-- [ ] **Task 3: Config API `src/app/api/integrations/calcom/route.ts`**
-  - GET: decrypts config → connection status (+ live event types when configured).
-  - POST: upserts config (encrypt keys, blank fields keep existing), tests the
-    connection; clean 4xx on invalid key/username.
-  - DELETE: clears the integration.
-- [ ] **Task 4: Settings connect UI `src/components/settings/calcom-form.tsx` + hub**
-  - Connect pane only: API key + username inputs, masked saved-state,
-    Save & Test with toasts, Disconnect.
-  - Flip the `calendly` stub card in `integrations-hub.tsx` → **Cal.com**
-    ("Configure"), with a hint that management lives on the Bookings page.
-- [ ] **Task 5: `bookings` permission + sidebar + `/bookings` page shell**
-  - `permissions.ts`: add `bookings` to `PermissionKey`, `PERMISSION_DEFINITIONS`,
-    `FULL_ACCESS`, `AGENT_DEFAULT` (false), `BUSINESS_CONFIG_PERMISSIONS`.
-  - Sidebar nav item "Bookings" (+ `permissionByPath`), `pathGates` entry in
-    `dashboard-shell.tsx`.
-  - `src/app/(dashboard)/bookings/page.tsx` skeleton: client page, permission-clamped,
-    loading/empty states, panel placeholders.
+- [ ] **Task 3: Provision staging Supabase + migrations**
+  - Create new project; run `supabase/migrate.sql` then
+    `supabase/migrations/013…060` + `0201_integrations.sql` in order; confirm
+    `schema_migrations` rows and RLS enabled on all tables.
+  - Verify: table list matches prod schema; spot-check `get_user_business_id()`.
+- [ ] **Task 4: Staging secrets + seed data**
+  - Generate fresh `ENCRYPTION_KEY`; seed a test business, admin user, sample
+    contacts/messages so the dashboard is explorable immediately.
+  - Verify: login as seeded admin; dashboard renders with data.
 
-### Checkpoint: Connect & Navigate
-- [ ] Connect a real Cal.com account from Settings; sidebar shows Bookings;
-      unpermissioned users are bounced from `/bookings`.
+### Checkpoint: Database
+- [ ] Migrations applied cleanly; seeded login works.
 
-### Phase 2: Manage & Share
+### Phase 2 — Staging Vercel + Routing
 
-- [ ] **Task 6: Event-type toggle API
-        `src/app/api/integrations/calcom/event-types/[id]/route.ts`**
-  - PATCH `{ disabled: boolean }` (+ optional `length`) via Cal.com; 4xx with
-    Cal.com error detail on failure.
-- [ ] **Task 7: `/bookings` manage UI**
-  - Event-type list: title, duration, enabled/disabled toggle (optimistic + rollback),
-    booking link with **Copy** button, hint "Paste this link into your AI assistant
-    prompt or a chat to share it."
-  - Empty/no-integration state links back to Settings → Integrations.
+- [ ] **Task 5: Staging Vercel project + env vars**
+  - New Vercel project linked to repo, production branch `develop`; set all env
+    vars (table above) for Production; attach `dev.hopechat.net` + TLS.
+  - Verify: first deploy succeeds; `https://dev.hopechat.net` serves landing.
+- [ ] **Task 6: Host routing + cron for staging**
+  - Extend `src/proxy.ts` host map for `dev.hopechat.net` (and
+    `dev.app.` / `dev.docs.` subdomains or equivalent); confirm `vercel.json`
+    cron registers on the staging project.
+  - Verify: landing, dashboard, and docs all resolve on staging hosts; cron
+    endpoint responds with correct secret.
 
-### Checkpoint: Manage Flow
-- [ ] Toggling enable/disable reflects on Cal.com and in the UI; copy link works.
+### Checkpoint: Deployable Staging
+- [ ] `develop` push auto-deploys to `dev.hopechat.net`; all three surfaces route.
 
-### Phase 3: Track Bookings
+### Phase 3 — Third-party isolation
 
-- [ ] **Task 8: Cal.com webhook**
-  - `src/lib/calcom/webhook-signature.ts` + `webhook-signature.test.ts`
-    (HMAC-SHA256, fail closed, constant-time compare).
-  - `src/app/api/calcom/webhook/route.ts`: verify raw-body signature; parse
-    `BOOKING_CREATED / BOOKING_RESCHEDULED / BOOKING_CANCELLED`; upsert
-    `cal_bookings` via admin client; `logHttpEvent`; always 200 for acknowledged.
-- [ ] **Task 9: Bookings list API + `/bookings` panel**
-  - `src/app/api/calcom/bookings/route.ts`: recent bookings per business
-    (status: booked | rescheduled | cancelled).
-  - Recent-bookings panel on the `/bookings` page: attendee, event, time, status pill.
+- [ ] **Task 7: Sandbox third-party config**
+  - Pesapal sandbox creds; shared Meta test app pointed at test business/phone
+    only; staging Cal.com key + `CALCOM_WEBHOOK_SECRET`; test SMTP inbox.
+  - Verify: one sandbox checkout, one WhatsApp test message, one booking webhook
+    received on staging (not prod).
 
-### Checkpoint: Shipped Slice
-- [ ] A booking made via a shared link appears in-app; reschedule/cancel dedupes.
+### Phase 4 — Runbook & verification
 
-### Phase 4: Parity & Polish
-
-- [ ] **Task 10: Landing page parity (AGENTS.md mandatory)**
-  - `src/app/page.tsx`: feature card for appointment booking, matching FAQ entry,
-    Cal.com under Integrations chips/footer.
-- [ ] **Task 11: Hardening pass**
-  - RLS/service-role policies, rate-limit usage, no keys in client bundles,
-    dark/light contrast, reduced-motion; final `lint`/`typecheck`/`build`.
+- [ ] **Task 8: Deployment runbook**
+  - Document: migrate order, env var checklist per environment, promote-to-prod
+    steps (`develop` → PR → `main`), rollback (Vercel instant rollback + migration
+    reversal notes), Supabase free-tier pause caveat.
+  - Verify: a second person (or fresh session) can follow it end-to-end.
+- [ ] **Task 9: Full staging smoke test**
+  - Checklist: signup → magic/recovery email link lands on
+    `dev.hopechat.net/login` (valid absolute URL), AI chat reply, sandbox
+    checkout + webhook, Google Sheets sync, inbound WhatsApp webhook, Cal.com
+    booking, cron fires.
+  - Verify: all checklist items pass; no prod URLs or prod data touched.
 
 ### Checkpoint: Complete
-- [ ] All acceptance criteria met; human reviews before merge.
+- [ ] All acceptance criteria met; human reviews before merge to `main`.
 
 ## Dependency Graph
 
 ```
-Task 1 (migration) ───────────────┐
-Task 2 (calcom lib) ──────────────┼──► Task 3 ─► Task 4 (settings connect UI)
-         │                        │              Task 5 (nav + /bookings shell)
-         └──────────► Task 6 (toggle API) ─────────► Task 7 (/bookings manage UI)
-         └──────────► Task 8 (webhook lib + route) ─► Task 9 (bookings list + panel)
-Tasks 1–9 ────────────────────────────────────────────► Task 10, Task 11
+Task 1 ─► Task 2 ─┐
+                  ├─► Task 3 ─► Task 4 ─► Task 5 ─► Task 6 ─► Task 7 ─► Task 8 ─► Task 9
+(branches/CI)     │  (Supabase)         (Vercel)   (routing) (3rd-party) (runbook) (E2E)
 ```
 
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Cal.com v1 API variability/possible deprecation | Med | Encapsulate transport in `calcom.ts`; env-overridable `CALCOM_API_BASE`; mock-based tests; document endpoints. |
-| Username scoping when a key owns multiple calendars/orgs | Med | Always pass `username` param; surface Cal.com errors plainly in UI. |
-| Webhook signature header assumption (`SHA256=<hex>`) | Med | Fail-closed verification + fixtures; manual replay check in Task 8; per-business secret in config. |
-| RLS service-role policy omission (048 gotcha) | High | Explicit `FOR ALL TO service_role USING (true) WITH CHECK (true)`. |
-| vitest runner broken on this machine | Low | Tests written but gated; verified via typecheck/build/manual. |
-| New permission key affects existing profiles | Low | `normalizePermissions()` fills missing keys from role defaults; agents default to `bookings: false`. |
-| Landing page parity required (AGENTS.md) | Med | Task 10 is mandatory before "done". |
-| API key leaking to client bundles | High | Key encrypted in DB; routes decrypt server-side; client sees only status + event types. |
+| Supabase free tier pauses after ~1 wk idle | High | Weekly keepalive ping (cron or manual) or upgrade staging to Pro. |
+| `NEXT_PUBLIC_*` baked at build time | High | Set env vars before first build; changing Supabase URL requires redeploy. |
+| Webhook/cron cross-talk between envs | High | Distinct secrets + sandbox endpoints; verify webhook target URLs point at `dev.hopechat.net`. |
+| Shared Meta test app sends to wrong place | Med | Only test phone numbers/businesses registered on the test app. |
+| `ENCRYPTION_KEY` mismatch surprises (staged rows unreadable) | Med | Expected by design; document in runbook — never copy encrypted rows across envs. |
+| Full `npm run lint` native crash in CI | Low | Per-file eslint or build-only gate initially. |
+| `src/proxy.ts` host map misses staging hosts | Med | Task 6 explicitly covers all three surfaces on `dev.` hosts. |
+| Overwriting Cal.com plan in `tasks/` | Low | Approved by user; Cal.com plan recoverable from git history if needed. |
 
 ## Resolved Decisions
 
-- Auth: **API key + username** (encrypted, admin-owned).
-- UI: credentials in **Settings → Integrations**; management on a new **`/bookings` menu item**.
-- Schedule depth: **view + toggle event types, share links** (no availability editing in v1).
-- Sharing: **copy the link** and paste into the AI assistant prompt or a chat (no send route in v1).
+- Staging domain: **`dev.hopechat.net`**.
+- Meta: **same test app** (no second app).
+- `tasks/plan.md` / `tasks/todo.md`: **overwritten** with this plan.
+
+## Resolved Questions
+
+- Staging Supabase: **Free** tier with a weekly keepalive ping to avoid idle-pause.
+- Seed data: minimal fixture (1 test business + admin), expandable later.
 
 ## Parallelization Opportunities
 
-- Tasks 1 and 2 are independent → parallel.
-- Task 5 (nav/permission) is independent of Tasks 3–4 → can run in parallel.
-- Task 6 depends on Task 2 only; Task 7 depends on 5 + 6; Task 8 depends on 2;
-  Task 9 depends on 8 (+ 7 for the panel). Tasks 10–11 after the feature slices land.
+- Task 1 and Supabase project creation (Task 3 manual console step) can start in parallel.
+- Task 2 (CI) independent of Phases 1–2.
+- Task 7 third-party setup mostly independent once Task 5 env vars exist.

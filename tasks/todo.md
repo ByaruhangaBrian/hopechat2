@@ -1,79 +1,79 @@
-# Task List — Cal.com Scheduling / Bookings Integration
+# Task List — Staging / Test Environment
 
 Legend: `[ ]` pending, `[x]` done. Each task is independently verifiable.
-Commands: typecheck `npm run typecheck`, build `npm run build`, lint `npm run lint`.
-(The vitest runner is broken on this machine — write tests but verify via typecheck/build/manual unless the runner works.)
+Commands: typecheck `npm run typecheck`, build `npm run build`, lint per-file
+(`npx eslint <file>` — full `npm run lint` can crash natively).
 
-Confirmed decisions: API key + username auth; credentials in Settings → Integrations;
-management on a new `/bookings` menu item; toggle event types + share (copy) links;
-sharing = copy into AI prompt / chat (no send route in v1).
+Confirmed decisions: staging domain **`dev.hopechat.net`**; **same** Meta test
+app; `main` = prod, `develop` = staging (Vercel production branch); second
+Supabase project (**Free** tier + weekly keepalive ping); first GitHub Actions
+CI; this file replaces the retired Cal.com plan.
 
 ## Checklist
-- [x] Human approved the plan and decisions (API key auth, /bookings menu, toggle+share, copy-to-prompt).
-- [x] Every task has acceptance criteria + a verification step.
-- [x] Task dependencies ordered (see plan dependency graph).
-- [x] No task touches more than ~5 files.
-- [x] Checkpoints exist between phases.
+- [ ] Human approved this plan (domain, Meta app, file overwrite confirmed).
+- [ ] Every task has acceptance criteria + a verification step.
+- [ ] Task dependencies ordered (see plan dependency graph).
+- [ ] No task touches more than ~5 files.
+- [ ] Checkpoints exist between phases.
 
-## Phase 0 — Foundation
+## Phase 0 — Branch & CI
 
-- [ ] **Task 1: DB migration `060_calcom_scheduling.sql`**
-  - `cal_bookings` table, indexes, updated_at trigger, RLS per-op + explicit `TO service_role` full-access policy, system_settings fallback seed.
-  - Verify: typecheck/build; migration reviewed.
-- [ ] **Task 2: Cal.com API lib `src/lib/integrations/calcom.ts` + tests**
-  - Encrypted config loader, `fetchEventTypes`, `patchEventType`, `buildBookingLink`, `EventType` type; colocated `calcom.test.ts`.
-  - Verify: typecheck/build; lib harness if vitest broken.
+- [ ] **Task 1: Create `develop` branch**
+  - Branch from `main`, push upstream; protect `main` if possible.
+  - Verify: `git branch -a` shows `develop`; push succeeds.
+- [ ] **Task 2: GitHub Actions CI `.github/workflows/ci.yml`**
+  - PR to `main`/`develop` → install, typecheck, per-file lint, build with
+    placeholder env.
+  - Verify: green run on a test PR.
 
 ### Checkpoint: Foundation
-- [ ] Migration clean; typecheck + build pass.
+- [ ] `develop` pushed; CI green on a PR.
 
-## Phase 1 — Connect & Navigate
+## Phase 1 — Staging Supabase
 
-- [ ] **Task 3: Config API `src/app/api/integrations/calcom/route.ts`**
-  - GET status (+ event types when configured); POST upsert (encrypt keys, test connection); DELETE clears.
-  - Verify: API exercised against a test Cal.com key; typecheck/build.
-- [ ] **Task 4: Settings connect UI `src/components/settings/calcom-form.tsx` + hub**
-  - Connect pane only (masked secrets, Save & Test, Disconnect); flip Calendly stub card → Cal.com with "management lives on Bookings page" hint.
-  - Verify: connect + disconnect real account; typecheck/build.
-- [ ] **Task 5: `bookings` permission + sidebar + `/bookings` page shell**
-  - `permissions.ts` `bookings` key (definitions, FULL_ACCESS, AGENT_DEFAULT false, config perms); sidebar nav + `permissionByPath`; `pathGates` in dashboard-shell; `/bookings` page skeleton with permission clamp.
-  - Verify: sidebar shows Bookings; unpermissioned users bounced; typecheck/build.
+- [ ] **Task 3: Provision staging Supabase + migrations**
+  - New project; run `supabase/migrate.sql` + `supabase/migrations/013…060` +
+    `0201_integrations.sql` in order; confirm `schema_migrations` + RLS.
+  - Verify: schema matches prod; `get_user_business_id()` present.
+- [ ] **Task 4: Staging secrets + seed data**
+  - Fresh 64-hex `ENCRYPTION_KEY`; seed test business, admin user, sample data.
+  - Verify: seeded admin login renders populated dashboard.
 
-### Checkpoint: Connect & Navigate
-- [ ] Connect real account from Settings; `/bookings` reachable; permission gating works.
+### Checkpoint: Database
+- [ ] Migrations clean; seeded login works.
 
-## Phase 2 — Manage & Share
+## Phase 2 — Staging Vercel + Routing
 
-- [ ] **Task 6: Event-type toggle API `src/app/api/integrations/calcom/event-types/[id]/route.ts`**
-  - PATCH `{ disabled }` (+ optional `length`) via Cal.com; 4xx with Cal.com error detail.
-  - Verify: PATCH toggles on real account; typecheck/build.
-- [ ] **Task 7: `/bookings` manage UI**
-  - Event-type list (title, duration, toggle w/ optimistic rollback), booking link + Copy button, AI-prompt hint, no-integration → Settings link.
-  - Verify: toggle reflects on Cal.com; copy works; build passes.
+- [ ] **Task 5: Staging Vercel project + env vars**
+  - New project, production branch `develop`, all env vars (see plan table),
+    TLS for `dev.hopechat.net`.
+  - Verify: first deploy serves landing on `https://dev.hopechat.net`.
+- [ ] **Task 6: Host routing + cron for staging**
+  - Extend `src/proxy.ts` for `dev.` hosts (landing/dashboard/docs); confirm
+    `vercel.json` cron on staging project.
+  - Verify: all three surfaces resolve; cron endpoint auth-checks correctly.
 
-### Checkpoint: Manage Flow
-- [ ] Toggle reflects on Cal.com; copy link works to paste into AI prompt/chat.
+### Checkpoint: Deployable Staging
+- [ ] Push to `develop` auto-deploys to `dev.hopechat.net`; routing works.
 
-## Phase 3 — Track Bookings
+## Phase 3 — Third-party isolation
 
-- [ ] **Task 8: Cal.com webhook**
-  - `src/lib/calcom/webhook-signature.ts` + test (HMAC-SHA256, fail closed, constant-time); `src/app/api/calcom/webhook/route.ts` (verify, upsert bookings, logHttpEvent, 200 on ack).
-  - Verify: replayed real webhook inserts/updates; bad sig rejected; build passes.
-- [ ] **Task 9: Bookings list API + `/bookings` panel**
-  - `src/app/api/calcom/bookings/route.ts` (booked/rescheduled/cancelled); recent-bookings panel (attendee, event, time, status pill).
-  - Verify: created/rescheduled/cancelled render correctly; build passes.
+- [ ] **Task 7: Sandbox third-party config**
+  - Pesapal sandbox; Meta test app (test phone/business only); staging Cal.com
+    key + webhook secret; test SMTP inbox.
+  - Verify: sandbox checkout, WhatsApp test message, booking webhook hit staging.
 
-### Checkpoint: Shipped Slice
-- [ ] A booking via a shared link appears in-app; reschedule/cancel dedupes.
+## Phase 4 — Runbook & verification
 
-## Phase 4 — Parity & Polish
-
-- [ ] **Task 10: Landing page parity (AGENTS.md)**
-  - `src/app/page.tsx`: feature card for appointment booking, matching FAQ entry, Cal.com under Integrations chips/footer.
-  - Verify: landing copy present + consistent; build passes.
-- [ ] **Task 11: Hardening pass**
-  - RLS/service-role review, rate limits, no secrets in client, dark/light contrast, reduced-motion; final lint/typecheck/build.
-  - Verify: repo gates clean.
+- [ ] **Task 8: Deployment runbook**
+  - Migrate order, env checklist, promote `develop`→`main`, rollback, Supabase
+    idle-pause caveat.
+  - Verify: steps followable without prior context.
+- [ ] **Task 9: Full staging smoke test**
+  - Signup → recovery email resolves on `dev.hopechat.net/login`; AI chat;
+    sandbox checkout + webhook; Sheets sync; inbound WhatsApp; Cal.com booking;
+    cron fires.
+  - Verify: checklist all pass; no prod URLs/data touched.
 
 ### Checkpoint: Complete
-- [ ] All acceptance criteria met; human reviews before merge.
+- [ ] All acceptance criteria met; human reviews before merge to `main`.
