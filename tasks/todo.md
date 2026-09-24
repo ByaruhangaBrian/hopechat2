@@ -140,10 +140,13 @@ CI; this file replaces the retired Cal.com plan.
 
 ## Phase 4 — Runbook & verification
 
-- [ ] **Task 8: Deployment runbook**
-  - Migrate order, env checklist, promote `develop`→`main`, rollback, Supabase
-    idle-pause caveat.
-  - Verify: steps followable without prior context.
+- [x] **Task 8: Deployment runbook**
+  - `docs/deployment-runbook.md`: migrate order (061-before-promote), env
+    checklist per project (from `.env.local.example` + `process.env` audit),
+    deploy/rollback, cron-driver matrix, promote `develop`→`main`, Supabase
+    idle-pause/keepalive, and the 2026-09-26 edge-cache incident as a
+    don't-reintroduce note.
+  - Verify: steps followable without prior context. **DONE 2026-09-26**.
 - [ ] **Task 9: Full staging smoke test**
   - Signup → recovery email resolves on `dev.hopechat.net/login`; AI chat;
     sandbox checkout + webhook; Sheets sync; inbound WhatsApp; Cal.com booking;
