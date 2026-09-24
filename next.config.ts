@@ -76,11 +76,11 @@ const nextConfig: NextConfig = {
    *   did nothing because the cache is server-side.
    *
    * Strategy:
+   *   - /api/* — no-store. API responses are per-user and must never
+   *     be shared across requests at the edge.
    *   - /_next/static/* — immutable for a year. Filenames are
    *     content-hashed, so a new build produces new filenames; the
    *     old ones are safe to keep indefinitely in caches.
-   *   - /api/*          — no-store. API responses are per-user and
-   *     must never be shared across requests at the edge.
    *   - Everything else — public, brief s-maxage + generous
    *     stale-while-revalidate. The edge serves instantly from cache
    *     for the first 5 min, then returns cached content while
@@ -95,19 +95,24 @@ const nextConfig: NextConfig = {
    *   and auth middleware still set `private` / `no-store` for
    *   per-user responses.
    *
-   * Security headers are appended via a separate catch-all rule
-   * below — Next.js merges headers from every matching rule, so
-   * they apply to every response regardless of which cache rule
-   * matched.
+   *   Rule order matters: when two rules match a path and set the
+   *   same header key, the LAST rule listed wins (see headers.md
+   *   "Header Overriding Behavior"). The /:path* cache catch-all is
+   *   therefore listed first, with the /api/* and /_next/static/*
+   *   overrides AFTER it so no-store / immutable actually take
+   *   effect. Security headers are appended via a separate catch-all
+   *   rule below — it only sets security keys, so it never overrides
+   *   a Cache-Control value.
    */
   async headers() {
     return [
       {
-        source: "/_next/static/:path*",
+        source: "/:path*",
         headers: [
           {
             key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
+            value:
+              "public, max-age=0, s-maxage=300, stale-while-revalidate=86400",
           },
         ],
       },
@@ -116,12 +121,11 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "no-store" }],
       },
       {
-        source: "/:path*",
+        source: "/_next/static/:path*",
         headers: [
           {
             key: "Cache-Control",
-            value:
-              "public, max-age=0, s-maxage=300, stale-while-revalidate=86400",
+            value: "public, max-age=31536000, immutable",
           },
         ],
       },

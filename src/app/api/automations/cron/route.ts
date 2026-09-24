@@ -1,7 +1,16 @@
+import { createHash } from 'crypto'
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
 import { resumePendingExecution } from '@/lib/automations/engine'
 import type { AutomationContext } from '@/lib/automations/engine'
+
+function secretMatches(supplied: string | null, expected: string): boolean {
+  const a = createHash('sha256').update(supplied ?? '').digest()
+  const b = createHash('sha256').update(expected).digest()
+  let diff = 0
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i]
+  return diff === 0
+}
 
 /**
  * Drain due `automation_pending_executions` rows. Meant to be hit
@@ -20,7 +29,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'cron not configured' }, { status: 503 })
   }
   const supplied = request.headers.get('x-cron-secret')
-  if (supplied !== expected) {
+  if (!secretMatches(supplied, expected)) {
+    console.error(
+      `[cron-auth] rejected supplied_len=${supplied?.length ?? 0} expected_len=${expected.length}`
+    )
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
