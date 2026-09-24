@@ -1597,7 +1597,10 @@ DECLARE
   impersonated_id TEXT;
 BEGIN
   -- Check if user is superadmin at all
-  IF NOT is_superadmin() THEN
+  -- COALESCE guard: is_superadmin() is NULL for anonymous users (no profile row),
+  -- and `IF NOT NULL` is treated as false in PL/pgSQL, which would wrongly let
+  -- anonymous clients fall through and gain full read access.
+  IF NOT COALESCE(is_superadmin(), false) THEN
     RETURN FALSE;
   END IF;
 
@@ -1626,7 +1629,8 @@ DECLARE
   impersonated_id TEXT;
 BEGIN
   -- 1. If superadmin, prioritize impersonation
-  IF is_superadmin() THEN
+  -- COALESCE guard (see is_superadmin_not_impersonating for rationale)
+  IF COALESCE(is_superadmin(), false) THEN
     -- Try headers first (best for stateless PostgREST)
     BEGIN
       headers := current_setting('request.headers', true)::JSON;
@@ -1929,7 +1933,8 @@ DECLARE
   view_all TEXT;
 BEGIN
   -- Check if user is superadmin at all
-  IF NOT is_superadmin() THEN
+  -- COALESCE guard (see is_superadmin_not_impersonating for rationale)
+  IF NOT COALESCE(is_superadmin(), false) THEN
     RETURN FALSE;
   END IF;
 
@@ -1959,7 +1964,7 @@ BEGIN
   SELECT business_id INTO own_id FROM public.profiles WHERE user_id = auth.uid();
 
   -- If superadmin, allow impersonation override
-  IF is_superadmin() THEN
+  IF COALESCE(is_superadmin(), false) THEN
     BEGIN
       headers := current_setting('request.headers', true)::JSON;
       impersonated_id := headers ->> 'x-impersonated-business-id';
