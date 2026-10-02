@@ -105,7 +105,7 @@ export default function LandingPage() {
     },
     {
       q: "How much does HopeChat cost?",
-      a: "HopeChat runs on simple monthly plans: Bronze at 65,000 UGX, Silver at 180,000 UGX, and Gold at 450,000 UGX per month. Save up to 10% by paying for 3, 6, or 12 months upfront. Every plan starts with a free trial — no credit card required.",
+      a: "HopeChat runs on simple monthly plans: Bronze at 100,000 UGX, Silver at 180,000 UGX, and Gold at 450,000 UGX per month. Save up to 10% by paying for 3, 6, or 12 months upfront. Every plan starts with a free trial — no credit card required.",
     },
     {
       q: "How do I pay for my subscription?",
@@ -835,7 +835,7 @@ export default function LandingPage() {
                 {
                   name: "Bronze",
                   tagline: "For solo sellers getting started",
-                  price: "65,000",
+                  price: "100,000",
                   credits: "1,500 credits / month",
                   features: ["AI assistant & shared inbox", "WhatsApp coexistence", "1 team seat", "Sales pipeline & tags"],
                   popular: false,
