@@ -36,6 +36,7 @@ import {
   CalendarCheck,
   Database,
   ShoppingCart,
+  Download,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -122,6 +123,10 @@ export default function LandingPage() {
     {
       q: "Can the AI book or send appointments for me?",
       a: "Your AI assistant can send booking links from the Bookings page when a customer asks for an appointment, and conversations can hand off straight into an open booking link. You can set your weekly availability and time zone right in the Bookings page — available slots drop automatically from your Cal.com calendar — while HopeChat handles the chat-side sharing and tracking.",
+    },
+    {
+      q: "Can I install HopeChat on my phone like a normal app?",
+      a: "Yes. HopeChat is a Progressive Web App. On Android and desktop Chrome or Edge you'll see an install banner the first time you sign in — tap Install App and it lands on your home screen. On iPhone or iPad, tap the Share button and choose \"Add to Home Screen\". Either way it launches full-screen with no browser address bar, supports home-screen shortcuts to your inbox, broadcasts, and contacts, and updates the moment we deploy — no app store in the loop.",
     },
     {
       q: "Can HopeChat send SMS as well as WhatsApp messages?",
@@ -624,6 +629,39 @@ export default function LandingPage() {
                   </div>
                 ),
               },
+              {
+                icon: Smartphone,
+                title: "Installable Mobile App",
+                desc: "Install HopeChat on any phone or desktop and it opens in its own window — no browser tabs, no address bar, straight to your inbox.",
+                points: [
+                  "One-tap install from Chrome, Edge, or the iOS share sheet",
+                  "Launches full-screen from your home screen or desktop",
+                  "Long-press shortcuts to Inbox, Broadcasts, and Contacts",
+                  "Updates ship instantly — no app store review, no waiting"
+                ],
+                reverse: false,
+                mock: (
+                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between border-b border-border pb-2">
+                      <span className="text-xs font-bold text-foreground">Install HopeChat</span>
+                      <span className="text-[10px] text-primary font-bold bg-primary/10 px-2 py-0.5 rounded">PWA</span>
+                    </div>
+                    <div className="flex items-center gap-3 rounded-xl border border-border bg-background p-3">
+                      <div className="h-10 w-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0"><MessageSquare className="h-5 w-5" /></div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-foreground truncate">HopeChat</div>
+                        <div className="text-[10px] text-muted-foreground">Standalone &middot; No browser needed</div>
+                      </div>
+                      <Download className="h-4 w-4 text-primary shrink-0" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {["Inbox", "Broadcasts", "Contacts"].map((s) => (
+                        <div key={s} className="rounded-lg border border-border px-2 py-2 text-center text-[10px] font-bold text-foreground">Shortcut: {s}</div>
+                      ))}
+                    </div>
+                  </div>
+                ),
+              },
             ].map((feature, idx) => (
               <motion.div
                 key={idx}
@@ -1034,6 +1072,7 @@ export default function LandingPage() {
                 <li><Link href="#features" className="hover:text-primary transition-colors">AI Assistant</Link></li>
                 <li><Link href="#features" className="hover:text-primary transition-colors">Broadcasts</Link></li>
                 <li><Link href="#features" className="hover:text-primary transition-colors">SMS</Link></li>
+                <li><Link href="#features" className="hover:text-primary transition-colors">Mobile App</Link></li>
                 <li><Link href="#pricing" className="hover:text-primary transition-colors">Pricing</Link></li>
               </ul>
             </div>
@@ -1048,6 +1087,7 @@ export default function LandingPage() {
                 <li><Link href="#features" className="hover:text-primary transition-colors">Tests & Practice</Link></li>
                 <li><Link href="#features" className="hover:text-primary transition-colors">Smart Screening</Link></li>
                 <li><Link href="#features" className="hover:text-primary transition-colors">Team Inbox</Link></li>
+                <li><Link href="#features" className="hover:text-primary transition-colors">Mobile App</Link></li>
               </ul>
             </div>
 

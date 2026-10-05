@@ -52,6 +52,14 @@ const faqs = [
     a: "Yes. Go to the AI page and edit the system prompt. You can instruct the AI to speak formally, casually, in a specific language, or in a local dialect. Changes take effect immediately.",
   },
   {
+    q: "Can I install HopeChat on my phone?",
+    a: "Yes — HopeChat is a Progressive Web App. On Android and desktop Chrome or Edge an install banner appears at the top of the dashboard after you sign in; tap \"Install App\" and confirm in the browser dialog. On iPhone or iPad, tap the Share button in Safari and choose \"Add to Home Screen\". The installed copy opens full-screen with no address bar and supports long-press shortcuts to your Inbox, Broadcasts, and Contacts. Dismiss the banner and we won't ask again for 30 days.",
+  },
+  {
+    q: "The install banner never shows up — why?",
+    a: "A few reasons. The banner is suppressed if the app is already installed, if you dismissed it in the last 30 days, or if you opened HopeChat in a private/incognito window (installations are disabled there). It's also Chromium-only — Safari, Firefox, and in-app browsers such as Chrome on iOS don't support the programmatic install prompt, so iOS users install through the Share sheet instead. Note that service workers only register on production builds, so you won't see an install prompt from a local dev server.",
+  },
+  {
     q: "My plan expired — what happens to my workspace?",
     a: "You get a 7-day grace period after expiry where features remain active. After grace, the workspace enters read-only mode: you can still view data but can't send messages or run automations until you renew.",
   },

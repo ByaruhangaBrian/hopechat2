@@ -130,6 +130,19 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // The service worker must never be served from a cache. A stale
+        // sw.js is an old worker that never un-installs itself, and the
+        // browser gives it a 24h grace period before even checking for a
+        // new one. `no-store` makes every page load re-fetch it, so a
+        // deploy's SW changes take effect on the next navigation.
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+      {
         // Security headers on every response, including /_next/static
         // assets (nosniff matters there) and /api/* (HSTS + referrer-
         // policy don't hurt).
