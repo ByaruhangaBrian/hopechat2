@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { SubscriptionBanner } from "@/components/billing/subscription-banner";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { createClient } from "@/lib/supabase/client";
 import { canAccess, type PermissionKey } from "@/lib/permissions";
 
@@ -121,6 +122,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
         <SubscriptionBanner />
+        <InstallPrompt />
         {/* Thinner horizontal padding on mobile so cards have room to breathe. */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
       </div>

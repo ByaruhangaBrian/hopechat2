@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 import { ThemeProvider } from "@/components/theme-provider";
+import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -22,6 +23,15 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [{ url: "/icon" }],
+    apple: [{ url: "/apple-touch-icon.png" }],
+  },
+  applicationName: "HopeChat",
+  // Declares the PWA to iOS, which otherwise ignores manifest.webmanifest
+  // entirely and falls back to guessing from the title tag.
+  appleWebApp: {
+    capable: true,
+    title: "HopeChat",
+    statusBarStyle: "default",
   },
   formatDetection: {
     email: false,
@@ -49,6 +59,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <ServiceWorkerRegistration />
           <Toaster
             position="top-right"
           />
