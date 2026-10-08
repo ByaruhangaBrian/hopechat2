@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
 import { getTemplate } from '@/lib/automations/templates'
 import { insertSteps, type BuilderStepInput } from '@/lib/automations/steps-tree'
+import { logActivity } from '@/lib/activity/log'
 import {
   validateStepsForActivation,
   validateTriggerForActivation,
@@ -116,6 +117,17 @@ export async function POST(request: Request) {
     const err = await insertSteps(automation.id, effectiveSteps)
     if (err) return NextResponse.json({ error: err }, { status: 500 })
   }
+
+  void logActivity({
+    businessId: profile.business_id,
+    actorUserId: user.id,
+    actorLabel: user.email ?? null,
+    category: 'automation',
+    action: 'created',
+    entityType: 'automation',
+    entityId: automation.id,
+    summary: `Created automation ${effectiveName}`,
+  })
 
   return NextResponse.json({ automation }, { status: 201 })
 }

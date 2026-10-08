@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Loader2, Save, Clock, Bot } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { track } from '@/lib/activity/track';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,6 +65,12 @@ export function TestSettings() {
       toast.success(
         `Saved. AI ${enableAiOffers ? 'can' : 'cannot'} offer tests; idle sessions close after ${hours} hour(s).`,
       );
+      void track({
+        category: 'settings',
+        action: 'updated',
+        entity_type: 'settings',
+        summary: 'Updated test & practice session settings',
+      });
     }
     setSaving(false);
   }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
+import { logActivity } from '@/lib/activity/log'
 import {
   loadStepsTree,
   replaceSteps,
@@ -59,13 +60,14 @@ export async function PATCH(
   // to compute the post-patch "effective" state for validation.
   const { data: existing } = await admin
     .from('automations')
-    .select('id, user_id, is_active, trigger_type, trigger_config')
+    .select('id, user_id, business_id, name, is_active, trigger_type, trigger_config')
     .eq('id', id)
     .maybeSingle()
   if (!existing || existing.user_id !== user.id) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
+  const wasActive = existing.is_active
   const update: Record<string, unknown> = {}
   for (const k of [
     'name',
@@ -117,6 +119,34 @@ export async function PATCH(
     if (err) return NextResponse.json({ error: err }, { status: 500 })
   }
 
+  // One human-initiated event per patch. Calling out a state flip takes
+  // precedence over a generic "updated"; editing a running automation
+  // with no state change is just "updated".
+  const nowActive = typeof update.is_active === 'boolean' ? update.is_active : wasActive
+  if (nowActive !== wasActive) {
+    void logActivity({
+      businessId: existing.business_id,
+      actorUserId: user.id,
+      actorLabel: user.email ?? null,
+      category: 'automation',
+      action: nowActive ? 'enabled' : 'disabled',
+      entityType: 'automation',
+      entityId: id,
+      summary: `${nowActive ? 'Enabled' : 'Disabled'} automation ${existing.name}`,
+    })
+  } else {
+    void logActivity({
+      businessId: existing.business_id,
+      actorUserId: user.id,
+      actorLabel: user.email ?? null,
+      category: 'automation',
+      action: 'updated',
+      entityType: 'automation',
+      entityId: id,
+      summary: `Updated automation ${existing.name}`,
+    })
+  }
+
   return NextResponse.json({ ok: true })
 }
 
@@ -128,11 +158,35 @@ export async function DELETE(
   const user = await requireUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { error } = await supabaseAdmin()
+  const admin = supabaseAdmin()
+
+  // Fetch metadata first so the delete event can name the automation.
+  const { data: existing } = await admin
+    .from('automations')
+    .select('id, user_id, business_id, name')
+    .eq('id', id)
+    .maybeSingle()
+  if (!existing || existing.user_id !== user.id) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  const { error } = await admin
     .from('automations')
     .delete()
     .eq('id', id)
     .eq('user_id', user.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  void logActivity({
+    businessId: existing.business_id,
+    actorUserId: user.id,
+    actorLabel: user.email ?? null,
+    category: 'automation',
+    action: 'deleted',
+    entityType: 'automation',
+    entityId: id,
+    summary: `Deleted automation ${existing.name}`,
+  })
+
   return NextResponse.json({ ok: true })
 }

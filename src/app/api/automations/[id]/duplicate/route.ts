@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
+import { logActivity } from '@/lib/activity/log'
 
 export async function POST(
   _request: Request,
@@ -51,6 +52,17 @@ export async function POST(
   if (copyErr || !copy) {
     return NextResponse.json({ error: copyErr?.message ?? 'copy failed' }, { status: 500 })
   }
+
+  void logActivity({
+    businessId: profile.business_id,
+    actorUserId: user.id,
+    actorLabel: user.email ?? null,
+    category: 'automation',
+    action: 'created',
+    entityType: 'automation',
+    entityId: copy.id,
+    summary: `Duplicated automation ${original.name}`,
+  })
 
   const { data: steps } = await admin
     .from('automation_steps')

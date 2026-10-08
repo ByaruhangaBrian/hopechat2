@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Loader2, Upload, Trash2, Mail, CircleAlert } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/client';
+import { track } from '@/lib/activity/track';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -202,6 +203,13 @@ export function ProfileForm() {
           ? 'Profile saved — check your email to confirm the address change'
           : 'Profile saved',
       );
+
+      void track({
+        category: 'settings',
+        action: 'updated',
+        entity_type: 'settings',
+        summary: 'Updated profile',
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       toast.error(msg);

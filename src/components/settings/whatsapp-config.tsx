@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { getErrorMessage, getResponseErrorMessage } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { track } from '@/lib/activity/track';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -191,6 +192,13 @@ export function WhatsAppConfig() {
       );
 
       if (user) await fetchConfig(user.id);
+
+      void track({
+        category: 'settings',
+        action: 'updated',
+        entity_type: 'settings',
+        summary: `Updated WhatsApp configuration`,
+      });
     } catch (err) {
       console.error('Save error:', err);
       toast.error(getErrorMessage(err, 'Failed to save configuration'));
