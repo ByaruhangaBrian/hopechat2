@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { NextResponse, type NextRequest, type NextFetchEvent } from 'next/server'
+import { captureSessionIfDue } from '@/lib/analytics/session'
 
 // Subdomain zones. All three share one deployment; the proxy splits them:
 // - apex (hopechat.net, www.hopechat.net) → marketing landing page
@@ -22,7 +23,7 @@ function withHost(pathname: string, search: string, host: string): NextResponse 
   return NextResponse.redirect(new URL(`${pathname}${search}`, `https://${host}`))
 }
 
-export async function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest, event: NextFetchEvent) {
   const hostname = request.nextUrl.hostname
   const { pathname, search } = request.nextUrl
 
@@ -125,6 +126,12 @@ export async function proxy(request: NextRequest) {
   if (!user && request.nextUrl.pathname.startsWith('/api/whatsapp/') &&
       !request.nextUrl.pathname.includes('/webhook')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Session capture: authenticated page navigations only (not API calls),
+  // throttled to once per 60s, fire-and-forget inside event.waitUntil.
+  if (user && !request.nextUrl.pathname.startsWith('/api/')) {
+    captureSessionIfDue(request, event, supabaseResponse, user.id)
   }
 
   return supabaseResponse

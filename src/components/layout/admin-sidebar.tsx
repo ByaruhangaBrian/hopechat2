@@ -26,6 +26,7 @@ import {
   Radio,
   Wallet,
   UserPlus,
+  MonitorSmartphone,
 } from "lucide-react";
 import {
   Avatar,
@@ -55,6 +56,7 @@ const adminNavItems = [
   { href: "/admin/broadcast-monitor", label: "Broadcast Monitor", icon: Radio },
   { href: "/admin/revenue", label: "Revenue & Ledger", icon: TrendingUp },
   { href: "/admin/impersonation-logs", label: "Impersonation Logs", icon: Shield },
+  { href: "/admin/activity", label: "User Sessions", icon: MonitorSmartphone },
   { divider: true },
   { href: "/admin/logs", label: "System Logs", icon: FileCode },
   { href: "/admin/settings", label: "System Settings", icon: Settings },
