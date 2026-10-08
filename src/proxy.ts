@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest, type NextFetchEvent } from 'next/server'
 import { captureSessionIfDue } from '@/lib/analytics/session'
+import { getConsentGateDecision } from '@/lib/consent/check'
 
 // Subdomain zones. All three share one deployment; the proxy splits them:
 // - apex (hopechat.net, www.hopechat.net) → marketing landing page
@@ -15,8 +16,8 @@ const LANDING_HOSTS = new Set(['hopechat.net', 'www.hopechat.net'])
 // landing domain are redirected to app.hopechat.net.
 const APP_PATHS = [
   '/dashboard', '/inbox', '/contacts', '/pipelines', '/broadcasts',
-  '/automations', '/settings', '/onboarding', '/menus', '/ai',
-  '/login', '/signup', '/forgot-password',
+  '/automations', '/activity', '/settings', '/onboarding', '/menus', '/ai',
+  '/login', '/signup', '/forgot-password', '/consent',
 ]
 
 function withHost(pathname: string, search: string, host: string): NextResponse {
@@ -115,11 +116,26 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   }
 
   // Protected pages - redirect to login if not authenticated
-  const protectedPaths = ['/dashboard', '/inbox', '/contacts', '/pipelines', '/broadcasts', '/automations', '/settings', '/onboarding']
+  const protectedPaths = ['/dashboard', '/inbox', '/contacts', '/pipelines', '/broadcasts', '/automations', '/activity', '/settings', '/onboarding', '/consent']
   if (!user && protectedPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
+  }
+
+  // Consent gate (after auth): tenanted users with consent_state='required'
+  // who have not accepted the current legal versions are redirected away from
+  // all dashboard app paths. The consent screen itself (/consent) is not part
+  // of this list, so the redirect never loops. `soft` tenants and users who
+  // have accepted pass through untouched.
+  const gatedAppPaths = ['/dashboard', '/inbox', '/contacts', '/pipelines', '/broadcasts', '/automations', '/activity', '/settings', '/onboarding', '/menus', '/ai']
+  if (user && gatedAppPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
+    const decision = await getConsentGateDecision(supabase, user.id)
+    if (decision === 'blocked') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/consent'
+      return NextResponse.redirect(url)
+    }
   }
 
   // API routes that need auth (not webhooks)

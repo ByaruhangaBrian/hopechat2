@@ -25,6 +25,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarCheck,
+  Activity,
 } from "lucide-react";
 import {
   Avatar,
@@ -56,6 +57,7 @@ const navItems = [
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
   { href: "/bookings", label: "Bookings", icon: CalendarCheck },
   { href: "/automations", label: "Automations", icon: Zap },
+  { href: "/activity", label: "Activity", icon: Activity },
   { href: "/dashboard/menus", label: "Tests & Practice", icon: FolderTree },
   { href: "/ai", label: "AI Hub", icon: Cpu },
 ];
@@ -94,6 +96,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [impersonatedName, setImpersonatedName] = useState<string | null>(null);
+  const [consentPending, setConsentPending] = useState(false);
 
   // Load and save collapse state
   useEffect(() => {
@@ -114,6 +117,20 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       setImpersonatedName(decodeURIComponent(nameCookie.split('=')[1]));
     }
   }, []);
+
+  // Persistent consent badge — shows while a dismissed (unaccepted) consent
+  // notice remains pending; clicking reopens the notice.
+  useEffect(() => {
+    const onPendingChange = (e: Event) => {
+      setConsentPending((e as CustomEvent<{ pending: boolean }>).detail?.pending === true);
+    };
+    window.addEventListener('hopechat:consent-pending', onPendingChange);
+    return () => window.removeEventListener('hopechat:consent-pending', onPendingChange);
+  }, []);
+
+  const openConsentNotice = () => {
+    window.dispatchEvent(new CustomEvent('hopechat:consent-open'));
+  };
 
   const stopImpersonating = async () => {
     const cookies = document.cookie.split(';');
@@ -336,6 +353,30 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               );
             })}
           </ul>
+
+          {consentPending && (
+            <ul className="space-y-0.5">
+              <li>
+                <button
+                  type="button"
+                  onClick={openConsentNotice}
+                  className={cn(
+                    "group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition-all duration-200",
+                    "text-amber-600 dark:text-amber-400 hover:bg-sidebar-accent",
+                    isCollapsed && "justify-center px-0 py-2"
+                  )}
+                >
+                  <ShieldAlert className="size-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                  {!isCollapsed && (
+                    <>
+                      <span className="flex-1 text-sm font-medium">Review terms</span>
+                      <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
+                    </>
+                  )}
+                </button>
+              </li>
+            </ul>
+          )}
         </nav>
 
         {/* Bottom controls */}
