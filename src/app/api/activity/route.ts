@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { logActivity, validateActivityInput, type ActivityInput } from '@/lib/activity/log'
+import { clampPage, clampPageSize, validCategory, parseIsoDate } from '@/app/api/activity/params'
 
 interface ParsedPayload {
   category: string
@@ -75,6 +76,53 @@ export async function POST(req: Request) {
 
     const result = await logActivity(input)
     return NextResponse.json({ success: true, id: result?.id ?? null })
+  } catch (err: unknown) {
+    console.error('Activity route error:', err)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
+
+// Tenant-facing feed. RLS already scopes rows to the caller's business;
+// the explicit column list guarantees no ip/city/country/UA is ever emitted.
+export async function GET(req: Request) {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(req.url)
+    const page = clampPage(searchParams.get('page'))
+    const pageSize = clampPageSize(searchParams.get('pageSize'))
+    const category = validCategory(searchParams.get('category'))
+    const from = parseIsoDate(searchParams.get('from'))
+    const to = parseIsoDate(searchParams.get('to'))
+
+    const fromIndex = (page - 1) * pageSize
+    const toIndex = fromIndex + pageSize - 1
+
+    let query = supabase
+      .from('activity_events')
+      .select('id, actor_user_id, actor_label, category, action, entity_type, entity_id, summary, created_at', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(fromIndex, toIndex)
+
+    if (category) query = query.eq('category', category)
+    if (from) query = query.gte('created_at', from)
+    if (to) query = query.lte('created_at', to)
+
+    const { data, count, error } = await query
+    if (error) {
+      return NextResponse.json({ error: 'Failed to load activity' }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      events: data ?? [],
+      total: count ?? 0,
+      page,
+      pageSize,
+    })
   } catch (err: unknown) {
     console.error('Activity route error:', err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
