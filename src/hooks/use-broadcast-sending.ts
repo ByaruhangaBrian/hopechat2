@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { track } from '@/lib/activity/track';
 import { Contact, MessageTemplate } from '@/types';
 
 export type CustomFieldOperator = 'is' | 'is_not' | 'contains';
@@ -376,6 +377,13 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
       // ── Step 3: Insert recipient rows ─────────────────────────────
       setProgress(20);
+      void track({
+        category: 'broadcast',
+        action: 'created',
+        entity_type: 'broadcast',
+        entity_id: broadcast.id,
+        summary: `Created broadcast ${broadcast.name}`,
+      });
       const recipientRows = contacts.map((contact) => ({
         broadcast_id: broadcast.id,
         contact_id: contact.id,
@@ -565,6 +573,19 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         .from('broadcasts')
         .update({ status: finalStatus })
         .eq('id', broadcast.id);
+
+      if (finalStatus === 'sent') {
+        void track({
+          category: 'broadcast',
+          action: 'sent',
+          entity_type: 'broadcast',
+          entity_id: broadcast.id,
+          summary:
+            totalRecipients === 1
+              ? `Sent broadcast ${broadcast.name} to 1 contact`
+              : `Sent broadcast ${broadcast.name} to ${totalRecipients} contacts`,
+        });
+      }
 
       setProgress(100);
       return broadcast.id;

@@ -6,6 +6,7 @@ import {
   sendKintuSms,
 } from '@/lib/sms/kintu-sms'
 import { logHttpEvent } from '@/lib/logs/http-logs'
+import { logActivity } from '@/lib/activity/log'
 
 export const SMS_MAX_RECIPIENTS = 1000
 export const SMS_MAX_MESSAGE_LENGTH = 160
@@ -173,6 +174,17 @@ export async function dispatchSmsBroadcast(
     }
   }
 
+  // Created event (server-derived, not in any per-recipient loop).
+  void logActivity({
+    businessId,
+    actorUserId: userId,
+    category: 'broadcast',
+    action: 'created',
+    entityType: 'broadcast',
+    entityId: broadcast.id,
+    summary: `Created SMS broadcast ${cleanName} for ${valid.length} recipient${valid.length === 1 ? '' : 's'}`,
+  })
+
   const recipientRows = valid.map((r) => ({
     sms_broadcast_id: broadcast.id,
     contact_id: r.contactId,
@@ -242,6 +254,17 @@ export async function dispatchSmsBroadcast(
       .from('sms_broadcasts')
       .update({ status: 'sent', sent_count: valid.length })
       .eq('id', broadcast.id)
+
+    // One sent event for the whole bulk send, never one per recipient.
+    void logActivity({
+      businessId,
+      actorUserId: userId,
+      category: 'broadcast',
+      action: 'sent',
+      entityType: 'broadcast',
+      entityId: broadcast.id,
+      summary: `Sent SMS broadcast ${cleanName} to ${valid.length} recipient${valid.length === 1 ? '' : 's'}`,
+    })
 
     return {
       ok: true,

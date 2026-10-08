@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { track } from '@/lib/activity/track';
 import type { Contact, Tag, ContactTag, ContactNote, CustomField, ContactCustomValue, Deal } from '@/types';
 import {
   Sheet,
@@ -201,6 +202,14 @@ export function ContactDetailView({
     if (error) {
       toast.error('Failed to update contact');
     } else {
+      const contactLabel = editName.trim() || editPhone.trim() || 'contact';
+      void track({
+        category: 'contact',
+        action: 'updated',
+        entity_type: 'contact',
+        entity_id: contactId,
+        summary: `Updated contact ${contactLabel}`,
+      });
       toast.success('Contact updated');
       fetchContact();
       onUpdated();

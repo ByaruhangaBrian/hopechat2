@@ -44,6 +44,7 @@ import {
 import { ContactForm } from '@/components/contacts/contact-form';
 import { ContactDetailView } from '@/components/contacts/contact-detail-view';
 import { ImportModal } from '@/components/contacts/import-modal';
+import { track } from '@/lib/activity/track';
 
 const PAGE_SIZE = 25;
 
@@ -211,6 +212,15 @@ export default function ContactsPage() {
     }
 
     toast.success('Contact deleted');
+
+    const contactLabel = target.name || target.phone || 'contact';
+    void track({
+      category: 'contact',
+      action: 'deleted',
+      entity_type: 'contact',
+      entity_id: target.id,
+      summary: `Deleted contact ${contactLabel}`,
+    });
   }
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);

@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { track } from '@/lib/activity/track';
 import {
   Dialog,
   DialogContent,
@@ -165,6 +166,12 @@ export function ImportModal({ open, onOpenChange, onImported }: ImportModalProps
 
       setResult({ imported, failed });
       if (imported > 0) {
+        void track({
+          category: 'contact',
+          action: 'created',
+          entity_type: 'contact',
+          summary: `Imported ${imported} contact${imported !== 1 ? 's' : ''}`,
+        });
         toast.success(`${imported} contact${imported !== 1 ? 's' : ''} imported`);
         onImported();
       }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { track } from '@/lib/activity/track';
 import type { Contact, Tag, ContactTag } from '@/types';
 import {
   Dialog,
@@ -140,6 +141,15 @@ export function ContactForm({
           if (tagError) throw tagError;
         }
       }
+
+      const contactLabel = name.trim() || phone.trim() || 'contact';
+      void track({
+        category: 'contact',
+        action: isEdit ? 'updated' : 'created',
+        entity_type: 'contact',
+        entity_id: contactId ?? undefined,
+        summary: `${isEdit ? 'Updated' : 'Added'} contact ${contactLabel}`,
+      });
 
       toast.success(isEdit ? 'Contact updated' : 'Contact created');
       onOpenChange(false);

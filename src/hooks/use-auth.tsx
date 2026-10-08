@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { track } from "@/lib/activity/track";
 import type { User } from "@supabase/supabase-js";
 import type { Permissions } from "@/lib/permissions";
 
@@ -251,6 +252,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     const supabase = createClient();
+    // Fire-and-forget: report the sign-out while the session cookie is
+    // still present (the activity API needs it). Never awaited so it
+    // cannot delay or block an explicit logout.
+    void track({
+      category: 'auth',
+      action: 'logout',
+      summary: 'Signed out',
+    });
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);

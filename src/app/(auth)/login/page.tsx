@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { MessageSquare, ShieldCheck, Zap, BarChart3, Globe } from "lucide-react";
 import { GoogleIcon } from "@/components/ui/google-icon";
 import { logHttpEvent } from "@/lib/logs/http-logs";
+import { track } from "@/lib/activity/track";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -52,6 +53,12 @@ export default function LoginPage() {
       payload: { email },
       statusCode: 200,
       note: 'login_success'
+    });
+
+    void track({
+      category: 'auth',
+      action: 'login',
+      summary: `Signed in as ${email}`,
     });
 
     router.push("/dashboard");

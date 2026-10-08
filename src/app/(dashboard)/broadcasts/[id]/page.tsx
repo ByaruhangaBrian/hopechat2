@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { track } from '@/lib/activity/track';
 import { Broadcast, BroadcastRecipient, RecipientStatus } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -239,6 +240,13 @@ export default function BroadcastDetailPage() {
       toast.error(`Failed to delete: ${delErr.message}`);
       return;
     }
+    void track({
+      category: 'broadcast',
+      action: 'deleted',
+      entity_type: 'broadcast',
+      entity_id: broadcastId,
+      summary: `Deleted broadcast ${broadcast?.name ?? ''}`.trim(),
+    });
     toast.success('Broadcast deleted');
     router.push('/broadcasts');
   }

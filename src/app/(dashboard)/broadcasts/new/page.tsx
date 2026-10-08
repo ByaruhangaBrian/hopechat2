@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { track } from '@/lib/activity/track';
 import { toast } from 'sonner';
 import { MessageTemplate } from '@/types';
 import { Step1ChooseTemplate } from '@/components/broadcasts/step1-choose-template';
@@ -170,6 +171,12 @@ function NewBroadcastContent() {
       toast.error(`Failed to save draft: ${error.message}`);
       return;
     }
+    void track({
+      category: 'broadcast',
+      action: 'created',
+      entity_type: 'broadcast',
+      summary: `Created broadcast ${name.trim()} as a draft`,
+    });
     toast.success('Draft saved');
     router.push('/broadcasts');
   }
