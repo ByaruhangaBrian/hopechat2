@@ -3,6 +3,10 @@
     {
       "path": "/api/onboarding-funnel/cron",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/retention",
+      "schedule": "0 6 * * *"
     }
   ]
 }

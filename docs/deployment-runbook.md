@@ -45,6 +45,7 @@ Feature / guarded-route vars (set when the feature is used):
 | --- | --- |
 | `AUTOMATION_CRON_SECRET` | `x-cron-secret` for `/api/automations/cron` (drains pending executions) |
 | `LEAD_RECOVERY_CRON_SECRET` | `x-cron-secret` for `/api/onboarding-funnel/cron` (recovery emails) |
+| `RETENTION_CRON_SECRET` | `x-cron-secret` for `/api/cron/retention` (redacts IPs older than 90 days) |
 | `WHATSAPP_AI_QUEUE_SECRET` | `/api/whatsapp/queue` |
 | `GEMINI_API_KEY` | global AI fallback (per-business keys live in DB, encrypted) |
 | `PESAPAL_CONSUMER_KEY` / `PESAPAL_CONSUMER_SECRET` | payments fallback (DB per-business overrides) |
@@ -57,7 +58,8 @@ Feature / guarded-route vars (set when the feature is used):
 
 Known gaps as of 2026-09-26: staging lacks `META_APP_SECRET`, `GEMINI_API_KEY`,
 `GOOGLE_SHEETS_*`, `PESAPAL_*`, `SMTP_*`. Prod lacks `AUTOMATION_CRON_SECRET`,
-`LEAD_RECOVERY_CRON_SECRET`, `CALCOM_WEBHOOK_SECRET`, `PESAPAL_*`, `SMTP_*`.
+`LEAD_RECOVERY_CRON_SECRET`, `RETENTION_CRON_SECRET`, `CALCOM_WEBHOOK_SECRET`,
+`PESAPAL_*`, `SMTP_*`.
 
 **How to set** (staging, dev install; `%APPDATA%\xdg.data\com.vercel.cli\auth.json`
 holds the CLI token — rerun `vercel login` if that file is lost):
