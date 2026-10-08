@@ -32,6 +32,7 @@ export default function SignupPage() {
   const [phoneNumberId, setPhoneNumberId] = useState("");
   const [wabaId, setWabaId] = useState("");
   const [accessToken, setAccessToken] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -65,6 +66,12 @@ export default function SignupPage() {
   const handleSignup = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setError(null);
+
+    if (!termsAccepted) {
+      setError("Please accept the Terms of Service and Privacy Policy to continue");
+      return;
+    }
+
     setLoading(true);
 
     const { data, error } = await supabase.auth.signUp({
@@ -342,6 +349,12 @@ export default function SignupPage() {
 
             {step === 2 && (
               <form onSubmit={handleSignup} className="grid gap-4 animate-in slide-in-from-right-4 duration-500">
+                {error && (
+                  <div role="alert" className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive animate-in zoom-in-95 duration-300">
+                    {error}
+                  </div>
+                )}
+
                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 mb-2">
                   <p className="text-xs text-primary font-medium leading-relaxed">
                     Link your Meta WhatsApp Business API now to start sending messages immediately. You can also skip this and configure it later.
@@ -383,6 +396,43 @@ export default function SignupPage() {
                     onChange={(e) => setAccessToken(e.target.value)}
                     className="h-11 bg-muted/30 border-border"
                   />
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <input
+                    id="termsAccept"
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    disabled={loading}
+                    aria-required="true"
+                    aria-describedby="termsAcceptHint"
+                    className="mt-1 h-4 w-4 shrink-0 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <label htmlFor="termsAccept" className="text-xs text-muted-foreground leading-relaxed">
+                    I have read and agree to the{" "}
+                    <Link
+                      href="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-primary hover:underline"
+                    >
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                      href="/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-primary hover:underline"
+                    >
+                      Privacy Policy
+                    </Link>
+                    .
+                    <span id="termsAcceptHint" className="sr-only">
+                      Required to create your account
+                    </span>
+                  </label>
                 </div>
 
                 <div className="mt-4 flex flex-col gap-3">
