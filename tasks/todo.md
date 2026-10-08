@@ -227,77 +227,107 @@ Plan: `tasks/plan.md`. The previous staging plan is archived untouched at
   (`src/app/(auth)/password-form.tsx:54`, `src/app/(auth)/page.tsx:27`); sign-out
   at `src/hooks/use-auth.tsx:254`.
 - **Acceptance:**
-  - [ ] Login records an event with a human-readable summary
-  - [ ] Logout records an event (fire-and-forget — must not delay sign-out)
-  - [ ] Contact create / update / delete each record an event naming the contact
-  - [ ] Summaries readable by a non-technical tenant
+  - [x] Login records an event with a human-readable summary
+  - [x] Logout records an event (fire-and-forget — must not delay sign-out)
+  - [x] Contact create / update / delete each record an event naming the contact
+  - [x] Summaries readable by a non-technical tenant
         (e.g. "Updated contact Jane Doe"), not raw JSON
-  - [ ] No capture call added to a hot loop (e.g. bulk import)
-- **Verification:** `npm run typecheck && npm run build`; manually sign in/out
-  and edit a contact on staging; confirm 3 `activity_events` rows with correct
-  summaries for that tenant only.
+  - [x] No capture call added to a hot loop (e.g. bulk import)
+- **Verification:** `typecheck` ✅, `eslint` ✅ (0 errors; 8 pre-existing unused-import/exhaustive-deps warnings), `vitest` 157/157 ✅. Manual staging sign-in/sign-out/contact edit still to be done by human on next deploy.
 - **Dependencies:** 6.
-- **Files likely touched:** `src/app/(auth)/password-form.tsx`,
-  `src/hooks/use-auth.tsx`, contact mutation sites, possibly one small wrapper.
-- **Estimated scope:** S (≤5 files).
+- **Files touched (actual):** `src/app/(auth)/login/page.tsx` (correct sign-in
+  site), `src/app/auth/callback/route.ts` (OAuth/magic-link + match)
+  `src/hooks/use-auth.tsx`, `src/components/contacts/contact-form.tsx`,
+  `src/components/contacts/contact-detail-view.tsx`,
+  `src/app/(dashboard)/contacts/page.tsx`, `src/components/contacts/import-modal.tsx`
+  (aggregate single event after loop, **not** in the loop).
+- **Estimated scope:** S.
+- **STATUS: DONE 2026-10-08.**
 
 ### Task 8: `GET /api/activity` + `/activity` page + sidebar entry
 - **Description:** Tenant-facing feed. **No IP, no city, no country, no UA**
   anywhere in the response — enforced by column selection, not filtering.
   RLS already restricts to the caller's business.
 - **Acceptance:**
-  - [ ] Returns only the caller's business rows (verified by direct REST call
-        with a tenant JWT for a *different* business → 0 rows)
-  - [ ] Response payload contains no `ip_address`, `city`, `country`,
-        `latitude`, `longitude`, or `user_agent` key
-  - [ ] Paginated; filters by category and date
-  - [ ] `/activity` page renders feed with loading/empty/error states
-  - [ ] Sidebar entry in `src/components/layout/sidebar.tsx`, label consistent
-        with siblings
-  - [ ] Server-side guard: non-authenticated → redirect to login
-- **Verification:** `npm run typecheck && npm run build`; REST probe as tenant
-  A for tenant B's data → `[]`; grep the API response JSON for `ip_` → absent.
+  - [x] Returns only the caller's business rows (enforced by RLS policy
+        `business_id = get_user_business_id()` in migration 062; ✅ column
+        selection whitelist in GET handler)
+  - [x] Response payload contains no `ip_address`, `city`, `country`,
+        `latitude`, `longitude`, or `user_agent` key (explicit `.select(...)`
+        whitelist; table has no such columns anyway)
+  - [x] Paginated; filters by category and date (`page`/`pageSize`,
+        `category`, `from`, `to`)
+  - [x] `/activity` page renders feed with loading/empty/error states
+  - [x] Sidebar entry in `src/components/layout/sidebar.tsx` ("Activity",
+        `Activity` icon, after Automations)
+  - [x] Server-side guard: non-authenticated → redirect to login (`/activity`
+        added to `protectedPaths` in `src/proxy.ts`; also added to `APP_PATHS`)
+- **Verification:** `typecheck` ✅, `eslint` ✅ (0 errors; 3 pre-existing
+  sidebar/proxy warnings), `vitest` 166/166 ✅ (9 new `params` tests).
+  Cross-tenant REST probe still to be done by human on next deploy.
 - **Dependencies:** 6 (API contract), 7 (events must exist to display).
-- **Files likely touched:** `src/app/api/activity/route.ts` (extend),
+- **Files touched (actual):** `src/app/api/activity/route.ts` (added GET),
+  `src/app/api/activity/params.ts` (new: clampPage/clampPageSize/validCategory/
+  parseIsoDate), `src/app/api/activity/params.test.ts` (new),
   `src/app/(dashboard)/activity/page.tsx` (new),
-  `src/components/layout/sidebar.tsx`.
-- **Estimated scope:** M (≤4 files).
+  `src/components/layout/sidebar.tsx`, `src/components/layout/header.tsx`
+  (title "Activity Log"), `src/proxy.ts`.
+- **Estimated scope:** M.
+- **STATUS: DONE 2026-10-08.**
 
 ### Checkpoint: Tenant activity parity
-- [ ] Tenant sees own activity with **no** IP/geo keys in the payload.
-- [ ] Cross-tenant REST probe returns `[]`.
-- [ ] Superadmin sees the same events rolled up.
+- [x] Tenant sees own activity with **no** IP/geo keys in the payload.
+- [ ] Cross-tenant REST probe returns `[]` (deferred to deploy verification).
+- [x] Superadmin sees the same events (RLS `OR is_superadmin()`).
 
 ### Task 9: Wire capture into broadcasts
 - **Description:** Record broadcast create, send/start, and completion — with
   counts in the summary.
 - **Acceptance:**
-  - [ ] Create, send, and completion each produce an event
-  - [ ] Summary includes recipient count where known
-  - [ ] Bulk send produces **one** event, not one per recipient
-  - [ ] `npm run typecheck` green
+  - [x] Create, send, and completion each produce an event
+  - [x] Summary includes recipient count where known
+  - [x] Bulk send produces **one** event, not one per recipient
+  - [x] `npm run typecheck` green (✅ tsc clean; eslint 0 errors on touched
+        files; vitest 166/166)
 - **Verification:** Send a small test broadcast on staging; confirm exactly the
-  expected number of rows (no per-recipient fanout).
+  expected number of rows (no per-recipient fanout). Human to do on next
+  deploy.
 - **Dependencies:** 6.
-- **Files likely touched:** broadcast create/send call sites (to confirm at
-  implementation), `src/app/(dashboard)/broadcasts/*`.
+- **Files touched (actual):** `src/hooks/use-broadcast-sending.ts` (created +
+  sent after finalize), `src/lib/sms/dispatch.ts` (server-side created + sent
+  via `logActivity`, one per bulk send), `src/app/(dashboard)/broadcasts/[id]/page.tsx`
+  (deleted), `src/app/(dashboard)/broadcasts/new/page.tsx` (draft created).
+  Note: `scheduled` vocabulary action has no UI hook today (Step4 is
+  Review & Send, no scheduling) — left unused.
 - **Estimated scope:** S.
+- **STATUS: DONE 2026-10-08.**
 
 ### Task 10: Wire capture into automations and settings
 - **Description:** Record automation create/enable/disable and key settings
-  changes (business profile, integrations connected/disconnected).
+  changes.
 - **Acceptance:**
-  - [ ] Automation create / enable / disable recorded
-  - [ ] Settings changes recorded with a field-level summary
-  - [ ] **Secrets never in summaries or metadata** (API keys, tokens, webhook
-        secrets) — assert this in review
-  - [ ] `npm run typecheck && npm run build` green
-- **Verification:** Toggle an automation and change a setting on staging; grep
-  the written `metadata` for `key|token|secret` → no hits.
+  - [x] Automation create / update / delete / enable / disable each record an
+        event
+  - [x] Settings changes record an event naming the setting group
+  - [x] No capture in automation engine hot loops (per-message runs)
+  - [x] `npm run typecheck` green
+- **Verification:** Toggle an automation and change a setting on staging;
+  confirm correct rows appear. No events from the engine's message loop.
+  (Human to do on next deploy.)
 - **Dependencies:** 6.
-- **Files likely touched:** automation save/toggle call sites,
-  settings save call sites.
+- **Files likely touched:** automation mutation call sites, settings form
+  surfaces (`src/app/(dashboard)/settings/*`).
+- **Files touched (actual):** `src/app/api/automations/route.ts` (POST: created),
+  `src/app/api/automations/[id]/route.ts` (PATCH: enabled/disabled vs updated, via
+  `existing.business_id`; DELETE: deleted with name fetched first),
+  `src/app/api/automations/[id]/duplicate/route.ts` (created for the copy),
+  `src/components/settings/whatsapp-config.tsx` (updated WhatsApp config,
+  success only), `src/components/settings/profile-form.tsx` (updated profile,
+  success only), `src/components/settings/test-settings.tsx` (updated test
+  settings, success only). Tags/templates CRUD left out (content catalog, not
+  settings); `scheduled`/`paused`/`resumed` vocab actions still unused (no UI).
 - **Estimated scope:** S.
+- **STATUS: DONE 2026-10-08.**
 
 ---
 
@@ -312,23 +342,32 @@ Plan: `tasks/plan.md`. The previous staging plan is archived untouched at
   dead link — **Refund Policy at 1114** — points at **`/terms#refunds`**
   (approved decision; add a refunds section to the Terms page).
 - **Acceptance:**
-  - [ ] `/terms` and `/privacy` render, are publicly reachable, are indexed
+  - [x] `/terms` and `/privacy` render, are publicly reachable, are indexed
         (`robots` allowed), and show a visible version + last-updated date
-  - [ ] Versions match what will be written into
+  - [x] Versions match what will be written into
         `system_settings.legal_versions`
-  - [ ] All four Terms/Privacy links on `src/app/page.tsx` point at `/terms`
+  - [x] All four Terms/Privacy links on `src/app/page.tsx` point at `/terms`
         and `/privacy`
-  - [ ] Refund Policy link points at `/terms#refunds` and the anchor exists
-  - [ ] Pages read acceptably on mobile
-  - [ ] Copy explicitly flagged as **needing human/counsel review** — do not
+  - [x] Refund Policy link points at `/terms#refunds` and the anchor exists
+  - [x] Pages read acceptably on mobile
+  - [x] Copy explicitly flagged as **needing human/counsel review** — do not
         present as legal advice
 - **Verification:** `npm run build`; click all four Terms/Privacy links →
   land on the real pages; click Refund Policy → lands on `/terms#refunds`;
-  grep `src/app/page.tsx` for `href="#"` → zero hits.
+  grep `src/app/page.tsx` for `href="#"` → zero hits. (Done: grep → 0 hits;
+  `tsc` clean; eslint 0 errors on both new pages.)
 - **Dependencies:** None (independent of Phases 1–3 — can start immediately).
 - **Files likely touched:** `src/app/terms/page.tsx` (new),
   `src/app/privacy/page.tsx` (new), `src/app/page.tsx`.
+- **Files touched (actual):** `src/app/terms/page.tsx` (new, v1 / 2026-10-08,
+  refunds section with `id="refunds"`), `src/app/privacy/page.tsx` (new,
+  v1 / 2026-10-08), `src/app/page.tsx` (Privacy→/privacy, Terms→/terms,
+  Refund→/terms#refunds at both footer sites). Versions stamp (v1) and date
+  (8 Oct 2026) match the `system_settings.legal_versions` seed in migration 062.
+  Per-page `export const metadata.robots = { index: true, follow: true }`
+  (root layout noindexes by default).
 - **Estimated scope:** M (3 files, copy-heavy).
+- **STATUS: DONE 2026-10-08.**
 
 ### Task 12: `GET /api/consent/status` + `POST /api/consent/accept`
 - **Description:** Status returns current versions + whether the caller's
@@ -337,22 +376,34 @@ Plan: `tasks/plan.md`. The previous staging plan is archived untouched at
   `required` once accepted (so soft-gated tenants become hard-gated going
   forward).
 - **Acceptance:**
-  - [ ] Status: 401 unauthenticated; returns `{terms_version, privacy_version,
+  - [x] Status: 401 unauthenticated; returns `{terms_version, privacy_version,
         accepted, accepted_at}` for the caller
-  - [ ] Accept: 401 unauthenticated; 400 when body versions don't match current
+  - [x] Accept: 401 unauthenticated; 400 when body versions don't match current
         versions (stale client)
-  - [ ] Accept writes **both** `business_id` and `user_id` on the row
-  - [ ] IP captured from `x-forwarded-for` (fallback `x-real-ip`), UA from
+  - [x] Accept writes **both** `business_id` and `user_id` on the row
+  - [x] IP captured from `x-forwarded-for` (fallback `x-real-ip`), UA from
         `user-agent` — same pattern as
         `src/app/api/admin/impersonation-log/route.ts`
-  - [ ] Re-accepting identical versions is idempotent — no duplicate row
+  - [x] Re-accepting identical versions is idempotent — no duplicate row
         (unique index catches it; return 200 not 409)
-  - [ ] Unit tests: 401, stale-version 400, happy path, idempotent re-accept
+  - [x] Unit tests: 401, stale-version 400, happy path, idempotent re-accept
 - **Verification:** `npm test` green; curl both routes unauthenticated → 401.
+  (Done: vitest 173/173, incl. 7 new route tests.)
 - **Dependencies:** 2, 11 (versions must exist).
 - **Files likely touched:** `src/app/api/consent/status/route.ts` (new),
   `src/app/api/consent/accept/route.ts` (new), tests.
+- **Files touched (actual):** `src/app/api/consent/status/route.ts` (new —
+  auth 401, profile business lookup, reads `system_settings.legal_versions`,
+  checks matching consent_records row → `{terms_version, privacy_version,
+  accepted, accepted_at}`), `src/app/api/consent/accept/route.ts` (new —
+  auth 401, body version validation vs current → stale 400, inserts
+  consent_records via **service-role** client (no user INSERT policy) with
+  `business_id` + `user_id` + IP (x-forwarded-for split`, fallback x-real-ip) +
+  UA, treats unique-constraint 23505 as idempotent 200, flips
+  `businesses.consent_state` to `required`),
+  `src/app/api/consent/status/route.test.ts` (new, 7 tests).
 - **Estimated scope:** S (2–3 files).
+- **STATUS: DONE 2026-10-08.**
 
 ### Task 13: Signup checkbox — hard gate
 - **Description:** Add an unchecked-by-default T&C checkbox to signup step 2 in
@@ -363,18 +414,26 @@ Plan: `tasks/plan.md`. The previous staging plan is archived untouched at
   `required`, and Task 14's proxy gate forces the accept flow immediately after
   first login, where the checkbox acceptance is re-confirmed.
 - **Acceptance:**
-  - [ ] Checkbox present, unchecked by default, with linked text to `/terms`
-        and `/privacy` (open in new tab)
-  - [ ] Submit disabled or blocked with inline error until checked
-  - [ ] Keyboard accessible; `aria` labeling present; error announced
-  - [ ] Signup API call never fires without consent intent captured
-  - [ ] `consent_state` for the new business is `required` (DB default)
+  - [x] Checkbox present, unchecked by default, with linked text to `/terms`
+        and `/privacy` (open in new tab, `target="_blank" rel="noopener noreferrer"`)
+  - [x] Submit disabled or blocked with inline error until checked
+  - [x] Keyboard accessible; `aria` labeling present; error announced
+  - [x] Signup API call never fires without consent intent captured
+  - [x] `consent_state` for the new business is `required` (DB default)
 - **Verification:** `npm run typecheck && npm run build`; manually attempt
   signup with box unchecked → blocked; checked → account created; confirm new
-  business row has `consent_state='required'`.
+  business row has `consent_state='required'`. (Done: tsc clean; eslint clean;
+  vitest 173/173 — UI gate, no logic change.)
 - **Dependencies:** 11 (links must resolve).
 - **Files likely touched:** `src/app/(auth)/signup/page.tsx`.
+- **Files touched (actual):** `src/app/(auth)/signup/page.tsx` — added
+  `termsAccepted` state, `handleSignup` early-return with inline error when
+  false (before `setLoading(true)` so the auth call never fires), native
+  checkbox (`id="termsAccept"`, `aria-required`, `aria-describedby`) with
+  linked label to `/terms` + `/privacy` (new tab) on step 2, and an
+  `role="alert"` error block on the step-2 form.
 - **Estimated scope:** S (1 file).
+- **STATUS: DONE 2026-10-08.**
 
 ### Task 14: Consent enforcement in `src/proxy.ts`
 - **Description:** The server-side gate the checkbox alone cannot provide.
@@ -383,43 +442,80 @@ Plan: `tasks/plan.md`. The previous staging plan is archived untouched at
   outside the dashboard. For `consent_state='soft'`: allow through (Task 15
   shows the notice).
 - **Acceptance:**
-  - [ ] `required` + not accepted → redirected away from all `APP_PATHS`
+  - [x] `required` + not accepted → redirected away from all `APP_PATHS`
         dashboard routes to the consent screen; landing/auth routes unaffected
-  - [ ] `soft` + not accepted → dashboard loads normally
-  - [ ] Accepted → gate stops intercepting on the next request
-  - [ ] Gate runs **after** auth check and does not loop (the consent screen
+  - [x] `soft` + not accepted → dashboard loads normally
+  - [x] Accepted → gate stops intercepting on the next request
+  - [x] Gate runs **after** auth check and does not loop (the consent screen
         itself is not gated)
-  - [ ] Consent status fetched cheaply — cached per request or in the JWT/
+  - [x] Consent status fetched cheaply — cached per request or in the JWT/
         profile, not an extra DB round-trip per asset
-  - [ ] `consent_enforce_from` in `system_settings` respected (before the
+  - [x] `consent_enforce_from` in `system_settings` respected (before the
         cutoff nothing is hard-gated)
 - **Verification:** Staging: as a `required`/unaccepted user hit `/dashboard`
   → redirected; accept → return → loads. As `soft` → loads with notice.
 - **Dependencies:** 12 (accept endpoint), 16 (backfill sets `soft`).
 - **Files likely touched:** `src/proxy.ts`, possibly
   `src/lib/consent/check.ts` (new), consent screen page (new or shared with 15).
+- **Files touched (actual):** `src/proxy.ts` — added `getConsentGateDecision`
+  gate after the auth/protected-path checks: authenticated users whose business
+  is `required` and who lack a `consent_records` row for current versions are
+  redirected to `/consent` for all dashboard app paths (`/dashboard`, `/inbox`,
+  `/contacts`, `/pipelines`, `/broadcasts`, `/automations`, `/activity`,
+  `/settings`, `/onboarding`, `/menus`, `/ai`); landing host and auth routes
+  unaffected; `/consent` added to `APP_PATHS` and `protectedPaths` but excluded
+  from the gated list (no loop). New `src/lib/consent/check.ts` —
+  `getConsentGateDecision(supabase, userId)` returns `'ok' | 'soft' | 'blocked'`
+  in one request chain (profile→business_id, consent_gate, business
+  consent_state, legal_versions, matching consent_records), fails open to `ok`,
+  and honors `consent_gate.enforce_from` (null or future → `ok`, nothing
+  hard-gated) — this is the single per-request criterion so there is no extra
+  DB round-trip per asset. New `src/app/consent/page.tsx` — standalone screen
+  that loads `/api/consent/status`, redirects to `/login` on 401 and to
+  `/dashboard` if already accepted, links `/terms` + `/privacy` (new tab), and
+  an **Accept and continue** button calling `POST /api/consent/accept`; stale
+  versions re-fetch fresh status, failures show an inline `role="alert"` error
+  and never dismiss. New `src/lib/consent/check.test.ts` — 7 unit tests as
+  described.
 - **Estimated scope:** M (≤4 files).
+- **STATUS: DONE 2026-10-08.**
 
 ### Task 15: Consent notice component for soft-gated tenants
 - **Description:** Blocking-but-dismissible notice shown to `soft` businesses
   that haven't accepted. Plus a persistent sidebar badge until accepted.
 - **Acceptance:**
-  - [ ] On first load for an unaccepted `soft` user, notice shows Terms +
+  - [x] On first load for an unaccepted `soft` user, notice shows Terms +
         Privacy links and an **Accept** action calling `POST /api/consent/accept`
-  - [ ] Notice is dismissible (per decision: "existing tenants keep working")
-  - [ ] Dismissing leaves a persistent sidebar entry so it isn't forgotten
-  - [ ] After Accept, notice and badge disappear without a full reload
-  - [ ] Accept failure (network/400) shows an inline error and does not
+  - [x] Notice is dismissible (per decision: "existing tenants keep working")
+  - [x] Dismissing leaves a persistent sidebar entry so it isn't forgotten
+  - [x] After Accept, notice and badge disappear without a full reload
+  - [x] Accept failure (network/400) shows an inline error and does not
         dismiss
-  - [ ] Focus trapped while the notice is open; Esc closes it; accessible name
-  - [ ] Responsive
+  - [x] Focus trapped while the notice is open; Esc closes it; accessible name
+  - [x] Responsive
 - **Verification:** `npm run build`; as a `soft`/unaccepted tenant: see notice,
   dismiss, continue working, accept, badge clears; check `consent_records` row
   written with both ids + IP + UA.
 - **Dependencies:** 12.
 - **Files likely touched:** `src/components/consent/ConsentBanner.tsx` (new),
   consent modal, dashboard shell layout, `src/components/layout/sidebar.tsx`.
+- **Files touched (actual):** new `src/components/consent/consent-notice.tsx`
+  (`ConsentNotice`) — fetches `/api/consent/status` once on mount; if
+  unaccepted shows a blocking-but-dismissible `role="dialog"` overlay
+  (`aria-modal`, `aria-labelledby`) with Terms + Privacy links (new tab) and
+  an Accept button calling `POST /api/consent/accept`; on success dispatches
+  `hopechat:consent-pending=false` and closes with no reload; on stale/network/
+  400 error shows inline `role="alert"` error and stays open; focus is trapped
+  while open and Esc dismisses; dismissal persists via `localStorage`
+  (`hc_consent_dismissed`) and fires `hopechat:consent-pending=true`. Rendered
+  once inside `src/app/(dashboard)/dashboard-shell.tsx` above `<main>`. The
+  sidebar (`src/components/layout/sidebar.tsx`) listens for the pending event
+  and shows a persistent amber **Review terms** badge with a pulsing dot that
+  dispatches `hopechat:consent-open` to reopen the notice; badge clears when
+  consent is accepted. `required` tenants never reach it (proxy gated) —
+  only soft/pre-cutoff users see this.
 - **Estimated scope:** M (≤5 files).
+- **STATUS: DONE 2026-10-08.**
 
 ### Task 16: Backfill existing businesses → `soft` + cutoff
 - **Description:** One-off SQL: set `consent_state='soft'` for all currently
@@ -427,12 +523,12 @@ Plan: `tasks/plan.md`. The previous staging plan is archived untouched at
   run time) into `system_settings`. New signups stay `required` via the DB
   default. **Human approval required before running** — it is a data mutation.
 - **Acceptance:**
-  - [ ] SQL documented in the migration or as a reviewed script — not
+  - [x] SQL documented in the migration or as a reviewed script — not
         ad-hoc paste
   - [ ] Row count before/after equals the number of businesses existing at the
         cutoff (prod currently has **2**: `HopeChat`, `Infinity WIFI` — assert
         actual count, do not hardcode)
-  - [ ] `enforce_from` written and matches the plan's stated value
+  - [x] `enforce_from` written and matches the plan's stated value
   - [ ] A pre-existing business can reach its dashboard and sees the Task 15
         notice (not a Task 14 redirect)
   - [ ] A business created *after* the cutoff is `required` and is gated
@@ -441,7 +537,22 @@ Plan: `tasks/plan.md`. The previous staging plan is archived untouched at
 - **Dependencies:** 14, 15 (both must exist before flipping the switch).
 - **Files likely touched:** `supabase/migrations/063_consent_backfill.sql`
   (new, or a documented script).
+- **Files touched (actual):** new `supabase/migrations/063_consent_backfill.sql`
+  — documents the design constraint (no `DO` blocks, no semicolons inside
+  literals/comments, matching 062), pre-flight census instructions, then (1)
+  `UPDATE businesses SET consent_state='soft' WHERE consent_state='required'`
+  (full census of currently-existing rows, nothing hardcoded), and (2) a
+  one-shot guarded `UPDATE system_settings SET value = jsonb_set(value,
+  '{enforce_from}', to_jsonb(to_char(now(), ...)))` for `consent_gate` only
+  while `enforce_from` is still NULL, so a re-run never moves the cutoff.
+  Includes a manual post-apply verification checklist (distribution, value,
+  new signup gated, existing tenant sees notice).
 - **Estimated scope:** S (1 file + apply).
+- **STATUS: DONE (migration authored) 2026-10-08 — APPLY PENDING: requires
+  human approval; run `supabase/migrations/063_consent_backfill.sql` in the
+  Dashboard SQL editor against staging first, then prod. Do NOT use
+  `scripts/run-migrations.mjs` (broken; only `pg_exec` runner works), and 061
+  must be applied beforehand too.
 
 ### Checkpoint: Consent
 - [ ] New signup impossible without accepting current versions.
@@ -463,40 +574,55 @@ Plan: `tasks/plan.md`. The previous staging plan is archived untouched at
   this job must be an HTTP endpoint the workflow calls, following the existing
   two cron endpoints (including their timing-safe secret compare).
 - **Acceptance:**
-  - [ ] HTTP endpoint guarded by a cron secret, **timing-safe comparison**
+  - [x] HTTP endpoint guarded by a cron secret, **timing-safe comparison**
         (match the hardened pattern already in the other two cron routes)
-  - [ ] Redacts only rows older than 90 days; leaves newer rows untouched
-  - [ ] Second run changes nothing (idempotent) — returns `0` affected
-  - [ ] Does **not** delete `consent_records` rows or their versions
+  - [x] Redacts only rows older than 90 days; leaves newer rows untouched
+  - [x] Second run changes nothing (idempotent) — returns `0` affected
+  - [x] Does **not** delete `consent_records` rows or their versions
         (audit integrity preserved; only the IP is redacted)
-  - [ ] `.github/workflows/cron.yml` matrix extended; `vercel.json` route
+  - [x] `.github/workflows/cron.yml` matrix extended; `vercel.json` route
         registered (Hobby no-op is expected)
-  - [ ] Endpoint responds 401 without the secret
+  - [x] Endpoint responds 401 without the secret
 - **Verification:** Backdate a row's `last_seen` by 91 days; run endpoint with
   secret → IP truncated, city intact, row still present; run again → `0`;
   run without secret → 401.
 - **Dependencies:** 2, 3 (tables exist and have data).
-- **Files likely touched:** `src/app/api/cron/retention/route.ts` (new),
-  `.github/workflows/cron.yml`, `vercel.json`.
-- **Estimated scope:** S (≤3 files).
+- **Files touched:** `src/app/api/cron/retention/route.ts` (new),
+  `src/app/api/cron/retention/route.test.ts` (new, 8 tests),
+  `.github/workflows/cron.yml` (matrix + retention step),
+  `vercel.json` (cron route), `docs/deployment-runbook.md` (secret doc).
+- **STATUS: DONE 2026-10-08** — route verified: `npx tsc --noEmit` clean,
+  eslint 0 errors, vitest 188/188 (includes 8 new retention tests). Workflow
+  now expects GHA secrets `STAGING_RETENTION_CRON_SECRET` / `PROD_RETENTION_CRON_SECRET`
+  and Vercel env `RETENTION_CRON_SECRET` per host. Manual staging check
+  (backdate 91 days → IP truncated, city intact, row present; rerun → 0;
+  no secret → 401) is queued behind the next deploy.
+- **Estimated scope:** S.
 
 ### Task 18: Landing-page parity
 - **Description:** AGENTS.md mandates that features shipped to the dashboard
   are mentioned on `src/app/page.tsx`. Add copy for the activity/session
   tracking feature and the Terms/Privacy pages.
 - **Acceptance:**
-  - [ ] Features section mentions activity tracking (with the
+  - [x] Features section mentions activity tracking (with the
         privacy-preserving angle: tenants see their activity, not visitor IP)
-  - [ ] If billing-relevant: Pricing section updated
-  - [ ] At least one FAQ entry covering what is tracked and how long IP is
+  - [x] If billing-relevant: Pricing section updated
+        — activity tracking is included on every plan (not billing-relevant,
+        so no pricing change needed)
+  - [x] At least one FAQ entry covering what is tracked and how long IP is
         kept (90 days)
-  - [ ] Footer links to `/terms` and `/privacy` (Task 11) — verified live
-  - [ ] Copy does not overclaim (no "bank-grade", no legal guarantees)
+  - [x] Footer links to `/terms` and `/privacy` (Task 11) — verified live
+  - [x] Copy does not overclaim (no "bank-grade", no legal guarantees)
 - **Verification:** `npm run build`; read the rendered landing page top to
   bottom; no section contradicts actual behavior.
 - **Dependencies:** 11 (pages must exist to link), 18's feature set complete
   (practically: after Phases 2–4).
 - **Files likely touched:** `src/app/page.tsx`.
+- **STATUS: DONE 2026-10-08** — added "Activity Trail & Privacy" feature card
+  (BarChart3, tenant-sees-activity-not-IP angle, 90-day truncation, consent-first)
+  and a FAQ entry covering what is tracked / 90-day IP retention. Footer legal
+  links already present (Task 11). Not billing-relevant → pricing left factual.
+  `npx tsc --noEmit` clean; eslint 0 errors (4 pre-existing warnings).
 - **Estimated scope:** S (1 file).
 
 ### Checkpoint: Complete

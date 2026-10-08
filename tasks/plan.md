@@ -154,10 +154,10 @@ system_settings seeds:
 ### Phase 3 — Tenant activity
 
 - [x] **Task 6:** Activity capture helper + `POST /api/activity` + unit tests
-- [ ] **Task 7:** Wire capture into auth (login/logout) and contacts CRUD
-- [ ] **Task 8:** `GET /api/activity` + `/activity` page + app sidebar entry
-- [ ] **Task 9:** Wire capture into broadcasts and pipelines
-- [ ] **Task 10:** Wire capture into automations and settings
+- [x] **Task 7:** Wire capture into auth (login/logout) and contacts CRUD
+- [x] **Task 8:** `GET /api/activity` + `/activity` page + app sidebar entry
+- [x] **Task 9:** Wire capture into broadcasts and pipelines
+- [x] **Task 10:** Wire capture into automations and settings
 
 #### Checkpoint: Tenant activity parity
 - [ ] Tenant sees their own activity feed with **no** IP or geo columns returned
@@ -167,13 +167,14 @@ system_settings seeds:
 
 ### Phase 4 — Terms & consent
 
-- [ ] **Task 11:** `/terms` and `/privacy` pages + repair the dead footer links
-- [ ] **Task 12:** `GET /api/consent/status` + `POST /api/consent/accept`
-- [ ] **Task 13:** Signup checkbox — hard gate on account creation
-- [ ] **Task 14:** Consent enforcement in `src/proxy.ts` (hard vs soft split)
-- [ ] **Task 15:** Consent notice component for soft-gated tenants
-- [ ] **Task 16:** Backfill — mark existing businesses as `soft` (prod now:
-      `HopeChat`, `Infinity WIFI`), set cutoff
+- [x] **Task 11:** `/terms` and `/privacy` pages + repair the dead footer links
+- [x] **Task 12:** `GET /api/consent/status` + `POST /api/consent/accept`
+- [x] **Task 13:** Signup checkbox — hard gate on account creation
+- [x] **Task 14:** Consent enforcement in `src/proxy.ts` (hard vs soft split)
+- [x] **Task 15:** Consent notice component for soft-gated tenants
+- [x] **Task 16:** Backfill — mark existing businesses as `soft` (prod now:
+      `HopeChat`, `Infinity WIFI`), set cutoff (migration authored; apply
+      pending human approval)
 
 #### Checkpoint: Consent
 - [ ] New signup is impossible without accepting current versions
@@ -184,8 +185,8 @@ system_settings seeds:
 
 ### Phase 5 — Retention, parity, sign-off
 
-- [ ] **Task 17:** Retention cron — redact IP after 90 days + `vercel.json` schedule
-- [ ] **Task 18:** Landing-page parity — Features/FAQs/Footer copy + legal links
+- [x] **Task 17:** Retention cron — redact IP after 90 days + `vercel.json` schedule
+- [x] **Task 18:** Landing-page parity — Features/FAQs/Footer copy + legal links
 
 #### Checkpoint: Complete
 - [ ] `npm run typecheck`, `npm run lint`, `npm run build`, `npm test` all pass

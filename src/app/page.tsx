@@ -136,6 +136,10 @@ export default function LandingPage() {
       q: "What happens if I don't finish my signup or setup right away?",
       a: "No pressure — you can pause and pick up where you left off anytime. If you start creating an account or setting up your workspace and stop before finishing, our team will follow up with a friendly reminder (by email, easily opt-outable) and offer a free guided setup session so you can get live without the guesswork.",
     },
+    {
+      q: "What activity does HopeChat track, and how long is data kept?",
+      a: "We keep a privacy-first activity trail of events inside your workspace — logins, contact and pipeline changes, broadcasts, automation runs, and settings updates — so you can audit what happened and who did it. Your team never sees visitor IP addresses or location; IPs are captured only for security and automatically truncated to their network prefix after 90 days. New tenants are asked to accept the Terms of Service and Privacy Policy before using the platform, and your consent records are kept intact for audit purposes. Full details are in the Privacy Policy.",
+    },
   ];
 
   return (
@@ -630,6 +634,41 @@ export default function LandingPage() {
                 ),
               },
               {
+                icon: BarChart3,
+                title: "Activity Trail & Privacy",
+                desc: "See every login, settings change, and automation run across your workspace — so nothing happens invisibly. Visitor IP addresses never appear in your team view.",
+                points: [
+                  "Full audit of logins, contacts, pipelines, broadcasts, and automations",
+                  "Tenant teams see activity events — never visitor IP addresses or location",
+                  "IPs are kept for security only and automatically truncated to their network prefix after 90 days",
+                  "Consent first: every new tenant accepts the Terms & Privacy Policy before using the app"
+                ],
+                reverse: false,
+                mock: (
+                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
+                    <div className="flex justify-between items-center border-b border-border pb-2">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5"><BarChart3 className="h-4 w-4 text-primary" /> Recent activity</span>
+                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">Live</span>
+                    </div>
+                    {[
+                      { ev: "Login", who: "Admin · Kampala", when: "2m ago" },
+                      { ev: "Broadcast sent", who: "Sales · 1,240 recipients", when: "1h ago" },
+                      { ev: "Automation updated", who: "Ops · Lead qualifier", when: "3h ago" },
+                      { ev: "Contact imported", who: "Sales · 350 rows", when: "Yesterday" },
+                    ].map((a, i) => (
+                      <div key={i} className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-foreground">{a.ev}</span>
+                        <span className="text-muted-foreground min-w-0">{a.who}</span>
+                        <span className="text-xs font-bold text-primary shrink-0">{a.when}</span>
+                      </div>
+                    ))}
+                    <div className="rounded-lg bg-primary/5 border border-primary/10 px-3 py-2 text-[11px] text-foreground">
+                      <span className="font-bold text-primary">Privacy:</span> IP addresses truncated automatically after 90 days.
+                    </div>
+                  </div>
+                ),
+              },
+              {
                 icon: Smartphone,
                 title: "Installable Mobile App",
                 desc: "Install HopeChat on any phone or desktop and it opens in its own window — no browser tabs, no address bar, straight to your inbox.",
@@ -1109,9 +1148,9 @@ export default function LandingPage() {
                 <li><Link href="#setup-service" className="hover:text-primary transition-colors">Setup Service</Link></li>
                 <li><a href="tel:+256763149276" className="hover:text-primary transition-colors">+256 763 149 276</a></li>
                 <li><a href="mailto:info@hopechat.net" className="hover:text-primary transition-colors">Email Us</a></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Terms of Service</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Refund Policy</Link></li>
+                <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
+                <li><Link href="/terms#refunds" className="hover:text-primary transition-colors">Refund Policy</Link></li>
               </ul>
             </div>
           </div>
@@ -1119,8 +1158,8 @@ export default function LandingPage() {
           <div className="pt-6 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
             <p>© {new Date().getFullYear()} HopeChat by HopeTech Solutions Ltd. All rights reserved.</p>
             <div className="flex gap-6">
-              <Link href="#" className="hover:text-primary transition-colors">Privacy Policy</Link>
-              <Link href="#" className="hover:text-primary transition-colors">Terms of Service</Link>
+              <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+              <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
             </div>
           </div>
         </div>
