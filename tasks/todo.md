@@ -274,6 +274,14 @@ Plan: `tasks/plan.md`. The previous staging plan is archived untouched at
   (title "Activity Log"), `src/proxy.ts`.
 - **Estimated scope:** M.
 - **STATUS: DONE 2026-10-08.**
+- **RELOCATED 2026-10-09:** the standalone `/activity` page + sidebar entry were
+  removed; the full feed (filters, list, pagination) now lives in Settings →
+  **Users** as a third card ("Business Activity") below Team Seat Allocation and
+  Team Members, so it is owner/admin-only. Extracted to
+  `src/components/settings/activity-log.tsx` (`ActivityLog`), rendered by
+  `src/components/settings/user-management.tsx`. `GET /api/activity` and the
+  tracking layer are unchanged. `'/activity'` dropped from `src/proxy.ts`
+  (all three lists) and `src/components/layout/header.tsx`.
 
 ### Checkpoint: Tenant activity parity
 - [x] Tenant sees own activity with **no** IP/geo keys in the payload.

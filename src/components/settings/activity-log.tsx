@@ -74,7 +74,7 @@ const categoryStyles: Record<string, string> = {
   settings: "bg-slate-500/15 text-slate-600 dark:text-slate-400",
 };
 
-export default function ActivityPage() {
+export function ActivityLog() {
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -117,16 +117,6 @@ export default function ActivityPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Activity Log</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            What&apos;s happening in your workspace — every sign-in, contact change,
-            broadcast and automation.
-          </p>
-        </div>
-      </div>
-
       {/* Filters */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="grid gap-1.5">

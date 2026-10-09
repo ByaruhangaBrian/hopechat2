@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit2, Loader2, UserPlus, Users, Key, AlertTriangle, Shield, CheckCircle } from 'lucide-react';
+import { Trash2, Edit2, Loader2, UserPlus, Users, Key, AlertTriangle, Shield, Activity } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ import {
   type Permissions,
 } from '@/lib/permissions';
 import { PermissionsEditor } from '@/components/settings/permissions-editor';
+import { ActivityLog } from '@/components/settings/activity-log';
 
 interface ProfileRow {
   id: string;
@@ -428,6 +429,22 @@ export function UserManagement() {
               </TableBody>
             </Table>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Business activity log */}
+      <Card className="bg-card border-border shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-foreground flex items-center gap-2">
+            <Activity className="h-5 w-5 text-primary" />
+            Business Activity
+          </CardTitle>
+          <CardDescription className="text-muted-foreground/60">
+            What&apos;s happening in your workspace — every sign-in, contact change, broadcast and automation.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ActivityLog />
         </CardContent>
       </Card>
 

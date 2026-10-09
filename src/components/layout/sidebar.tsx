@@ -25,7 +25,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarCheck,
-  Activity,
 } from "lucide-react";
 import {
   Avatar,
@@ -57,7 +56,6 @@ const navItems = [
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
   { href: "/bookings", label: "Bookings", icon: CalendarCheck },
   { href: "/automations", label: "Automations", icon: Zap },
-  { href: "/activity", label: "Activity", icon: Activity },
   { href: "/dashboard/menus", label: "Tests & Practice", icon: FolderTree },
   { href: "/ai", label: "AI Hub", icon: Cpu },
 ];
