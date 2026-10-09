@@ -260,9 +260,16 @@ Tasks 1–2 land.
 
 ## Related work discovered during research (not in this plan's scope)
 
-- **Migration 061 is still pending on prod and staging** (only 062 was applied
-  by the human). Anon reads were already blocked on prod (404) so it is not
-  urgent, but apply it for consistency with repo-canonical schema.
+- ~~**Migration 061 is still pending on prod and staging**~~ **RESOLVED
+  (2026-10-09):** 061 + 063 applied by the human on both prod and staging via
+  Dashboard SQL editor; post-apply probe confirms anonymous `businesses` /
+  `profiles` reads return `[]` on both envs (see todo.md Task 16 STATUS).
+- **Consent gate failed open (found 2026-10-09):** migration 022's
+  `system_settings` SELECT whitelist excluded `consent_gate` / `legal_versions`,
+  so `getConsentGateDecision()` saw no cutoff and never gated a `required`
+  tenant. Fixed by `supabase/migrations/064_consent_settings_visibility.sql`
+  (extends the whitelist); applied on staging + prod and re-verified
+  (soft → 200, `required` → `307 /consent`).
 - **`run-migrations.mjs` is currently non-functional on every environment**
   that lacks the `pg_exec` helper (prod returns 404 for `rpc('pg_exec')`, and
   the runner swallows exactly that error class → silent no-op). It also cannot

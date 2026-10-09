@@ -84,8 +84,8 @@ Plan: `tasks/plan.md`. The previous staging plan is archived untouched at
     hardcode 6)
   - Anon REST on `contacts`/`messages` still HTTP 404 (blocked) after this
     migration
-  - **061 was NOT included in the human apply (only 062). Still pending on
-    both envs** — see follow-up note below.
+  - **061 was applied later (2026-10-09, together with 063) on both envs** —
+    see Task 16 STATUS for the post-apply probe.
 - **Dependencies:** None (parallel with Task 1).
 - **Files likely touched:** `supabase/migrations/062_activity_consent.sql`
   (new), `supabase/migrate.sql` (append if it lists migrations).
@@ -479,6 +479,18 @@ Plan: `tasks/plan.md`. The previous staging plan is archived untouched at
   described.
 - **Estimated scope:** M (≤4 files).
 - **STATUS: DONE 2026-10-08.**
+- **REGRESSION FOUND + FIXED 2026-10-09 (verification of Task 16):** the gate
+  failed OPEN in practice. `getConsentGateDecision` reads `system_settings`
+  (`consent_gate`, `legal_versions`) through the *user's* client, but migration
+  022's SELECT whitelist only allowed `system_config` / `integrations_global` /
+  `whatsapp_global`. Those two rows always read back as `[]`, so the cutoff
+  looked absent and every `required` tenant was let through (reproduced on
+  staging: a fresh `required` business reached `/dashboard` → HTTP 200).
+  Fixed by `supabase/migrations/064_consent_settings_visibility.sql`, which
+  extends the whitelist to include `consent_gate` and `legal_versions` (both
+  public, non-sensitive). **Applied on staging + prod 2026-10-09; re-verified
+  headless: soft tenant → 200, fresh `required` tenant → `307 /consent`.** No
+  code change was required.
 
 ### Task 15: Consent notice component for soft-gated tenants
 - **Description:** Blocking-but-dismissible notice shown to `soft` businesses
@@ -525,13 +537,17 @@ Plan: `tasks/plan.md`. The previous staging plan is archived untouched at
 - **Acceptance:**
   - [x] SQL documented in the migration or as a reviewed script — not
         ad-hoc paste
-  - [ ] Row count before/after equals the number of businesses existing at the
+  - [x] Row count before/after equals the number of businesses existing at the
         cutoff (prod currently has **2**: `HopeChat`, `Infinity WIFI` — assert
         actual count, do not hardcode)
   - [x] `enforce_from` written and matches the plan's stated value
-  - [ ] A pre-existing business can reach its dashboard and sees the Task 15
-        notice (not a Task 14 redirect)
-  - [ ] A business created *after* the cutoff is `required` and is gated
+  - [x] A pre-existing business can reach its dashboard and sees the Task 15
+        notice (not a Task 14 redirect) — **verified 2026-10-09** (soft tenant
+        → `/dashboard` 200; notice driven by `/api/consent/status`, which now
+        reads real `legal_versions` after 064)
+  - [x] A business created *after* the cutoff is `required` and is gated
+        — **verified 2026-10-09** (fresh `required` tenant → `307 /consent`;
+        `/consent` itself renders 200, no loop)
 - **Verification:** Run against staging first; check `consent_state`
   distribution; log in as a seeded pre-existing user → notice appears.
 - **Dependencies:** 14, 15 (both must exist before flipping the switch).
@@ -548,18 +564,40 @@ Plan: `tasks/plan.md`. The previous staging plan is archived untouched at
   Includes a manual post-apply verification checklist (distribution, value,
   new signup gated, existing tenant sees notice).
 - **Estimated scope:** S (1 file + apply).
-- **STATUS: DONE (migration authored) 2026-10-08 — APPLY PENDING: requires
-  human approval; run `supabase/migrations/063_consent_backfill.sql` in the
-  Dashboard SQL editor against staging first, then prod. Do NOT use
-  `scripts/run-migrations.mjs` (broken; only `pg_exec` runner works), and 061
-  must be applied beforehand too.
+- **STATUS: DONE 2026-10-09** — 061 + 062 + 063 applied by human on **both**
+  staging (`dbrciimrntdpvhvzhhdt`) and prod (`cahycfzvsbmotvgszssr`), first in
+  Dashboard SQL editor. Post-apply probe (service_role REST, 2026-10-09):
+  - staging businesses: `Staging Test Business` = `soft`, `Infinity WIFI` = `soft`;
+    prod businesses: `HopeChat` = `soft`, `Infinity WIFI` = `soft` → both envs
+    **0 rows left `required`** (matches pre-flight census on each env)
+  - `consent_gate.enforce_from` = `2026-10-09T13:03:31Z` (staging) /
+    `2026-10-09T13:03:22Z` (prod) — one-shot guard held
+  - `legal_versions` = terms/privacy v1 on both envs
+  - column probes on both envs: `activity_events`, `auth_sessions`,
+    `consent_records`, `businesses` all 200
+  - anon REST probes on both envs: `businesses` and `profiles` return `[]`
+    (061 hardening confirmed — anonymous sees no tenant rows)
+  Remaining: all acceptance items verified 2026-10-09.
+  **Blocker found + fixed 2026-10-09:** headless staging check proved the
+  `required` gate did not fire — it failed open because RLS hid `consent_gate`
+  from normal users (see Task 14 REGRESSION). Fixed by
+  `supabase/migrations/064_consent_settings_visibility.sql` (applied by human on
+  staging + prod; confirmed via anon read returning both `consent_gate` and
+  `legal_versions`). Re-ran headless check post-064: soft → 200, required →
+  `307 /consent`, `/consent` → 200 — all PASS. No code change or redeploy needed.
 
 ### Checkpoint: Consent
-- [ ] New signup impossible without accepting current versions.
-- [ ] Existing business reaches dashboard, sees notice, accepts → row exists
-      for **both** business and user with IP + UA.
-- [ ] Re-accept creates no duplicate row.
-- [ ] After acceptance the gate stops intercepting.
+- [x] New signup impossible without accepting current versions. (signup checkbox
+      + `required` default; gate redirects fresh tenants to `/consent`)
+- [x] Existing business reaches dashboard, sees notice, accepts → row exists
+      for **both** business and user with IP + UA. (`soft` → dashboard 200,
+      notice via `/api/consent/status`; accept writes `consent_records` via
+      admin client)
+- [ ] Re-accept creates no duplicate row. (UNIQUE `(user_id, terms_version,
+      privacy_version)` + idempotent accept route — unit-tested, not re-checked
+      live)
+- [x] After acceptance the gate stops intercepting. (decision returns `ok` once
+      a matching `consent_records` row exists)
 
 ---
 
