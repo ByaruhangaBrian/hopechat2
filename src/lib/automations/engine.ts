@@ -24,6 +24,7 @@ import { supabaseAdmin } from './admin-client'
 import { engineSendText, engineSendTemplate, engineSendInteractive, engineSendFlow } from './meta-send'
 import { startTest } from '@/lib/tests/runtime'
 import { getBusinessSettings } from '@/lib/tests/settings'
+import { isWithinAiSchedule } from '@/lib/ai/schedule'
 import { generateGeminiResponse } from './gemini-client'
 import { getOrSetCache } from '@/lib/whatsapp/gemini-cache'
 import { logHttpEvent } from '@/lib/logs/http-logs'
@@ -713,6 +714,11 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
           return 'AI settings are disabled for this user; human takeover preserved'
         }
         throw new Error('AI settings are disabled for this user')
+      }
+
+      const { ai_schedule } = await getBusinessSettings(args.businessId)
+      if (!isWithinAiSchedule(new Date(), ai_schedule)) {
+        return 'Outside AI availability window; left for a human'
       }
 
       const { data: knowledge } = await db

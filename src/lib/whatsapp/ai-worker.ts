@@ -9,6 +9,7 @@ import { runAutomationsForTrigger, resumeAutomationWithInteraction } from '@/lib
 import { engineSendInteractive } from '@/lib/automations/meta-send';
 import { handleTestReply, handleFlowReply } from '@/lib/tests/runtime';
 import { getBusinessSettings } from '@/lib/tests/settings';
+import { isWithinAiSchedule } from '@/lib/ai/schedule';
 import { decrypt } from './encryption';
 import { consumeCredits, checkCredits } from '@/lib/credits';
 // @google/genai used via gemini-client.ts
@@ -272,6 +273,14 @@ async function executeAiJob(job: any): Promise<void> {
 
   if (activeInteraction) {
     console.log(`[ai-worker] Interaction guardrail triggered for conv ${job.conversation_id}. Skipping AI.`);
+    return;
+  }
+
+  // Schedule guardrail: only reply within the business's configured hours.
+  // Outside the window we stay silent and leave the conversation to a human.
+  const { ai_schedule } = await getBusinessSettings(job.business_id);
+  if (!isWithinAiSchedule(new Date(), ai_schedule)) {
+    console.log(`[ai-worker] Outside AI availability window for business ${job.business_id}. Skipping AI.`);
     return;
   }
 

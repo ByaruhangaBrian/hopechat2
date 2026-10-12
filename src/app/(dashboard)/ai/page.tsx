@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Cpu, BookOpen } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { AiConfig } from '@/components/ai/ai-config';
+import { AiScheduleCard } from '@/components/ai/ai-schedule';
 import { KnowledgeManager } from '@/components/ai/knowledge-manager';
 
 const TAB_VALUES = ['config', 'knowledge'] as const;
@@ -54,7 +55,10 @@ export default function AiHubPage() {
         </TabsList>
 
         <TabsContent value="config" className="mt-6">
-          <AiConfig />
+          <div className="space-y-6">
+            <AiConfig />
+            <AiScheduleCard />
+          </div>
         </TabsContent>
 
         <TabsContent value="knowledge" className="mt-6">

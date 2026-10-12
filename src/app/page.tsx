@@ -101,6 +101,10 @@ export default function LandingPage() {
       a: "Upload your product catalogues, price lists, FAQs, and website URLs. HopeChat AI learns your business automatically and answers customer questions based on what you teach it. Connect a Google Sheet and the AI can answer live questions like \"is item X in stock?\" or \"what does it cost?\" — each spreadsheet lookup the AI performs costs one credit. It escalates to a human when it doesn't know the answer.",
     },
     {
+      q: "Can I control when the AI replies?",
+      a: "Yes. In the AI Hub you can set AI availability hours — choose the days of the week and the start and end times the AI assistant is allowed to reply, in your own time zone. Outside those hours the AI stays quiet and leaves the conversation for your team to handle, and no reply credit is used. Overnight windows such as 22:00 to 06:00 are supported too.",
+    },
+    {
       q: "Is HopeChat compliant with Meta's Official WhatsApp API policies?",
       a: "Yes. HopeChat connects directly through Meta Business using the official WhatsApp Business API. Every message — broadcasts, chatbot replies, order updates — is delivered with enterprise-grade reliability and full Meta compliance.",
     },

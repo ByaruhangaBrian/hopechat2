@@ -48,11 +48,18 @@ export function TestSettings() {
     if (!businessId) return;
     const hours = Math.max(0, Math.round(timeoutHours || 0));
     setSaving(true);
+    const { data: existing } = await supabase
+      .from('business_settings')
+      .select('value')
+      .eq('business_id', businessId)
+      .maybeSingle();
+
     const { error } = await supabase
       .from('business_settings')
       .upsert({
         business_id: businessId,
         value: {
+          ...(existing?.value ?? {}),
           session_timeout_hours: hours,
           enable_ai_test_offers: enableAiOffers,
         },

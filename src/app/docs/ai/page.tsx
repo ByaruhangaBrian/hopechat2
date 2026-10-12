@@ -86,6 +86,29 @@ export default function DocsAIPage() {
         />
       </DocSection>
 
+      <DocSection title="Control when the AI replies">
+        <DocParagraph>
+          By default the AI replies at all hours. In the AI Hub under{" "}
+          <b>Configuration → AI availability</b> you can switch on &quot;Only reply during set
+          hours&quot;, pick your time zone, and set a start and end time for each day. Days you
+          turn off are treated as closed.
+        </DocParagraph>
+        <DocList
+          items={[
+            <span key="1">
+              <b>Inside the window</b> the AI answers incoming messages exactly as usual.
+            </span>,
+            <span key="2">
+              <b>Outside the window</b> the AI stays silent and leaves the conversation for your
+              team — no auto-reply is sent and no credit is used.
+            </span>,
+            <span key="3">
+              Overnight windows (for example 22:00 to 06:00) are supported and wrap past midnight.
+            </span>,
+          ]}
+        />
+      </DocSection>
+
       <DocSection title="Best practices">
         <DocList
           items={[
