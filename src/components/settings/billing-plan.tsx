@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Coins, CreditCard, Landmark, Loader2, ArrowRight, ShieldCheck, Check, Clock, History, Activity, Users } from 'lucide-react';
@@ -12,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Card,
   CardContent,
@@ -263,6 +265,12 @@ export function BillingPlan() {
   const remainingCredits = liveBalance?.credits_remaining ?? profile?.business?.credits_remaining ?? 0;
   const balanceUgx = liveBalance?.balance_ugx ?? profile?.business?.balance_ugx ?? 0;
 
+  // Trial credits are only granted once WhatsApp is connected. Until then the
+  // account sits at zero credits and we surface how to unlock them.
+  const trialCreditsPending =
+    profile?.business?.status === 'trialing' &&
+    profile?.business?.trial_credits_granted === false;
+
   const latestSub = profile?.business?.subscriptions?.[0] ?? null;
   const subStatus = (() => {
     if (!latestSub) return null;
@@ -306,6 +314,20 @@ export function BillingPlan() {
                 Credits are consumed on AI chat replies, interactive forms, and broadcasts.
                 Ledger Balance: <span className="font-mono font-medium text-foreground">UGX {balanceUgx.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </p>
+              {trialCreditsPending && (
+                <Alert className="mt-4 bg-primary/10 border-primary/20">
+                  <Coins className="size-4 text-primary" />
+                  <AlertTitle className="text-foreground">Unlock your free trial credits</AlertTitle>
+                  <AlertDescription className="text-muted-foreground">
+                    Your free trial credits are released as soon as you connect your
+                    WhatsApp Business number.{' '}
+                    <Link href="/settings?tab=whatsapp" className="font-semibold text-primary hover:underline">
+                      Connect WhatsApp
+                    </Link>{' '}
+                    to unlock them. SMS-only setups don&apos;t qualify for the free trial.
+                  </AlertDescription>
+                </Alert>
+              )}
             </CardContent>
           </Card>
 

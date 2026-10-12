@@ -41,6 +41,7 @@ interface Profile {
     tier_id: string;
     plan_tier: string;
     status: string;
+    trial_credits_granted?: boolean;
     subscriptions?: BusinessSubscription[];
   };
 }
@@ -115,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               tier_id,
               plan_tier,
               status,
+              trial_credits_granted,
               subscriptions (
                 id,
                 tier_id,
@@ -155,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               tier_id,
               plan_tier,
               status,
+              trial_credits_granted,
               subscriptions (
                 id,
                 tier_id,

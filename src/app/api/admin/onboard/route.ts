@@ -65,7 +65,10 @@ export async function POST(req: Request) {
     const trialDays = trialConfig.trial_days ?? 14;
     const isTrial = trialDays > 0;
     const status = isTrial ? 'trialing' : 'active';
-    const credits_remaining = isTrial ? (trialConfig.trial_credits || 500) : (tier.base_credits_monthly || 1500);
+    // Free trial credits are unlocked only after WhatsApp is connected
+    // (see grant_trial_credits_on_whatsapp_connect), so start trialing
+    // tenants at zero.
+    const credits_remaining = isTrial ? 0 : (tier.base_credits_monthly || 1500);
     const features = isTrial
       ? {
           inbox_enabled: true,
@@ -98,6 +101,7 @@ export async function POST(req: Request) {
         tier_id: resolvedTierId,
         status,
         credits_remaining,
+        trial_credits_granted: !isTrial,
         usage_quotas: {
           max_contacts: resolvedTierId === "gold" ? 10000 : resolvedTierId === "silver" ? 5000 : 100,
           max_messages: resolvedTierId === "gold" ? 100000 : resolvedTierId === "silver" ? 50000 : 1000,

@@ -109,6 +109,10 @@ export default function LandingPage() {
       a: "HopeChat runs on simple monthly plans: Bronze at 100,000 UGX, Silver at 180,000 UGX, and Gold at 450,000 UGX per month. Save up to 10% by paying for 3, 6, or 12 months upfront. Every plan starts with a free trial — no credit card required.",
     },
     {
+      q: "When do I get my free trial credits?",
+      a: "Your free trial credits are unlocked the moment you connect your WhatsApp Business number (Settings → WhatsApp Config). We release them only after WhatsApp is connected so the free credits go to businesses that are actually running on WhatsApp — SMS-only or automated signups don't qualify. Connect once and your credits appear in Billing instantly.",
+    },
+    {
       q: "How do I pay for my subscription?",
       a: "Pay securely through Pesapal using Mobile Money or credit card, right from your dashboard. You can also top up message credits any time, and your plan, billing period, and credit balance are all visible in the Billing section.",
     },
@@ -903,7 +907,7 @@ export default function LandingPage() {
             <motion.div className="text-center space-y-4 max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
               <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Simple plans that grow with you</motion.h2>
               <motion.p variants={fadeUp} custom={0.1} className="text-base text-muted-foreground leading-relaxed font-medium">
-                Every plan includes a free trial. Pay securely with Mobile Money or cards and switch plans any time.
+                Every plan includes a free trial — connect your WhatsApp Business number to unlock your free trial credits, then pay securely with Mobile Money or cards and switch plans any time.
               </motion.p>
             </motion.div>
 
