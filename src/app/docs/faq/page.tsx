@@ -33,7 +33,7 @@ const faqs = [
   },
   {
     q: "How does the AI know when to escalate to a human?",
-    a: "The AI scores its confidence on every answer. When it can't find a relevant match in your knowledge base, it sends a polite fallback message to the customer and flags the conversation in your inbox with a \"Bot\" tag so an agent can pick it up.",
+    a: "Two ways. First, if a customer uses one of your trigger words (set in the AI Hub under Configuration → Escalation to a human), the AI hands the chat over straight away. Second, the AI scores its confidence on every answer: when it can't find a relevant match in your knowledge base it sends a polite fallback and escalates. Either way the conversation is flagged in your inbox with the reserved \"Needs human\" tag and, if auto-pause is on, the AI stops replying until an agent takes over.",
   },
   {
     q: "A student is stuck on a timed exam — can I let them retry?",

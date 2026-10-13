@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, X, Loader2 } from 'lucide-react';
+import { Plus, X, Loader2, Lock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getErrorMessage } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import { DEFAULT_ESCALATION_TAG_NAME } from '@/lib/ai/escalation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,6 +45,7 @@ export function TagManager() {
   const [deleting, setDeleting] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[3].value);
+  const [reservedTagName, setReservedTagName] = useState(DEFAULT_ESCALATION_TAG_NAME);
 
   useEffect(() => {
     if (authLoading) return;
@@ -54,6 +56,29 @@ export function TagManager() {
     fetchTags(user.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user?.id]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/ai-escalation');
+        if (!res.ok) return;
+        const payload = await res.json();
+        if (active && payload?.policy?.tagName) {
+          setReservedTagName(payload.policy.tagName);
+        }
+      } catch {
+        // Non-fatal: fall back to the default reserved tag name.
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  function isReserved(tag: Tag) {
+    return tag.name.trim().toLowerCase() === reservedTagName.trim().toLowerCase();
+  }
 
   async function fetchTags(userId: string) {
     try {
@@ -78,6 +103,11 @@ export function TagManager() {
   async function handleCreate() {
     if (!newTagName.trim()) {
       toast.error('Tag name is required');
+      return;
+    }
+
+    if (newTagName.trim().toLowerCase() === reservedTagName.trim().toLowerCase()) {
+      toast.error(`"${reservedTagName}" is reserved for AI escalations`);
       return;
     }
 
@@ -112,12 +142,23 @@ export function TagManager() {
   }
 
   function confirmDelete(tag: Tag) {
+    if (isReserved(tag)) {
+      toast.error(`"${tag.name}" is a system tag and can't be deleted`);
+      return;
+    }
     setTagToDelete(tag);
     setDeleteDialogOpen(true);
   }
 
   async function handleDelete() {
     if (!tagToDelete) return;
+
+    if (isReserved(tagToDelete)) {
+      toast.error(`"${tagToDelete.name}" is a system tag and can't be deleted`);
+      setDeleteDialogOpen(false);
+      setTagToDelete(null);
+      return;
+    }
 
     try {
       setDeleting(true);
@@ -194,12 +235,22 @@ export function TagManager() {
                     style={{ backgroundColor: tag.color }}
                   />
                   {tag.name}
-                  <button
-                    onClick={() => confirmDelete(tag)}
-                    className="ml-0.5 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-foreground/10"
-                  >
-                    <X className="size-3" />
-                  </button>
+                  {isReserved(tag) ? (
+                    <span
+                      className="ml-0.5 inline-flex items-center gap-1 rounded-full bg-foreground/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                      title="System tag used for AI escalations"
+                    >
+                      <Lock className="size-2.5" />
+                      System
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => confirmDelete(tag)}
+                      className="ml-0.5 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-foreground/10"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
                 </span>
               ))}
             </div>

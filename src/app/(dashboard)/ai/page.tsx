@@ -5,6 +5,7 @@ import { Cpu, BookOpen } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { AiConfig } from '@/components/ai/ai-config';
 import { AiScheduleCard } from '@/components/ai/ai-schedule';
+import { AiEscalationCard } from '@/components/ai/ai-escalation';
 import { KnowledgeManager } from '@/components/ai/knowledge-manager';
 
 const TAB_VALUES = ['config', 'knowledge'] as const;
@@ -58,6 +59,7 @@ export default function AiHubPage() {
           <div className="space-y-6">
             <AiConfig />
             <AiScheduleCard />
+            <AiEscalationCard />
           </div>
         </TabsContent>
 

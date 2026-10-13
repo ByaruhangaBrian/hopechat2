@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/automations/admin-client'
 import { normalizeAiSchedule, type AiSchedule } from '@/lib/ai/schedule'
+import { normalizeEscalationPolicy, type EscalationPolicy } from '@/lib/ai/escalation'
 
 export const DEFAULT_SESSION_TIMEOUT_HOURS = 2
 
@@ -10,6 +11,8 @@ export interface BusinessSettings {
   enable_ai_test_offers: boolean
   /** Business-level availability window for the AI assistant. */
   ai_schedule: AiSchedule
+  /** When and how the AI hands a conversation off to a human. */
+  escalation: EscalationPolicy
 }
 
 /**
@@ -31,6 +34,7 @@ export async function getBusinessSettings(businessId: string): Promise<BusinessS
       Number.isFinite(hours) && hours > 0 ? hours : DEFAULT_SESSION_TIMEOUT_HOURS,
     enable_ai_test_offers: v.enable_ai_test_offers !== false,
     ai_schedule: normalizeAiSchedule(v.ai_schedule),
+    escalation: normalizeEscalationPolicy(v.escalation),
   }
 }
 

@@ -28,12 +28,15 @@ const STATUS_COLORS: Record<ConversationStatus, string> = {
   closed: "bg-muted-foreground/40",
 };
 
-const FILTER_OPTIONS: { label: string; value: ConversationStatus | "all" }[] = [
+const FILTER_OPTIONS: { label: string; value: ConversationFilter }[] = [
   { label: "All", value: "all" },
+  { label: "Needs attention", value: "needs_attention" },
   { label: "Open", value: "open" },
   { label: "Pending", value: "pending" },
   { label: "Closed", value: "closed" },
 ];
+
+type ConversationFilter = ConversationStatus | "all" | "needs_attention";
 
 export function ConversationList({
   activeConversationId,
@@ -42,7 +45,7 @@ export function ConversationList({
   onConversationsLoaded,
 }: ConversationListProps) {
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<ConversationStatus | "all">("all");
+  const [filter, setFilter] = useState<ConversationFilter>("all");
   const [loading, setLoading] = useState(true);
 
   // Keep the latest callback in a ref so the fetch effect below can
@@ -98,7 +101,9 @@ export function ConversationList({
   const filtered = useMemo(() => {
     let result = conversations;
 
-    if (filter !== "all") {
+    if (filter === "needs_attention") {
+      result = result.filter((c) => c.escalated);
+    } else if (filter !== "all") {
       result = result.filter((c) => c.status === filter);
     }
 
@@ -257,6 +262,11 @@ function ConversationItem({
           <span className="shrink-0 text-[10px] text-muted-foreground">{timeAgo}</span>
         </div>
         <div className="mt-1 flex items-center gap-2">
+          {conversation.escalated && (
+            <span className="shrink-0 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+              Escalated
+            </span>
+          )}
           {conversation.ai_enabled && (
             <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-semibold text-white">
               AI

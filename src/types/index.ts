@@ -70,6 +70,12 @@ export interface Conversation {
   assigned_agent_id?: string;
   ai_enabled?: boolean;
   human_takeover?: boolean;
+  /** True while the AI has handed this conversation to a human. */
+  escalated?: boolean;
+  /** True while the conversation is paused (no AI, no automations). */
+  paused?: boolean;
+  /** User currently assigned to handle the conversation. */
+  assigned_to?: string;
   last_message_text?: string;
   last_message_at?: string;
   unread_count: number;

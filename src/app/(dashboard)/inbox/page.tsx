@@ -293,6 +293,18 @@ export default function InboxPage() {
     [activeConversation]
   );
 
+  const handleEscalationChange = useCallback(
+    (conversationId: string, patch: Partial<Conversation>) => {
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversationId ? { ...c, ...patch } : c))
+      );
+      if (activeConversation?.id === conversationId) {
+        setActiveConversation((prev) => (prev ? { ...prev, ...patch } : prev));
+      }
+    },
+    [activeConversation]
+  );
+
   // On mobile (<lg) we show a SINGLE pane — either the list or the
   // thread — rather than cramming both side-by-side. Selecting a
   // conversation slides the thread in; the thread's back button pops
@@ -353,6 +365,7 @@ export default function InboxPage() {
             onStatusChange={handleStatusChange}
             onAssignChange={handleAssignChange}
             onAiEnabledChange={handleAiEnabledChange}
+            onEscalationChange={handleEscalationChange}
             onBack={handleCloseConversation}
           />
         </div>

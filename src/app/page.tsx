@@ -105,6 +105,10 @@ export default function LandingPage() {
       a: "Yes. In the AI Hub you can set AI availability hours — choose the days of the week and the start and end times the AI assistant is allowed to reply, in your own time zone. Outside those hours the AI stays quiet and leaves the conversation for your team to handle, and no reply credit is used. Overnight windows such as 22:00 to 06:00 are supported too.",
     },
     {
+      q: "How does the AI hand a chat over to a human?",
+      a: "You set the rules in the AI Hub under Configuration → Escalation to a human. Choose trigger words (such as \"refund\" or \"speak to a person\"), and the AI escalates whenever a customer uses one — or when it can't confidently answer. Escalated chats are tagged \"Needs human\", surfaced first in your inbox, and can auto-pause the AI so it never talks over your agent. Any teammate can then take over, resolve, or hand the conversation back to the AI with one click.",
+    },
+    {
       q: "Is HopeChat compliant with Meta's Official WhatsApp API policies?",
       a: "Yes. HopeChat connects directly through Meta Business using the official WhatsApp Business API. Every message — broadcasts, chatbot replies, order updates — is delivered with enterprise-grade reliability and full Meta compliance.",
     },
@@ -565,6 +569,37 @@ export default function LandingPage() {
                         <span className="text-xs font-bold text-foreground">{a.chats} chats</span>
                       </div>
                     ))}
+                  </div>
+                ),
+              },
+              {
+                icon: Bot,
+                title: "Smart Human Handoff",
+                desc: "Your AI knows when it's out of its depth. It escalates hard conversations — or any message that contains words you choose — flags them for your team, and can pause itself until a person steps in.",
+                points: [
+                  "Custom trigger words like \"refund\" or \"speak to a person\"",
+                  "Escalated chats tagged \"Needs human\" and surfaced first",
+                  "Auto-pause the AI so it never talks over your agent",
+                  "Take over, resolve, or hand back to the AI in one click"
+                ],
+                reverse: false,
+                mock: (
+                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
+                    <div className="flex justify-between items-center border-b border-border pb-2">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5"><Bot className="h-4 w-4 text-primary" /> Escalated to a human</span>
+                      <span className="text-[10px] text-red-600 font-bold bg-red-500/10 px-2 py-0.5 rounded">Needs attention</span>
+                    </div>
+                    <div className="space-y-2 text-xs">
+                      <div className="p-2 rounded-lg bg-red-500/5 border border-red-500/20 text-muted-foreground">&ldquo;I want to speak to a real person about my refund.&rdquo;</div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 font-bold text-[10px]">Needs human</span>
+                        <span className="text-[11px] text-muted-foreground">AI paused · waiting for an agent</span>
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <span className="px-2.5 py-1 rounded-md bg-primary text-primary-foreground text-[10px] font-semibold">Take over</span>
+                        <span className="px-2.5 py-1 rounded-md border border-border text-[10px] font-semibold text-muted-foreground">Return to AI</span>
+                      </div>
+                    </div>
                   </div>
                 ),
               },

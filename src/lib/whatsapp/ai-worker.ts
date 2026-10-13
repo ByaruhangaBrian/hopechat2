@@ -10,6 +10,7 @@ import { engineSendInteractive } from '@/lib/automations/meta-send';
 import { handleTestReply, handleFlowReply } from '@/lib/tests/runtime';
 import { getBusinessSettings } from '@/lib/tests/settings';
 import { isWithinAiSchedule } from '@/lib/ai/schedule';
+import { detectEscalation, normalizeEscalationPolicy, recordEscalation, stripEscalationMarker } from '@/lib/ai/escalation';
 import { decrypt } from './encryption';
 import { consumeCredits, checkCredits } from '@/lib/credits';
 // @google/genai used via gemini-client.ts
@@ -524,20 +525,36 @@ async function executeAiJob(job: any): Promise<void> {
   }
 
   // 5. Escalation Check
-  if (aiText.includes('[ESCALATE]') || /angry|refund|human|manager/i.test(lastUserMessage)) {
-    await db.from('conversations').update({ escalated: true }).eq('id', job.conversation_id);
-    void logHttpEvent({ 
-      userId: job.user_id, 
-      businessId: job.business_id,
-      direction: 'incoming', 
-      service: 'ai', 
-      endpoint: 'escalate', 
-      payload: { stage: 'escalation_triggered', conv_id: job.conversation_id }, 
-      note: 'escalation_triggered' 
+  const escalationPolicy = normalizeEscalationPolicy(businessSettings.escalation);
+  if (escalationPolicy.enabled) {
+    const detection = detectEscalation({
+      aiText,
+      lastUserMessage,
+      keywords: escalationPolicy.keywords,
     });
+    if (detection.escalated) {
+      const newlyEscalated = await recordEscalation(db, {
+        conversationId: job.conversation_id,
+        businessId: job.business_id,
+        contactId: conv.contact_id,
+        userId: job.user_id,
+        policy: escalationPolicy,
+      });
+      if (newlyEscalated) {
+        void logHttpEvent({ 
+          userId: job.user_id, 
+          businessId: job.business_id,
+          direction: 'incoming', 
+          service: 'ai', 
+          endpoint: 'escalate', 
+          payload: { stage: 'escalation_triggered', conv_id: job.conversation_id, reason: detection.reason }, 
+          note: 'escalation_triggered' 
+        });
+      }
+    }
   }
 
-  const cleanAiText = aiText.replace('[ESCALATE]', '').trim();
+  const cleanAiText = stripEscalationMarker(aiText);
 
   // Did the model just stage a test offer (start_test tool call)? If so, the
   // confirmation question is delivered as WhatsApp buttons so the customer can

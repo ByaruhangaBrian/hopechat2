@@ -75,15 +75,50 @@ export default function DocsAIPage() {
               brief source attribution.
             </span>,
             <span key="2">
-              <b>Escalation</b> — when the AI can&apos;t find a good answer, it lets the customer
-              know a human will follow up, and notifies your team in the inbox.
+              <b>Escalation</b> — when the AI can&apos;t find a good answer, or the customer
+              uses one of your trigger words, it lets the customer know a human will follow up
+              and flags the conversation in your inbox.
             </span>,
             <span key="3">
-              <b>Human handoff</b> — the conversation appears in your shared inbox with a
-              &quot;Bot&quot; tag so agents know it was triaged.
+              <b>Human handoff</b> — the conversation appears in your shared inbox wearing the
+              reserved escalation tag (default &quot;Needs human&quot;) so agents spot it at a
+              glance. If auto-pause is on, the AI goes quiet until someone takes over.
             </span>,
           ]}
         />
+      </DocSection>
+
+      <DocSection title="Escalation to a human">
+        <DocParagraph>
+          In the AI Hub under <b>Configuration → Escalation to a human</b> you decide when the AI
+          hands a conversation to your team.
+        </DocParagraph>
+        <DocList
+          items={[
+            <span key="1">
+              <b>Trigger keywords</b> — any message that contains one of your words (matched whole,
+              ignoring case) escalates the chat. The defaults cover things like &quot;human&quot;,
+              &quot;agent&quot;, &quot;refund&quot;, and &quot;complaint&quot;.
+            </span>,
+            <span key="2">
+              <b>Auto-pause the AI</b> — when on, the assistant stops replying as soon as a chat is
+              escalated, so it never talks over your agent.
+            </span>,
+            <span key="3">
+              <b>Contact tag</b> — escalated contacts are labelled with a reserved system tag
+              (default &quot;Needs human&quot;) that your team can filter on but can&apos;t delete.
+            </span>,
+            <span key="4">
+              <b>Needs attention filter</b> — use it in the inbox to jump straight to every
+              conversation waiting for a person.
+            </span>,
+          ]}
+        />
+        <DocParagraph>
+          From the conversation itself an agent can <b>Take over</b> (pause the AI and reply
+          manually), <b>Return to AI</b> (resume automated replies), or <b>Resolve</b> the
+          escalation once the customer is helped.
+        </DocParagraph>
       </DocSection>
 
       <DocSection title="Control when the AI replies">

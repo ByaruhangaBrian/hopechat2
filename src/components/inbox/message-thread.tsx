@@ -22,6 +22,7 @@ import {
   ArrowLeft,
   PanelRightOpen,
   PanelRightClose,
+  AlertTriangle,
 } from "lucide-react";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +68,14 @@ interface MessageThreadProps {
     assignedAgentId: string | null,
   ) => void;
   onAiEnabledChange: (conversationId: string, aiEnabled: boolean) => void;
+  /**
+   * Called after an escalation action ("Take over", "Resolve", "Return to
+   * AI") persists to the conversation, so the page can sync list + thread.
+   */
+  onEscalationChange: (
+    conversationId: string,
+    patch: Partial<Conversation>,
+  ) => void;
   /**
    * On mobile, the thread is shown full-screen with the conversation list
    * hidden. This callback lets the page deselect the active conversation
@@ -116,6 +125,7 @@ export function MessageThread({
   onStatusChange,
   onAssignChange,
   onAiEnabledChange,
+  onEscalationChange,
   onBack,
 }: MessageThreadProps) {
   const { user } = useAuth();
@@ -634,6 +644,34 @@ export function MessageThread({
     [conversation, onAiEnabledChange],
   );
 
+  const handleEscalationAction = useCallback(
+    async (action: "take_over" | "resolve" | "return_to_ai") => {
+      if (!conversation) return;
+
+      const patch: Partial<Conversation> =
+        action === "take_over"
+          ? { escalated: false, human_takeover: true, ai_enabled: false }
+          : action === "resolve"
+            ? { escalated: false }
+            : { escalated: false, human_takeover: false, ai_enabled: true };
+
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("conversations")
+        .update(patch)
+        .eq("id", conversation.id);
+
+      if (error) {
+        console.error("Failed to update escalation:", error);
+        toast.error("Failed to update escalation");
+        return;
+      }
+
+      onEscalationChange(conversation.id, patch);
+    },
+    [conversation, onEscalationChange],
+  );
+
   // Empty state
   if (!conversation || !contact) {
     return (
@@ -796,6 +834,35 @@ export function MessageThread({
           </div>
         </div>
       </div>
+
+      {/* Escalation banner — the AI handed this conversation to a human. */}
+      {conversation.escalated && (
+        <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-2 border-b border-red-500/30 bg-red-500/10 px-3 py-2 sm:px-4">
+          <div className="flex items-center gap-2 text-xs font-medium text-red-600 dark:text-red-400">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>The AI escalated this conversation — a human should take over.</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => handleEscalationAction("take_over")}>
+              Take over
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleEscalationAction("return_to_ai")}
+            >
+              Return to AI
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => handleEscalationAction("resolve")}
+            >
+              Resolve
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Messages Area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
