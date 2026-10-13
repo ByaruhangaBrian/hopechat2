@@ -106,7 +106,7 @@ export default function LandingPage() {
     },
     {
       q: "How does the AI hand a chat over to a human?",
-      a: "You set the rules in the AI Hub under Configuration → Escalation to a human. Choose trigger words (such as \"refund\" or \"speak to a person\"), and the AI escalates whenever a customer uses one — or when it can't confidently answer. Escalated chats are tagged \"Needs human\", surfaced first in your inbox, and can auto-pause the AI so it never talks over your agent. Any teammate can then take over, resolve, or hand the conversation back to the AI with one click.",
+      a: "You set the rules in the AI Hub under Configuration → Escalation to a human. It's off by default — turn it on when you're ready. Choose trigger words (such as \"refund\" or \"speak to a person\"), and the AI escalates whenever a customer uses one — or when it can't confidently answer. Escalated chats are tagged \"Needs human\", surfaced first in your inbox, and can auto-pause the AI so it never talks over your agent. Any teammate can then take over, resolve, or hand the conversation back to the AI with one click.",
     },
     {
       q: "Is HopeChat compliant with Meta's Official WhatsApp API policies?",
@@ -575,7 +575,7 @@ export default function LandingPage() {
               {
                 icon: Bot,
                 title: "Smart Human Handoff",
-                desc: "Your AI knows when it's out of its depth. It escalates hard conversations — or any message that contains words you choose — flags them for your team, and can pause itself until a person steps in.",
+                desc: "Your AI knows when it's out of its depth. Off by default, it's there when you need it: it escalates hard conversations — or any message that contains words you choose — flags them for your team, and can pause itself until a person steps in.",
                 points: [
                   "Custom trigger words like \"refund\" or \"speak to a person\"",
                   "Escalated chats tagged \"Needs human\" and surfaced first",

@@ -90,8 +90,9 @@ export default function DocsAIPage() {
 
       <DocSection title="Escalation to a human">
         <DocParagraph>
-          In the AI Hub under <b>Configuration → Escalation to a human</b> you decide when the AI
-          hands a conversation to your team.
+          Escalation is <b>off by default</b>. In the AI Hub under{" "}
+          <b>Configuration → Escalation to a human</b>, switch on &quot;Escalate when a human is
+          needed&quot; to decide when the AI hands a conversation to your team.
         </DocParagraph>
         <DocList
           items={[

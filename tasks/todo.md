@@ -54,6 +54,7 @@ Status: implemented — all tasks complete; awaiting review + commit.
 
 ## Open questions (resolved)
 
+- [x] Default escalation enabled? → **no (off by default; businesses opt in)**
 - [x] Auto-pause AI on escalation? → yes (default `autoPauseAi: true`)
 - [x] Reserved tag name → "Needs human" (configurable; default)
 - [x] Flip conversation `status` to `pending` on escalation? → no

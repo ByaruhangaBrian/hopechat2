@@ -34,7 +34,7 @@ export const DEFAULT_ESCALATION_KEYWORDS: readonly string[] = [
 ]
 
 export const DEFAULT_ESCALATION_POLICY: EscalationPolicy = {
-  enabled: true,
+  enabled: false,
   autoPauseAi: true,
   keywords: [...DEFAULT_ESCALATION_KEYWORDS],
   tagName: DEFAULT_ESCALATION_TAG_NAME,
