@@ -118,7 +118,8 @@ export default function DocsAIPage() {
         <DocParagraph>
           From the conversation itself an agent can <b>Take over</b> (pause the AI and reply
           manually), <b>Return to AI</b> (resume automated replies), or <b>Resolve</b> the
-          escalation once the customer is helped.
+          escalation once the customer is helped. Once an agent handles the chat the reserved tag
+          is removed automatically — so it never lingers after the handoff is dealt with.
         </DocParagraph>
       </DocSection>
 

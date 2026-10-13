@@ -30,6 +30,7 @@ export default function InboxPage() {
     useState<Conversation | null>(null);
   const [activeContact, setActiveContact] = useState<Contact | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [contactRefreshKey, setContactRefreshKey] = useState(0);
   const [whatsappConnected, setWhatsappConnected] = useState<boolean | null>(
     null
   );
@@ -301,6 +302,9 @@ export default function InboxPage() {
       if (activeConversation?.id === conversationId) {
         setActiveConversation((prev) => (prev ? { ...prev, ...patch } : prev));
       }
+      // Escalation transitions add/remove the reserved contact tag — refetch
+      // the sidebar so it reflects the change without a manual reload.
+      setContactRefreshKey((k) => k + 1);
     },
     [activeConversation]
   );
@@ -372,7 +376,7 @@ export default function InboxPage() {
 
         {/* Right panel: Contact sidebar — desktop only. */}
         <div className="hidden lg:block lg:w-72 xl:w-80 shrink-0 border-l border-border bg-card overflow-hidden">
-          <ContactSidebar contact={activeContact} />
+          <ContactSidebar contact={activeContact} refreshKey={contactRefreshKey} />
         </div>
       </div>
     </div>

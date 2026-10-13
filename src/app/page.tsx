@@ -106,7 +106,7 @@ export default function LandingPage() {
     },
     {
       q: "How does the AI hand a chat over to a human?",
-      a: "You set the rules in the AI Hub under Configuration → Escalation to a human. It's off by default — turn it on when you're ready. Choose trigger words (such as \"refund\" or \"speak to a person\"), and the AI escalates whenever a customer uses one — or when it can't confidently answer. Escalated chats are tagged \"Needs human\", surfaced first in your inbox, and can auto-pause the AI so it never talks over your agent. Any teammate can then take over, resolve, or hand the conversation back to the AI with one click.",
+      a: "You set the rules in the AI Hub under Configuration → Escalation to a human. It's off by default — turn it on when you're ready. Choose trigger words (such as \"refund\" or \"speak to a person\"), and the AI escalates whenever a customer uses one — or when it can't confidently answer. Escalated chats are tagged \"Needs human\", surfaced first in your inbox, and can auto-pause the AI so it never talks over your agent. Any teammate can then take over, resolve, or hand the conversation back to the AI with one click — and the tag clears itself once the chat is handled.",
     },
     {
       q: "Is HopeChat compliant with Meta's Official WhatsApp API policies?",

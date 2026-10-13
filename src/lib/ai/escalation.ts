@@ -303,3 +303,37 @@ async function applyReservedTag(
     // Best-effort tagging.
   }
 }
+
+/**
+ * Detach the reserved escalation tag from a contact. Best-effort: the tag is
+ * only a visual aid — `conversations.escalated` remains the source of truth —
+ * so a failure here must never block clearing an escalation.
+ */
+export async function removeReservedTag(
+  db: SupabaseClient,
+  input: { businessId: string; contactId: string; tagName: string },
+): Promise<void> {
+  const { businessId, contactId, tagName } = input
+
+  try {
+    const { data: existing } = await db
+      .from('tags')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('name', tagName)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    const tagId = (existing as { id: string } | null)?.id
+    if (!tagId) return
+
+    await db
+      .from('contact_tags')
+      .delete()
+      .eq('contact_id', contactId)
+      .eq('tag_id', tagId)
+  } catch {
+    // Best-effort untagging.
+  }
+}

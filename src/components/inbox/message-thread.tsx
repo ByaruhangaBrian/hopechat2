@@ -655,13 +655,17 @@ export function MessageThread({
             ? { escalated: false }
             : { escalated: false, human_takeover: false, ai_enabled: true };
 
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("conversations")
-        .update(patch)
-        .eq("id", conversation.id);
+      try {
+        const res = await fetch("/api/ai-escalation/action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conversationId: conversation.id, action }),
+        });
 
-      if (error) {
+        if (!res.ok) {
+          throw new Error("Failed to update escalation");
+        }
+      } catch (error) {
         console.error("Failed to update escalation:", error);
         toast.error("Failed to update escalation");
         return;
