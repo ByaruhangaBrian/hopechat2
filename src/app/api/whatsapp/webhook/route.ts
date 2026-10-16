@@ -1,9 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { supabaseAdmin } from '@/lib/automations/admin-client';
 import { decrypt } from '@/lib/whatsapp/encryption';
 import { verifyMetaWebhookSignature } from '@/lib/whatsapp/webhook-signature';
 import { logHttpEvent } from '@/lib/logs/http-logs';
-import { enqueueWhatsAppAiJobs, processPendingWhatsAppAiJobs } from '@/lib/whatsapp/ai-worker';
+import { enqueueWhatsAppAiJobs, processPendingWhatsAppAiJobs, DEBOUNCE_DELAY_MS } from '@/lib/whatsapp/ai-worker';
+
+// The post-response worker (after) waits out the debounce window and then
+// runs Gemini, so this route needs more headroom than the default.
+export const maxDuration = 30;
 
 interface WhatsAppWebhookEntry {
   id: string;
@@ -88,22 +92,23 @@ export async function POST(request: NextRequest) {
 
   // 2. High-Speed Processing
   try {
-    // Process all enqueuing and saving tasks
-    await enqueueWhatsAppAiJobs(body);
+    // Persist messages + enqueue AI jobs synchronously. The enqueue path
+    // is idempotent on Meta's wamid, so a redelivered payload is a no-op.
+    const scheduled = await enqueueWhatsAppAiJobs(body);
 
     // 3. Background Orchestration
-    // We trigger the worker to check for overdue jobs (including old pending ones)
-    // The worker now handles the debounce logic.
-    if ((request as any).waitUntil) {
-      (request as any).waitUntil(
-        processPendingWhatsAppAiJobs(10).catch((err) => {
+    // Acknowledge to Meta immediately — a slow (or timed-out) response
+    // makes Meta redeliver the payload, and each redelivery used to
+    // generate an extra AI reply for the same message. The worker runs
+    // post-response via after() (waitUntil-backed on Vercel).
+    if (scheduled > 0) {
+      after(async () => {
+        // Wait out the debounce window so rapid-fire messages coalesce
+        // into one AI reply instead of one reply per message.
+        await new Promise((resolve) => setTimeout(resolve, DEBOUNCE_DELAY_MS + 500));
+        await processPendingWhatsAppAiJobs(10).catch((err) => {
           console.error('[webhook] Background processing failed:', err);
-        })
-      );
-    } else {
-      // For instant production-ready feel, we await the worker
-      await processPendingWhatsAppAiJobs(10).catch((err) => {
-        console.error('[webhook] Background processing failed:', err);
+        });
       });
     }
 

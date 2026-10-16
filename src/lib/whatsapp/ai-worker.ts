@@ -15,7 +15,7 @@ import { decrypt } from './encryption';
 import { consumeCredits, checkCredits } from '@/lib/credits';
 // @google/genai used via gemini-client.ts
 
-const DEBOUNCE_DELAY_MS = 5000; // 5 seconds
+export const DEBOUNCE_DELAY_MS = 5000; // 5 seconds
 const MAX_HISTORY_MESSAGES = 15;
 
 interface WhatsAppMessage {
@@ -53,10 +53,14 @@ interface WhatsAppWebhookEntry {
 
 /**
  * High-speed message enqueuing and saving.
+ *
+ * Returns the number of AI jobs scheduled (0 when the payload contained no
+ * new messages — e.g. a statuses-only delivery receipt).
  */
-export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry[] }): Promise<void> {
+export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry[] }): Promise<number> {
   const db = supabaseAdmin();
-  if (!body.entry) return;
+  if (!body.entry) return 0;
+  let scheduled = 0;
 
   for (const entry of body.entry) {
     for (const change of entry.changes) {
@@ -98,6 +102,20 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
       // 2. Process Messages
       const messages = value.messages || [];
       for (const message of messages) {
+        // Meta redelivers webhooks whenever our response is slow or
+        // non-200. Each redelivery re-runs this whole pipeline, so
+        // without a wamid guard one "hi" produced one AI reply per
+        // delivery. If we've already stored this message ID the
+        // save/automations/job work is done — skip the duplicate.
+        if (message.id) {
+          const { data: seen } = await db
+            .from('messages')
+            .select('id')
+            .eq('message_id', message.id)
+            .maybeSingle();
+          if (seen) continue;
+        }
+
         const contactInfo = value.contacts?.find((c) => c.wa_id === message.from);
         const contactName = contactInfo?.profile?.name || message.from;
         
@@ -154,6 +172,7 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
               retry_count: 0,
             });
         }
+        scheduled++;
 
         void logHttpEvent({
           userId: config.user_id,
@@ -173,6 +192,7 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
       }
     }
   }
+  return scheduled;
 }
 
 /**
@@ -181,8 +201,19 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
 export async function processPendingWhatsAppAiJobs(limit = 10): Promise<number> {
   const db = supabaseAdmin();
   const now = new Date();
-  // Buffer to pick up jobs scheduled slightly in the future (debounce workaround)
-  const dueTime = new Date(now.getTime() + 7000).toISOString(); 
+  // Tiny grace for clock skew between instances. This used to be +7s,
+  // which exceeded the 5s debounce window and made every job "due"
+  // instantly — the debounce never coalesced anything.
+  const dueTime = new Date(now.getTime() + 1000).toISOString();
+
+  // Reclaim jobs stranded on 'running' by a crashed/timed-out worker.
+  // Without this they'd never execute again (webhook retries are now
+  // deduped by wamid, so they no longer incidentally re-create jobs).
+  await db
+    .from('whatsapp_ai_jobs')
+    .update({ status: 'pending', updated_at: new Date().toISOString() })
+    .eq('status', 'running')
+    .lt('updated_at', new Date(now.getTime() - 5 * 60_000).toISOString());
 
   // Pick jobs that are due
   const { data: jobs, error } = await db
