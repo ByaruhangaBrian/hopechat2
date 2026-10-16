@@ -55,6 +55,17 @@ export interface DispatchInput {
   triggerType: AutomationTriggerType
   contactId?: string | null
   context?: AutomationContext
+  /**
+   * Mutable collector for side effects produced during dispatch. Callers can
+   * pass one in to learn whether, e.g., an `assign_to_ai` step sent an AI
+   * reply — the inbound AI worker uses this to avoid sending a second reply.
+   */
+  effects?: AutomationEffects
+}
+
+export interface AutomationEffects {
+  /** Set when a step actually sent an AI-generated reply to the customer. */
+  aiReplied?: boolean
 }
 
 /**
@@ -64,7 +75,8 @@ export interface DispatchInput {
  * All errors are caught and logged; per-automation failures are
  * recorded into automation_logs with status='failed'.
  */
-export async function runAutomationsForTrigger(input: DispatchInput): Promise<void> {
+export async function runAutomationsForTrigger(input: DispatchInput): Promise<AutomationEffects> {
+  const effects: AutomationEffects = input.effects ?? {}
   try {
     const db = supabaseAdmin()
     const { data: automations, error } = await db
@@ -76,14 +88,14 @@ export async function runAutomationsForTrigger(input: DispatchInput): Promise<vo
 
     if (error) {
       console.error('[automations] fetch failed:', error)
-      return
+      return effects
     }
-    if (!automations || automations.length === 0) return
+    if (!automations || automations.length === 0) return effects
 
     for (const automation of automations as Automation[]) {
       if (!triggerMatches(automation, input.context)) continue
       try {
-        await executeAutomation(automation, input)
+        await executeAutomation(automation, { ...input, effects })
       } catch (err) {
         console.error('[automations] execute failed:', automation.id, err)
       }
@@ -91,6 +103,7 @@ export async function runAutomationsForTrigger(input: DispatchInput): Promise<vo
   } catch (err) {
     console.error('[automations] dispatch failed:', err)
   }
+  return effects
 }
 
 /**
@@ -237,6 +250,7 @@ async function executeAutomation(automation: Automation, input: DispatchInput) {
     startPosition: 0,
     logId: log.id,
     triggerEvent: input.triggerType,
+    effects: input.effects,
   })
 
   // Atomic counter update via the SQL function from migration 007.
@@ -261,6 +275,7 @@ interface ExecuteArgs {
   startPosition: number
   logId: string | null
   triggerEvent: string
+  effects?: AutomationEffects
 }
 
 async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
@@ -538,6 +553,7 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         triggerType: 'new_message_received',
         contactId: args.contactId,
         context: args.context,
+        effects: args.effects,
       })
 
       return `triggered child automation ${cfg.automation_id}`
@@ -728,10 +744,11 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         .eq('is_active', true)
         .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
 
+      // A per-business key is optional: generateGeminiResponse falls back to
+      // the platform's global Gemini key, exactly like the inbound AI worker.
+      // Hard-requiring the business key here made assign_to_ai fail for
+      // businesses that rely on the platform key.
       const apiKey = aiSettings.groq_api_key ? decrypt(aiSettings.groq_api_key) : ''
-      if (!apiKey) {
-        throw new Error('Gemini API key is missing in AI settings')
-      }
 
       let systemInstruction = aiSettings?.system_prompt ?? 'You are a helpful customer service AI assistant.'
       if (aiSettings?.training_documents && aiSettings.training_documents.length > 0) {
@@ -897,6 +914,7 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
               { id: 'test:cancel', label: 'Not Now' },
             ],
           })
+          if (args.effects) args.effects.aiReplied = true
           return `AI test offer sent via Meta (${offerMessageId})`
         }
 
@@ -907,6 +925,7 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
           text: replyText,
         })
 
+        if (args.effects) args.effects.aiReplied = true
         return `AI reply sent via Meta (${whatsapp_message_id})`
       } catch (err: any) {
         const errMsg = err instanceof Error ? err.message : String(err)

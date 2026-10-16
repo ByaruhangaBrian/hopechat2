@@ -42,6 +42,22 @@ async function getGlobalGeminiKey(): Promise<string> {
 }
 const INITIAL_BACKOFF_MS = 1000;
 
+/**
+ * Gemini returns 503 UNAVAILABLE / "experiencing high demand" during traffic
+ * spikes, plus occasional 500/502/504 and timeouts. These are transient and
+ * safe to retry. Retrying only 429 (as we used to) permanently dropped a
+ * customer's reply whenever the model was briefly overloaded.
+ */
+function isTransientGeminiError(error: any): boolean {
+  const status = Number(error?.status ?? error?.error?.code);
+  if ([429, 500, 502, 503, 504].includes(status)) return true;
+  const msg = String(error?.message ?? '').toLowerCase();
+  return (
+    /\b(429|500|502|503|504)\b/.test(msg) ||
+    /rate limit|overloaded|high demand|unavailable|deadline exceeded|timed? ?out|temporarily|try again/.test(msg)
+  );
+}
+
 interface MessageContent {
   role: 'user' | 'model' | 'function';
   parts: { text?: string; functionCall?: any; functionResponse?: any }[];
@@ -317,14 +333,9 @@ export async function generateGeminiResponse(
         status: error?.status,
       });
 
-      const isRateLimit = 
-        error?.status === 429 || 
-        error?.message?.includes('429') || 
-        error?.message?.toLowerCase().includes('rate limit');
-
-      if (isRateLimit && attempt < MAX_RETRIES) {
+      if (isTransientGeminiError(error) && attempt < MAX_RETRIES) {
         const backoff = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1);
-        console.warn(`[gemini] Rate limited. Retrying in ${backoff}ms (Attempt ${attempt}/${MAX_RETRIES})`);
+        console.warn(`[gemini] Transient error (attempt ${attempt}/${MAX_RETRIES}). Retrying in ${backoff}ms`);
         await new Promise(resolve => setTimeout(resolve, backoff));
         continue;
       }

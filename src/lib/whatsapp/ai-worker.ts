@@ -126,11 +126,18 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
           continue;
         }
 
-        const { conversationId, handledByTest } = saveResult;
+        const { conversationId, handledByTest, aiReplied } = saveResult;
 
         // If the interaction was already handled by the workflow node manager,
         // do not schedule an AI chat response to talk over it.
         if (handledByTest) {
+          continue;
+        }
+
+        // An `assign_to_ai` automation step already generated and sent the AI
+        // reply for this message. Scheduling the worker too would send a second
+        // (duplicate) reply and double-charge credits.
+        if (aiReplied) {
           continue;
         }
 
@@ -261,14 +268,19 @@ export async function processPendingWhatsAppAiJobs(limit = 10): Promise<number> 
       processed++;
     } catch (err: any) {
       console.error('[ai-worker] Job execution failed:', err);
-      const isRateLimit = err?.message?.includes('429');
-      const status = (isRateLimit && job.retry_count < 1) ? 'pending' : 'failed';
-      
+      // Retry transient upstream failures (Gemini 429/5xx, overload, timeouts).
+      // Retrying only 429 dropped replies whenever the model was briefly
+      // overloaded with a 503.
+      const errMsg = String(err?.message ?? '');
+      const isTransient = /\b(429|500|502|503|504)\b|rate limit|overloaded|high demand|unavailable|deadline exceeded|timed? ?out|temporarily|try again/i.test(errMsg);
+      const canRetry = isTransient && job.retry_count < 2;
+      const status = canRetry ? 'pending' : 'failed';
+
       await db.from('whatsapp_ai_jobs').update({ 
         status, 
         last_error: err.message, 
         retry_count: job.retry_count + 1,
-        next_run_at: new Date(Date.now() + 5000).toISOString()
+        next_run_at: new Date(Date.now() + 5000 * (job.retry_count + 1)).toISOString()
       }).eq('id', job.id);
     }
   }
@@ -688,7 +700,7 @@ async function handleIncomingMessageSaving(
   contactName: string,
   userId: string,
   businessId: string
-): Promise<{ conversationId: string; handledByTest: boolean } | null> {
+): Promise<{ conversationId: string; handledByTest: boolean; aiReplied: boolean } | null> {
   const db = supabaseAdmin();
   const senderPhone = normalizePhone(message.from);
 
@@ -802,9 +814,10 @@ async function handleIncomingMessageSaving(
   // While a test/practice session is actively handling the message we skip
   // `new_message_received` automations entirely — otherwise a dispatch_test
   // automation re-fires on every reply and resets the student's session.
+  let aiReplied = false;
   if (!handledByTest) {
     try {
-      await runAutomationsForTrigger({
+      const effects = await runAutomationsForTrigger({
         userId,
         businessId,
         triggerType: 'new_message_received',
@@ -814,11 +827,12 @@ async function handleIncomingMessageSaving(
           conversation_id: conv.id,
         },
       });
+      aiReplied = effects.aiReplied === true;
     } catch (err) {
       console.error('[ai-worker] Automation trigger failed:', err);
     }
   }
 
-  return { conversationId: conv.id, handledByTest };
+  return { conversationId: conv.id, handledByTest, aiReplied };
 }
 
