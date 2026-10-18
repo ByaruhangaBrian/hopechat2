@@ -264,11 +264,17 @@ export async function applySuccessfulPayment(tx: SuccessfulPaymentTx): Promise<v
 
   if (tx.purpose === "subscription" && tx.tier_id && tx.period_months) {
     // Idempotency guard: skip if this exact payment already applied a subscription.
-    const { data: existing } = await db
+    const { data: existing, error: existingError } = await db
       .from("subscriptions")
       .select("id")
       .eq("payment_transaction_id", tx.id)
       .maybeSingle();
+
+    if (existingError) {
+      // A failed idempotency check must NOT fall through and apply the payment
+      // again — that would extend the subscription twice.
+      throw new Error(`subscription idempotency check failed: ${existingError.message}`);
+    }
 
     if (existing) {
       console.warn("[subscriptions] Payment already applied to a subscription — skipping:", tx.id);

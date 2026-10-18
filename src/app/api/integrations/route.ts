@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { encrypt } from '@/lib/whatsapp/encryption';
-import { appendFileSync } from 'fs';
-import { join } from 'path';
 
 export async function GET(req: Request) {
   try {
@@ -50,10 +48,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  let requestBody: any = null;
   try {
     const body = await req.json();
-    requestBody = body;
     const { type, is_enabled, config } = body;
     
     const supabase = await createClient();
@@ -111,15 +107,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, integration: data });
   } catch (err: any) {
-    console.error('[integrations] POST failed:', err);
-    try {
-      appendFileSync(
-        join(process.cwd(), 'error_log.txt'),
-        `[${new Date().toISOString()}] POST failed: ${err.message}\nStack: ${err.stack}\nPayload config: ${JSON.stringify(requestBody?.config)}\n\n`
-      );
-    } catch (logErr) {
-      console.error('Failed to write to error_log.txt:', logErr);
-    }
+    console.error('[integrations] POST failed:', err?.message ?? err);
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
 }

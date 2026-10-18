@@ -52,10 +52,9 @@ export default function TenantsDirectoryPage() {
 
   const supabase = createClient();
 
-  const isSuperAdmin = 
-    user?.app_metadata?.is_superadmin === true || 
-    profile?.is_superadmin === true || 
-    user?.user_metadata?.role === "super_admin";
+  const isSuperAdmin =
+    user?.app_metadata?.is_superadmin === true ||
+    profile?.is_superadmin === true;
 
   useEffect(() => {
     if (!authLoading && isSuperAdmin) {

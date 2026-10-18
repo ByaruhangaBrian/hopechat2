@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { logHttpEvent } from "@/lib/logs/http-logs";
 import { applySuccessfulPayment } from "@/lib/subscriptions";
 import {
@@ -139,11 +139,14 @@ export async function GET(req: Request) {
       payload: { merchantReference, amount: tx.amount_ugx, credits_added: tx.credits_added, paymentMethod: txStatus.paymentMethod, confirmationCode: txStatus.confirmationCode }
     });
 
-    // Fire-and-forget: apply subscription / send receipt (IPN may have already
-    // done this — applySuccessfulPayment is idempotent for credit receipts and
-    // a no-op when the subscription was already written).
-    void applySuccessfulPayment(updatedTx).catch((err) => {
-      console.error("[payments] applySuccessfulPayment failed:", err?.message ?? err);
+    // Run activation after the response is sent but while the function is
+    // still alive (see the IPN route for rationale).
+    after(async () => {
+      try {
+        await applySuccessfulPayment(updatedTx);
+      } catch (err: any) {
+        console.error("[payments] applySuccessfulPayment failed:", err?.message ?? err);
+      }
     });
 
     return NextResponse.redirect(`${siteUrl}/settings?tab=billing&topup=success`);

@@ -108,11 +108,17 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
         // delivery. If we've already stored this message ID the
         // save/automations/job work is done — skip the duplicate.
         if (message.id) {
-          const { data: seen } = await db
+          const { data: seen, error: seenError } = await db
             .from('messages')
             .select('id')
             .eq('message_id', message.id)
             .maybeSingle();
+          if (seenError) {
+            // If the wamid cannot be verified we must not risk a duplicate
+            // reply (double charge) — skip and let the next delivery retry.
+            console.error('[ai-worker] wamid dedupe check failed:', seenError);
+            continue;
+          }
           if (seen) continue;
         }
 
@@ -147,12 +153,19 @@ export async function enqueueWhatsAppAiJobs(body: { entry?: WhatsAppWebhookEntry
         const nextRunAt = new Date(Date.now() + DEBOUNCE_DELAY_MS).toISOString();
 
         // Check for existing pending job
-        const { data: existingJob } = await db
+        const { data: existingJob, error: existingJobError } = await db
           .from('whatsapp_ai_jobs')
           .select('id')
           .eq('conversation_id', conversationId)
           .eq('status', 'pending')
           .maybeSingle();
+
+        if (existingJobError) {
+          // A failed lookup must not create a second job for the same
+          // conversation — that produces a duplicate reply and double charge.
+          console.error('[ai-worker] pending-job check failed:', existingJobError);
+          continue;
+        }
 
         if (existingJob) {
           // Update existing job's timer (reset debounce)

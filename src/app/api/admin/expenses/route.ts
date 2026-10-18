@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const isSuperAdmin = user.app_metadata?.is_superadmin === true || user.user_metadata?.role === "super_admin";
+    const isSuperAdmin = user.app_metadata?.is_superadmin === true;
     if (!isSuperAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const adminSupabase = createAdminClient();
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const isSuperAdmin = user.app_metadata?.is_superadmin === true || user.user_metadata?.role === "super_admin";
+    const isSuperAdmin = user.app_metadata?.is_superadmin === true;
     if (!isSuperAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await req.json();
@@ -81,7 +81,7 @@ export async function DELETE(req: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const isSuperAdmin = user.app_metadata?.is_superadmin === true || user.user_metadata?.role === "super_admin";
+    const isSuperAdmin = user.app_metadata?.is_superadmin === true;
     if (!isSuperAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const { searchParams } = new URL(req.url);

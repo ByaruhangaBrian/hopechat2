@@ -32,7 +32,7 @@ async function isSuperAdmin(req: Request): Promise<boolean> {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) return false;
-  return user.app_metadata?.is_superadmin === true || user.user_metadata?.role === "super_admin";
+  return user.app_metadata?.is_superadmin === true;
 }
 
 export async function GET(req: Request) {
@@ -79,8 +79,7 @@ export async function POST(req: Request) {
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const isSuper =
-      user.app_metadata?.is_superadmin === true || user.user_metadata?.role === "super_admin";
+    const isSuper = user.app_metadata?.is_superadmin === true;
     if (!isSuper) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await req.json();
@@ -177,8 +176,7 @@ export async function PATCH(req: Request) {
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const isSuper =
-      user.app_metadata?.is_superadmin === true || user.user_metadata?.role === "super_admin";
+    const isSuper = user.app_metadata?.is_superadmin === true;
     if (!isSuper) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await req.json();
