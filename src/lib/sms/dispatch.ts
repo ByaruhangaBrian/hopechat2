@@ -231,7 +231,19 @@ export async function dispatchSmsBroadcast(
 
   // ── Dispatch to the gateway ───────────────────────────────────
   const numbers = valid.map((r) => r.recipientPhone)
-  const result = await sendKintuSms(settings, numbers, cleanMessage)
+  // A thrown fetch error (timeout/network) must be treated exactly like a
+  // gateway rejection: the credits were already deducted above, so falling
+  // through to the refund path keeps the balance and broadcast state correct.
+  let result: Awaited<ReturnType<typeof sendKintuSms>>
+  try {
+    result = await sendKintuSms(settings, numbers, cleanMessage)
+  } catch (err: any) {
+    const reason =
+      err?.name === 'AbortError'
+        ? 'SMS gateway request timed out'
+        : err?.message ?? 'SMS gateway request failed'
+    result = { ok: false, raw: reason }
+  }
 
   await logHttpEvent({
     userId,

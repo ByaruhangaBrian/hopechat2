@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const isSuperAdmin = user.app_metadata?.is_superadmin === true || user.user_metadata?.role === "super_admin";
+    const isSuperAdmin = user.app_metadata?.is_superadmin === true;
     if (!isSuperAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -96,7 +96,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const isSuperAdmin = user.app_metadata?.is_superadmin === true || user.user_metadata?.role === "super_admin";
+    const isSuperAdmin = user.app_metadata?.is_superadmin === true;
     if (!isSuperAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

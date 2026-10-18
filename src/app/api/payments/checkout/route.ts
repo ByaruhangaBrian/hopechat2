@@ -86,7 +86,7 @@ export async function POST(req: Request) {
       .eq("user_id", user.id)
       .single();
 
-    const isSuperAdmin = user.app_metadata?.is_superadmin === true || user.user_metadata?.role === "super_admin";
+    const isSuperAdmin = user.app_metadata?.is_superadmin === true;
     
     if (!isSuperAdmin && (profileError || profile?.business_id !== businessId)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

@@ -70,8 +70,7 @@ export default function PricingTiersPage() {
 
   const isSuperAdmin =
     user?.app_metadata?.is_superadmin === true ||
-    profile?.is_superadmin === true ||
-    user?.user_metadata?.role === "super_admin";
+    profile?.is_superadmin === true;
 
   const fetchTiers = async () => {
     setLoading(true);

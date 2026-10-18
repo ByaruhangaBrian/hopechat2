@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { logHttpEvent } from "@/lib/logs/http-logs";
 import { applySuccessfulPayment } from "@/lib/subscriptions";
 import {
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       console.error("Pesapal credentials not configured for IPN verification");
       return NextResponse.json(
         { orderNotificationType: "IPNCHANGE", orderTrackingId: OrderTrackingId, orderMerchantReference: OrderMerchantReference, status: 500 },
-        { status: 200 }
+        { status: 500 }
       );
     }
 
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
       console.error("IPN: Transaction record not found:", OrderMerchantReference);
       return NextResponse.json(
         { orderNotificationType: "IPNCHANGE", orderTrackingId: OrderTrackingId, orderMerchantReference: OrderMerchantReference, status: 500 },
-        { status: 200 }
+        { status: 500 }
       );
     }
 
@@ -105,7 +105,7 @@ export async function POST(req: Request) {
       console.error("IPN: Failed to update transaction:", updateError);
       return NextResponse.json(
         { orderNotificationType: "IPNCHANGE", orderTrackingId: OrderTrackingId, orderMerchantReference: OrderMerchantReference, status: 500 },
-        { status: 200 }
+        { status: 500 }
       );
     }
 
@@ -119,10 +119,16 @@ export async function POST(req: Request) {
       payload: { OrderMerchantReference, amount: tx.amount_ugx, credits_added: tx.credits_added }
     });
 
-    // Fire-and-forget: apply subscription / send receipt. Swallowed errors are
-    // logged inside so a failed email never breaks the Pesapal IPN handshake.
-    void applySuccessfulPayment(updatedTx).catch((err) => {
-      console.error("[payments] applySuccessfulPayment failed:", err?.message ?? err);
+    // Run activation after the response is sent but while the function is
+    // still alive. A bare `void` promise can be frozen the moment the
+    // serverless response completes, silently losing the subscription and
+    // receipt even though the customer paid.
+    after(async () => {
+      try {
+        await applySuccessfulPayment(updatedTx);
+      } catch (err: any) {
+        console.error("[payments] applySuccessfulPayment failed:", err?.message ?? err);
+      }
     });
 
     return NextResponse.json(
@@ -142,7 +148,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json(
       { orderNotificationType: "IPNCHANGE", orderTrackingId: "", orderMerchantReference: "", status: 500 },
-      { status: 200 }
+      { status: 500 }
     );
   }
 }
