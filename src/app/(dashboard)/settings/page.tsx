@@ -59,56 +59,56 @@ export default function SettingsPage() {
       </div>
 
       <Tabs value={tab} onValueChange={(v) => onChange(v as TabValue)}>
-        <TabsList className="bg-card border border-border">
+        <TabsList className="bg-muted/40 border border-border/60 p-1.5 rounded-xl gap-1 overflow-x-auto scrollbar-hide max-w-full">
           <TabsTrigger
             value="profile"
-            className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+            className="group data-active:bg-card data-active:text-foreground data-active:shadow-sm data-active:border-border/60 text-muted-foreground hover:text-foreground hover:bg-card/50 transition-all rounded-lg px-3 py-1.5"
           >
-            <User className="size-4" />
+            <User className="size-4 text-sky-500 transition-transform duration-200 group-hover:scale-110" />
             Profile
           </TabsTrigger>
           {settingsEnabled && (
             <>
               <TabsTrigger
                 value="whatsapp"
-                className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+                className="group data-active:bg-card data-active:text-foreground data-active:shadow-sm data-active:border-border/60 text-muted-foreground hover:text-foreground hover:bg-card/50 transition-all rounded-lg px-3 py-1.5"
               >
-                <Settings className="size-4" />
+                <Settings className="size-4 text-emerald-500 transition-transform duration-200 group-hover:scale-110" />
                 WhatsApp Config
               </TabsTrigger>
               <TabsTrigger
                 value="templates"
-                className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+                className="group data-active:bg-card data-active:text-foreground data-active:shadow-sm data-active:border-border/60 text-muted-foreground hover:text-foreground hover:bg-card/50 transition-all rounded-lg px-3 py-1.5"
               >
-                <MessageSquare className="size-4" />
+                <MessageSquare className="size-4 text-indigo-500 transition-transform duration-200 group-hover:scale-110" />
                 Templates
               </TabsTrigger>
               <TabsTrigger
                 value="tags"
-                className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+                className="group data-active:bg-card data-active:text-foreground data-active:shadow-sm data-active:border-border/60 text-muted-foreground hover:text-foreground hover:bg-card/50 transition-all rounded-lg px-3 py-1.5"
               >
-                <Tag className="size-4" />
+                <Tag className="size-4 text-amber-500 transition-transform duration-200 group-hover:scale-110" />
                 Tags
               </TabsTrigger>
               <TabsTrigger
                 value="integrations"
-                className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+                className="group data-active:bg-card data-active:text-foreground data-active:shadow-sm data-active:border-border/60 text-muted-foreground hover:text-foreground hover:bg-card/50 transition-all rounded-lg px-3 py-1.5"
               >
-                <Blocks className="size-4" />
+                <Blocks className="size-4 text-purple-500 transition-transform duration-200 group-hover:scale-110" />
                 Integrations
               </TabsTrigger>
               <TabsTrigger
                 value="billing"
-                className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+                className="group data-active:bg-card data-active:text-foreground data-active:shadow-sm data-active:border-border/60 text-muted-foreground hover:text-foreground hover:bg-card/50 transition-all rounded-lg px-3 py-1.5"
               >
-                <Coins className="size-4" />
+                <Coins className="size-4 text-amber-500 transition-transform duration-200 group-hover:scale-110" />
                 Plan & Billing
               </TabsTrigger>
               <TabsTrigger
                 value="tests"
-                className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+                className="group data-active:bg-card data-active:text-foreground data-active:shadow-sm data-active:border-border/60 text-muted-foreground hover:text-foreground hover:bg-card/50 transition-all rounded-lg px-3 py-1.5"
               >
-                <ClipboardList className="size-4" />
+                <ClipboardList className="size-4 text-orange-500 transition-transform duration-200 group-hover:scale-110" />
                 Tests
               </TabsTrigger>
             </>
@@ -116,9 +116,9 @@ export default function SettingsPage() {
           {showUserManagement && (
             <TabsTrigger
               value="users"
-              className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+              className="group data-active:bg-card data-active:text-foreground data-active:shadow-sm data-active:border-border/60 text-muted-foreground hover:text-foreground hover:bg-card/50 transition-all rounded-lg px-3 py-1.5"
             >
-              <Users className="size-4" />
+              <Users className="size-4 text-blue-500 transition-transform duration-200 group-hover:scale-110" />
               Users
             </TabsTrigger>
           )}

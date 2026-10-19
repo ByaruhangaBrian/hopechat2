@@ -47,17 +47,18 @@ import {
 import { useState, useEffect } from "react";
 import { ShieldAlert } from "lucide-react";
 import { canAccess, type PermissionKey } from "@/lib/permissions";
+import { getAvatarGradient } from "@/lib/avatar-colors";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/inbox", label: "Inbox", icon: MessageSquare },
-  { href: "/contacts", label: "Contacts", icon: Users },
-  { href: "/pipelines", label: "Pipelines", icon: GitBranch },
-  { href: "/broadcasts", label: "Broadcasts", icon: Radio },
-  { href: "/bookings", label: "Bookings", icon: CalendarCheck },
-  { href: "/automations", label: "Automations", icon: Zap },
-  { href: "/dashboard/menus", label: "Tests & Practice", icon: FolderTree },
-  { href: "/ai", label: "AI Hub", icon: Cpu },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, color: "text-indigo-500 dark:text-indigo-400", bg: "bg-indigo-500/10 dark:bg-indigo-500/15" },
+  { href: "/inbox", label: "Inbox", icon: MessageSquare, color: "text-emerald-500 dark:text-emerald-400", bg: "bg-emerald-500/10 dark:bg-emerald-500/15" },
+  { href: "/contacts", label: "Contacts", icon: Users, color: "text-sky-500 dark:text-sky-400", bg: "bg-sky-500/10 dark:bg-sky-500/15" },
+  { href: "/pipelines", label: "Pipelines", icon: GitBranch, color: "text-amber-500 dark:text-amber-400", bg: "bg-amber-500/10 dark:bg-amber-500/15" },
+  { href: "/broadcasts", label: "Broadcasts", icon: Radio, color: "text-rose-500 dark:text-rose-400", bg: "bg-rose-500/10 dark:bg-rose-500/15" },
+  { href: "/bookings", label: "Bookings", icon: CalendarCheck, color: "text-teal-500 dark:text-teal-400", bg: "bg-teal-500/10 dark:bg-teal-500/15" },
+  { href: "/automations", label: "Automations", icon: Zap, color: "text-purple-500 dark:text-purple-400", bg: "bg-purple-500/10 dark:bg-purple-500/15" },
+  { href: "/dashboard/menus", label: "Tests & Practice", icon: FolderTree, color: "text-orange-500 dark:text-orange-400", bg: "bg-orange-500/10 dark:bg-orange-500/15" },
+  { href: "/ai", label: "AI Hub", icon: Cpu, color: "text-fuchsia-500 dark:text-fuchsia-400", bg: "bg-fuchsia-500/10 dark:bg-fuchsia-500/15" },
 ];
 
 const permissionByPath: Record<string, PermissionKey> = {
@@ -86,9 +87,11 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const { theme, setTheme } = useTheme();
 
   const bottomNavItems = [
-    ...(profile?.is_superadmin ? [{ href: "/admin", label: "System Admin", icon: ShieldCheck }] : []),
+    ...(profile?.is_superadmin
+      ? [{ href: "/admin", label: "System Admin", icon: ShieldCheck, color: "text-rose-500 dark:text-rose-400", bg: "bg-rose-500/10 dark:bg-rose-500/15" }]
+      : []),
     ...(canAccess(profile?.permissions, "settings", profile?.role)
-      ? [{ href: "/settings", label: "Settings", icon: Settings }]
+      ? [{ href: "/settings", label: "Settings", icon: Settings, color: "text-cyan-500 dark:text-cyan-400", bg: "bg-cyan-500/10 dark:bg-cyan-500/15" }]
       : []),
   ];
 
@@ -268,7 +271,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
         {/* Main navigation */}
         <nav className="flex-1 space-y-0.5 overflow-y-auto scrollbar-hide px-3 py-3">
-          <ul className="space-y-0.5">
+          <ul className="space-y-1">
             {filteredNavItems.map((item) => {
               const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
               const showUnreadDot = item.href === "/inbox" && totalUnread > 0 && !isActive;
@@ -277,22 +280,30 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 <Link
                   href={item.href}
                   className={cn(
-                    "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-all duration-200",
+                    "group relative flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 transition-all duration-200",
                     isActive
-                      ? "bg-primary/10 text-primary shadow-sm"
-                      : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                      ? "bg-primary/10 text-foreground font-semibold shadow-sm"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
                     isCollapsed && "justify-center px-0 py-2"
                   )}
                 >
-                  <item.icon className={cn("size-4 shrink-0 transition-transform duration-200 group-hover:scale-110", isActive && "text-primary")} />
-                  {!isCollapsed && <span className="flex-1 text-sm font-medium">{item.label}</span>}
+                  <div className={cn(
+                    "flex size-7 shrink-0 items-center justify-center rounded-lg transition-all duration-200",
+                    item.bg,
+                    item.color,
+                    "group-hover:scale-110",
+                    isActive && "ring-1 ring-primary/20 shadow-[0_0_12px_rgba(0,0,0,0.06)]"
+                  )}>
+                    <item.icon className="size-4 shrink-0 transition-transform duration-200 group-hover:scale-105" />
+                  </div>
+                  {!isCollapsed && <span className="flex-1 text-sm font-medium tracking-tight">{item.label}</span>}
                   {showUnreadDot && (
                     <span className={cn(
-                      "absolute flex h-1.5 w-1.5",
+                      "absolute flex h-2 w-2",
                       isCollapsed ? "right-1.5 top-1.5" : "right-2.5"
                     )}>
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                     </span>
                   )}
                   {isActive && !isCollapsed && (
@@ -318,22 +329,30 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
           {!isCollapsed && <div className="mx-2 my-2.5 h-px bg-sidebar-border/50" />}
 
-          <ul className="space-y-0.5">
+          <ul className="space-y-1">
             {bottomNavItems.map((item) => {
               const isActive = pathname.startsWith(item.href);
               const content = (
                 <Link
                   href={item.href}
                   className={cn(
-                    "group flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-all duration-200",
+                    "group relative flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 transition-all duration-200",
                     isActive
-                      ? "bg-primary/10 text-primary shadow-sm"
-                      : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                      ? "bg-primary/10 text-foreground font-semibold shadow-sm"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
                     isCollapsed && "justify-center px-0 py-2"
                   )}
                 >
-                  <item.icon className="size-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
-                  {!isCollapsed && <span className="flex-1 text-sm font-medium">{item.label}</span>}
+                  <div className={cn(
+                    "flex size-7 shrink-0 items-center justify-center rounded-lg transition-all duration-200",
+                    item.bg,
+                    item.color,
+                    "group-hover:scale-110",
+                    isActive && "ring-1 ring-primary/20 shadow-[0_0_12px_rgba(0,0,0,0.06)]"
+                  )}>
+                    <item.icon className="size-4 shrink-0 transition-transform duration-200 group-hover:scale-105" />
+                  </div>
+                  {!isCollapsed && <span className="flex-1 text-sm font-medium tracking-tight">{item.label}</span>}
                 </Link>
               );
 
@@ -400,7 +419,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 {profile?.avatar_url ? (
                   <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? "Avatar"} />
                 ) : null}
-                <AvatarFallback className="bg-primary/10 text-[10px] font-bold text-primary">
+                <AvatarFallback className={cn("text-[10px] font-bold text-white select-none", getAvatarGradient(profile?.full_name ?? profile?.email))}>
                   {profile?.full_name?.charAt(0)?.toUpperCase() ?? profile?.email?.charAt(0)?.toUpperCase() ?? "U"}
                 </AvatarFallback>
               </Avatar>

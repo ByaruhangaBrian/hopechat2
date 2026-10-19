@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { getAvatarGradient } from "@/lib/avatar-colors";
 
 interface ConversationListProps {
   activeConversationId: string | null;
@@ -23,9 +24,9 @@ interface ConversationListProps {
 }
 
 const STATUS_COLORS: Record<ConversationStatus, string> = {
-  open: "bg-primary",
-  pending: "bg-amber-500",
-  closed: "bg-muted-foreground/40",
+  open: "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]",
+  pending: "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]",
+  closed: "bg-slate-400/50",
 };
 
 const FILTER_OPTIONS: { label: string; value: ConversationFilter }[] = [
@@ -241,7 +242,10 @@ function ConversationItem({
       )}
     >
       {/* Avatar */}
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
+      <div className={cn(
+        "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold select-none transition-transform duration-200 group-hover:scale-105",
+        contact?.avatar_url ? "bg-muted" : getAvatarGradient(displayName)
+      )}>
         {contact?.avatar_url ? (
           <img
             src={contact.avatar_url}
@@ -256,19 +260,19 @@ function ConversationItem({
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-sm font-medium text-foreground">
+          <span className="truncate text-sm font-semibold text-foreground">
             {displayName}
           </span>
-          <span className="shrink-0 text-[10px] text-muted-foreground">{timeAgo}</span>
+          <span className="shrink-0 text-[10px] font-medium text-muted-foreground">{timeAgo}</span>
         </div>
         <div className="mt-1 flex items-center gap-2">
           {conversation.escalated && (
-            <span className="shrink-0 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+            <span className="shrink-0 rounded-full bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 text-[10px] font-bold text-rose-600 dark:text-rose-400">
               Escalated
             </span>
           )}
           {conversation.ai_enabled && (
-            <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+            <span className="rounded-full bg-fuchsia-500/15 border border-fuchsia-500/30 px-2 py-0.5 text-[10px] font-bold text-fuchsia-600 dark:text-fuchsia-400">
               AI
             </span>
           )}
@@ -277,7 +281,7 @@ function ConversationItem({
           </p>
           <div className="flex shrink-0 items-center gap-1.5">
             {conversation.unread_count > 0 && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-bold text-white shadow-sm shadow-emerald-500/30">
                 {conversation.unread_count}
               </span>
             )}

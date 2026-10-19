@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { track } from '@/lib/activity/track';
 import type { Contact, Tag, ContactTag, ContactNote, CustomField, ContactCustomValue, Deal } from '@/types';
@@ -20,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getAvatarGradient } from '@/lib/avatar-colors';
 import {
   Phone,
   Mail,
@@ -32,6 +34,10 @@ import {
   Save,
   X,
   DollarSign,
+  User,
+  Tag as TagIcon,
+  FileText,
+  Sliders,
 } from 'lucide-react';
 
 interface ContactDetailViewProps {
@@ -348,7 +354,7 @@ export function ContactDetailView({
             <SheetHeader className="p-4 border-b border-border/50">
               <div className="flex items-center gap-3">
                 <Avatar className="size-12 bg-muted border border-border">
-                  <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                  <AvatarFallback className={cn("text-white text-base font-bold select-none", getAvatarGradient(contact.name || contact.phone))}>
                     {getInitials(contact.name)}
                   </AvatarFallback>
                 </Avatar>
@@ -391,35 +397,40 @@ export function ContactDetailView({
 
             {/* Tabs */}
             <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
-              <TabsList className="bg-muted/50 border-b border-border mx-4 mt-3">
+              <TabsList className="bg-muted/40 border border-border/60 mx-4 mt-3 p-1 rounded-xl gap-1">
                 <TabsTrigger
                   value="details"
-                  className="data-[state=active]:bg-background data-[state=active]:text-primary text-muted-foreground"
+                  className="group data-active:bg-card data-active:text-foreground data-active:shadow-sm text-muted-foreground hover:text-foreground text-xs font-semibold py-1.5 px-2.5 rounded-lg flex items-center gap-1.5 transition-all"
                 >
+                  <User className="size-3.5 text-sky-500 transition-transform duration-200 group-hover:scale-110" />
                   Details
                 </TabsTrigger>
                 <TabsTrigger
                   value="tags"
-                  className="data-[state=active]:bg-background data-[state=active]:text-primary text-muted-foreground"
+                  className="group data-active:bg-card data-active:text-foreground data-active:shadow-sm text-muted-foreground hover:text-foreground text-xs font-semibold py-1.5 px-2.5 rounded-lg flex items-center gap-1.5 transition-all"
                 >
+                  <TagIcon className="size-3.5 text-amber-500 transition-transform duration-200 group-hover:scale-110" />
                   Tags
                 </TabsTrigger>
                 <TabsTrigger
                   value="notes"
-                  className="data-[state=active]:bg-background data-[state=active]:text-primary text-muted-foreground"
+                  className="group data-active:bg-card data-active:text-foreground data-active:shadow-sm text-muted-foreground hover:text-foreground text-xs font-semibold py-1.5 px-2.5 rounded-lg flex items-center gap-1.5 transition-all"
                 >
+                  <FileText className="size-3.5 text-indigo-500 transition-transform duration-200 group-hover:scale-110" />
                   Notes
                 </TabsTrigger>
                 <TabsTrigger
                   value="custom"
-                  className="data-[state=active]:bg-background data-[state=active]:text-primary text-muted-foreground"
+                  className="group data-active:bg-card data-active:text-foreground data-active:shadow-sm text-muted-foreground hover:text-foreground text-xs font-semibold py-1.5 px-2.5 rounded-lg flex items-center gap-1.5 transition-all"
                 >
-                  Custom Fields
+                  <Sliders className="size-3.5 text-purple-500 transition-transform duration-200 group-hover:scale-110" />
+                  Custom
                 </TabsTrigger>
                 <TabsTrigger
                   value="deals"
-                  className="data-[state=active]:bg-background data-[state=active]:text-primary text-muted-foreground"
+                  className="group data-active:bg-card data-active:text-foreground data-active:shadow-sm text-muted-foreground hover:text-foreground text-xs font-semibold py-1.5 px-2.5 rounded-lg flex items-center gap-1.5 transition-all"
                 >
+                  <DollarSign className="size-3.5 text-emerald-500 transition-transform duration-200 group-hover:scale-110" />
                   Deals
                 </TabsTrigger>
               </TabsList>

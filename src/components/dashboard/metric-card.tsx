@@ -6,6 +6,52 @@ import { ArrowDown, ArrowUp, Minus } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { cn } from '@/lib/utils';
 
+export type MetricTone = 'emerald' | 'sky' | 'amber' | 'violet' | 'rose' | 'primary';
+
+const TONE_STYLES: Record<MetricTone, {
+  iconContainer: string;
+  hoverBorder: string;
+  cornerGlow: string;
+  wash: string;
+}> = {
+  primary: {
+    iconContainer: 'border-primary/20 from-primary/20 to-primary/5 text-primary group-hover:border-primary/40 group-hover:shadow-[0_0_18px_color-mix(in_oklch,var(--primary)_35%,transparent)]',
+    hoverBorder: 'hover:border-primary/40 hover:shadow-primary/10',
+    cornerGlow: 'bg-primary/5 group-hover:bg-primary/15',
+    wash: 'to-primary/5',
+  },
+  emerald: {
+    iconContainer: 'border-emerald-500/25 from-emerald-500/20 to-teal-500/5 text-emerald-500 dark:text-emerald-400 group-hover:border-emerald-500/50 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.35)]',
+    hoverBorder: 'hover:border-emerald-500/40 hover:shadow-emerald-500/10',
+    cornerGlow: 'bg-emerald-500/5 group-hover:bg-emerald-500/15',
+    wash: 'to-emerald-500/5',
+  },
+  sky: {
+    iconContainer: 'border-sky-500/25 from-sky-500/20 to-blue-500/5 text-sky-500 dark:text-sky-400 group-hover:border-sky-500/50 group-hover:shadow-[0_0_20px_rgba(14,165,233,0.35)]',
+    hoverBorder: 'hover:border-sky-500/40 hover:shadow-sky-500/10',
+    cornerGlow: 'bg-sky-500/5 group-hover:bg-sky-500/15',
+    wash: 'to-sky-500/5',
+  },
+  amber: {
+    iconContainer: 'border-amber-500/25 from-amber-500/20 to-orange-500/5 text-amber-500 dark:text-amber-400 group-hover:border-amber-500/50 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.35)]',
+    hoverBorder: 'hover:border-amber-500/40 hover:shadow-amber-500/10',
+    cornerGlow: 'bg-amber-500/5 group-hover:bg-amber-500/15',
+    wash: 'to-amber-500/5',
+  },
+  violet: {
+    iconContainer: 'border-violet-500/25 from-violet-500/20 to-purple-500/5 text-violet-500 dark:text-violet-400 group-hover:border-violet-500/50 group-hover:shadow-[0_0_20px_rgba(139,92,246,0.35)]',
+    hoverBorder: 'hover:border-violet-500/40 hover:shadow-violet-500/10',
+    cornerGlow: 'bg-violet-500/5 group-hover:bg-violet-500/15',
+    wash: 'to-violet-500/5',
+  },
+  rose: {
+    iconContainer: 'border-rose-500/25 from-rose-500/20 to-pink-500/5 text-rose-500 dark:text-rose-400 group-hover:border-rose-500/50 group-hover:shadow-[0_0_20px_rgba(244,63,94,0.35)]',
+    hoverBorder: 'hover:border-rose-500/40 hover:shadow-rose-500/10',
+    cornerGlow: 'bg-rose-500/5 group-hover:bg-rose-500/15',
+    wash: 'to-rose-500/5',
+  },
+};
+
 interface MetricCardProps {
   title: string;
   /** Pre-formatted value for display (e.g. "42" or "$1,250"). */
@@ -23,6 +69,8 @@ interface MetricCardProps {
   };
   /** Used instead of `delta` when the metric has a static subtitle. */
   subtitle?: string;
+  /** Visual accent tone. Defaults to 'primary'. */
+  tone?: MetricTone;
 }
 
 export function MetricCard({
@@ -31,12 +79,18 @@ export function MetricCard({
   icon: Icon,
   delta,
   subtitle,
+  tone = 'primary',
 }: MetricCardProps) {
+  const styles = TONE_STYLES[tone] ?? TONE_STYLES.primary;
+
   return (
     <motion.div
       whileHover={{ y: -4, scale: 1.015 }}
       transition={{ type: 'spring', stiffness: 320, damping: 24 }}
-      className="group border-border bg-card hover:border-primary/40 hover:shadow-primary/10 hairline-top relative overflow-hidden rounded-2xl border p-6 transition-colors duration-300 hover:shadow-2xl"
+      className={cn(
+        "group border-border bg-card hairline-top relative overflow-hidden rounded-2xl border p-6 transition-colors duration-300 hover:shadow-2xl",
+        styles.hoverBorder
+      )}
     >
       <div className="flex items-start justify-between">
         <div>
@@ -45,8 +99,11 @@ export function MetricCard({
           </p>
           <AnimatedNumber value={value} />
         </div>
-        <div className="border-primary/20 from-primary/20 to-primary/5 text-primary group-hover:border-primary/40 relative flex size-12 items-center justify-center rounded-xl border bg-gradient-to-tr transition-all duration-300 group-hover:shadow-[0_0_18px_color-mix(in_oklch,var(--primary)_35%,transparent)]">
-          <Icon className="size-6" />
+        <div className={cn(
+          "relative flex size-12 items-center justify-center rounded-xl border bg-gradient-to-tr transition-all duration-300",
+          styles.iconContainer
+        )}>
+          <Icon className="size-6 transition-transform duration-300 group-hover:scale-110" />
         </div>
       </div>
 
@@ -63,11 +120,17 @@ export function MetricCard({
       {/* Hover wash + decorative corner glow */}
       <div
         aria-hidden
-        className="to-primary/5 absolute inset-0 bg-gradient-to-br from-transparent via-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        className={cn(
+          "absolute inset-0 bg-gradient-to-br from-transparent via-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100",
+          styles.wash
+        )}
       />
       <div
         aria-hidden
-        className="bg-primary/5 group-hover:bg-primary/10 absolute -top-4 -right-4 size-24 rounded-full blur-3xl transition-colors duration-300"
+        className={cn(
+          "absolute -top-4 -right-4 size-24 rounded-full blur-3xl transition-colors duration-300",
+          styles.cornerGlow
+        )}
       />
     </motion.div>
   );

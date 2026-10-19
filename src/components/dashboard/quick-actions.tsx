@@ -21,25 +21,25 @@ const ACTIONS: Action[] = [
     label: 'New Contact',
     href: '/contacts',
     icon: UserPlus,
-    chip: 'border border-primary/20 bg-gradient-to-tr from-primary/20 to-primary/5 text-primary',
+    chip: 'border border-sky-500/25 bg-gradient-to-tr from-sky-500/20 to-sky-500/5 text-sky-500 dark:text-sky-400',
   },
   {
     label: 'New Deal',
     href: '/pipelines',
     icon: Briefcase,
-    chip: 'border border-blue-500/20 bg-gradient-to-tr from-blue-500/20 to-blue-500/5 text-blue-400',
+    chip: 'border border-amber-500/25 bg-gradient-to-tr from-amber-500/20 to-amber-500/5 text-amber-500 dark:text-amber-400',
   },
   {
     label: 'New Broadcast',
     href: '/broadcasts/new',
     icon: Radio,
-    chip: 'border border-amber-500/20 bg-gradient-to-tr from-amber-500/20 to-amber-500/5 text-amber-400',
+    chip: 'border border-rose-500/25 bg-gradient-to-tr from-rose-500/20 to-rose-500/5 text-rose-500 dark:text-rose-400',
   },
   {
     label: 'New Automation',
     href: '/automations/new',
     icon: Zap,
-    chip: 'border border-primary/20 bg-gradient-to-tr from-primary/20 to-primary/5 text-primary',
+    chip: 'border border-purple-500/25 bg-gradient-to-tr from-purple-500/20 to-purple-500/5 text-purple-500 dark:text-purple-400',
   },
 ];
 
