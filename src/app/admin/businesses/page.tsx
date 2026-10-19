@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getAvatarGradient } from "@/lib/avatar-colors";
 import {
   Building2,
   MoreVertical,
@@ -41,13 +42,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -419,62 +413,69 @@ export default function BusinessesPage() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-card border-border">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              Total Businesses
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{businesses.length}</div>
-            <p className="text-xs text-muted-foreground/60">{activeCount} active</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Coins className="h-4 w-4" />
-              Total Credits
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{totalCredits.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground/60">Across all businesses</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              Total Balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">UGX {totalBalance.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground/60">Combined UGX balance</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Zap className="h-4 w-4" />
-              Active Tiers
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2 flex-wrap">
-              {tiers.map(t => {
-                const count = businesses.filter(b => b.tier_id === t.id).length;
-                return (
-                  <Badge key={t.id} variant="outline" className={cn("text-xs border-border", getTierBadgeColor(t.id))}>
-                    {t.name}: {count}
-                  </Badge>
-                );
-              })}
+        <div className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all duration-300 hover:border-sky-500/40 hover:shadow-xl hover:shadow-sky-500/10">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Businesses</p>
+              <div className="text-2xl font-bold tracking-tight text-foreground mt-2">{businesses.length}</div>
+              <p className="text-xs text-muted-foreground/70 mt-1">{activeCount} active tenants</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex size-11 items-center justify-center rounded-xl border border-sky-500/25 bg-gradient-to-tr from-sky-500/20 to-blue-500/5 text-sky-500 dark:text-sky-400 group-hover:scale-110 transition-transform duration-300">
+              <Building2 className="size-5" />
+            </div>
+          </div>
+          <div aria-hidden className="absolute -top-4 -right-4 size-20 rounded-full bg-sky-500/10 blur-2xl" />
+        </div>
+
+        <div className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all duration-300 hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/10">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Credits</p>
+              <div className="text-2xl font-bold tracking-tight text-foreground mt-2">{totalCredits.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground/70 mt-1">Across all businesses</p>
+            </div>
+            <div className="flex size-11 items-center justify-center rounded-xl border border-emerald-500/25 bg-gradient-to-tr from-emerald-500/20 to-teal-500/5 text-emerald-500 dark:text-emerald-400 group-hover:scale-110 transition-transform duration-300">
+              <Coins className="size-5" />
+            </div>
+          </div>
+          <div aria-hidden className="absolute -top-4 -right-4 size-20 rounded-full bg-emerald-500/10 blur-2xl" />
+        </div>
+
+        <div className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all duration-300 hover:border-amber-500/40 hover:shadow-xl hover:shadow-amber-500/10">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Balance</p>
+              <div className="text-2xl font-bold tracking-tight text-foreground mt-2">UGX {totalBalance.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground/70 mt-1">Combined UGX balance</p>
+            </div>
+            <div className="flex size-11 items-center justify-center rounded-xl border border-amber-500/25 bg-gradient-to-tr from-amber-500/20 to-orange-500/5 text-amber-500 dark:text-amber-400 group-hover:scale-110 transition-transform duration-300">
+              <CreditCard className="size-5" />
+            </div>
+          </div>
+          <div aria-hidden className="absolute -top-4 -right-4 size-20 rounded-full bg-amber-500/10 blur-2xl" />
+        </div>
+
+        <div className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all duration-300 hover:border-violet-500/40 hover:shadow-xl hover:shadow-violet-500/10">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active Tiers</p>
+              <div className="flex gap-1.5 flex-wrap mt-2">
+                {tiers.map(t => {
+                  const count = businesses.filter(b => b.tier_id === t.id).length;
+                  return (
+                    <Badge key={t.id} variant="outline" className={cn("text-[11px] font-semibold border-border", getTierBadgeColor(t.id))}>
+                      {t.name}: {count}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex size-11 items-center justify-center rounded-xl border border-violet-500/25 bg-gradient-to-tr from-violet-500/20 to-purple-500/5 text-violet-500 dark:text-violet-400 group-hover:scale-110 transition-transform duration-300">
+              <Zap className="size-5" />
+            </div>
+          </div>
+          <div aria-hidden className="absolute -top-4 -right-4 size-20 rounded-full bg-violet-500/10 blur-2xl" />
+        </div>
       </div>
 
       {/* Search & Filters */}
@@ -553,12 +554,15 @@ export default function BusinessesPage() {
                   <TableRow key={biz.id} className="border-border hover:bg-muted/30">
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded bg-muted">
-                          <Building2 className="h-4 w-4 text-primary" />
+                        <div className={cn(
+                          "flex size-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold text-white shadow-sm select-none transition-transform duration-200 group-hover:scale-105",
+                          getAvatarGradient(biz.name || biz.id)
+                        )}>
+                          {biz.name?.charAt(0)?.toUpperCase() || "B"}
                         </div>
                         <div>
-                          <div className="font-medium text-foreground">{biz.name}</div>
-                          <div className="text-xs text-muted-foreground/60">ID: {biz.id.slice(0, 8)}...</div>
+                          <div className="font-semibold text-foreground group-hover:text-primary transition-colors">{biz.name}</div>
+                          <div className="font-mono text-[11px] text-muted-foreground/70">ID: {biz.id.slice(0, 8)}...</div>
                         </div>
                       </div>
                     </TableCell>
