@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { buttonVariants } from "@/components/ui/button";
 import { getAvatarGradient } from "@/lib/avatar-colors";
+import { RoiCalculator } from "@/components/landing/roi-calculator";
+import { InteractivePlayground } from "@/components/landing/interactive-playground";
 import {
   MessageSquare,
   ArrowRight,
@@ -61,17 +63,519 @@ const stagger = {
   visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
 };
 
+const FEATURE_CATEGORIES = [
+  { id: "all", label: "All Features (13)" },
+  { id: "sales_ai", label: "AI & Lead Closing" },
+  { id: "broadcasts", label: "Broadcasts & SMS" },
+  { id: "automation", label: "Flows & Operations" },
+  { id: "education", label: "Tests & Screening" },
+];
+
 export default function LandingPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [selectedFeatureCategory, setSelectedFeatureCategory] = useState<string>("all");
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
 
   const navLinks = [
     { label: "Features", href: "#features" },
+    { label: "Live Demo", href: "#demo-playground" },
+    { label: "ROI Calculator", href: "#roi-calculator" },
     { label: "Pricing", href: "#pricing" },
     { label: "Integrations", href: "#integrations" },
     { label: "How It Works", href: "#how-it-works" },
     { label: "Setup Service", href: "#setup-service" },
     { label: "FAQ", href: "#faq" },
+  ];
+
+  const features = [
+    {
+      category: "sales_ai",
+      icon: Smartphone,
+      title: "WhatsApp Coexistence",
+      desc: "Use your existing phone number with zero downtime. Keep phone app chats intact while HopeChat handles background automation.",
+      points: ["Same number, no migration downtime", "Existing chats & contacts stay intact", "Use phone app and platform together", "Official Meta-approved coexistence"],
+      color: "text-emerald-600 dark:text-emerald-400",
+      bg: "bg-emerald-500/10 border-emerald-500/25",
+      reverse: false,
+      mock: (
+        <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+          <div className="flex items-center gap-3 pb-3 border-b border-border">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-border text-xs font-bold text-foreground">
+              <Smartphone className="size-3.5 text-emerald-600" /> Phone App
+            </div>
+            <span className="text-muted-foreground text-xs font-bold">+</span>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs font-bold text-emerald-700">
+              <Zap className="size-3.5" /> HopeChat Web
+            </div>
+          </div>
+          <div className="space-y-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50">
+              <div className="size-6 rounded-lg bg-emerald-500/15 text-emerald-700 flex items-center justify-center text-[10px] font-bold">WA</div>
+              <span className="text-foreground font-semibold">Nalukenge Kate</span> — replied via phone app
+            </div>
+            <div className="flex items-center gap-2.5 p-2 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+              <div className="size-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">HC</div>
+              <span className="text-foreground font-semibold">Ochieng Kevin</span> — auto-replied by HopeChat AI
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      category: "broadcasts",
+      icon: Radio,
+      title: "WhatsApp Broadcasts at Scale",
+      desc: "Send broadcast campaigns to thousands of contacts with zero ban risk via the Official WhatsApp API.",
+      points: ["Official API — zero ban risk", "Audience segmentation & targeting", "Rich media: images, videos, buttons", "Real-time delivery & read analytics"],
+      color: "text-rose-500 dark:text-rose-400",
+      bg: "bg-rose-500/10 border-rose-500/25",
+      reverse: true,
+      mock: (
+        <div className="bg-white border border-border rounded-2xl p-5 space-y-3.5 shadow-xs">
+          <div className="flex justify-between items-center border-b border-border pb-3">
+            <div className="flex items-center gap-2">
+              <div className="size-2 rounded-full bg-rose-500 animate-pulse" />
+              <span className="text-xs font-bold text-foreground">Spring Promo Blast</span>
+            </div>
+            <span className="text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Delivered</span>
+          </div>
+          {[
+            { label: "Target Audience", value: "12,450" },
+            { label: "Delivered", value: "12,201 (98%)", cls: "text-emerald-600 font-semibold" },
+            { label: "Read", value: "9,756 (80%)", cls: "text-emerald-600 font-semibold" },
+            { label: "Replies", value: "1,892 (19%)", cls: "text-rose-600 font-bold" },
+          ].map((r, i) => (
+            <div key={i} className="flex justify-between text-xs">
+              <span className="text-muted-foreground">{r.label}</span>
+              <span className={cn("font-bold", r.cls || "text-foreground")}>{r.value}</span>
+            </div>
+          ))}
+          <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-full w-[80%] bg-gradient-to-r from-rose-500 to-pink-500 rounded-full" />
+          </div>
+        </div>
+      ),
+    },
+    {
+      category: "broadcasts",
+      icon: MessageSquareText,
+      title: "Bulk SMS Broadcasts",
+      desc: "Reach customers who aren't on WhatsApp with affordable bulk SMS campaigns from the same dashboard — no separate tools needed.",
+      points: ["Bulk SMS to thousands of recipients", "Audience segmentation & targeting", "Pay per message with credit pricing", "Delivery tracking with one-tap retry"],
+      color: "text-sky-500 dark:text-sky-400",
+      bg: "bg-sky-500/10 border-sky-500/25",
+      reverse: false,
+      mock: (
+        <div className="bg-white border border-border rounded-2xl p-5 space-y-3.5 shadow-xs">
+          <div className="flex justify-between items-center border-b border-border pb-3">
+            <div className="flex items-center gap-2">
+              <div className="size-2 rounded-full bg-sky-500 animate-pulse" />
+              <span className="text-xs font-bold text-foreground">SMS Campaign #104</span>
+            </div>
+            <span className="text-[10px] text-sky-600 font-bold bg-sky-500/10 px-2 py-0.5 rounded-full border border-sky-500/20">Completed</span>
+          </div>
+          {[
+            { label: "Recipients", value: "8,320" },
+            { label: "Delivered", value: "8,014 (96.3%)", cls: "text-emerald-600 font-semibold" },
+            { label: "Failed (Invalid)", value: "306", cls: "text-rose-500 font-semibold" },
+            { label: "Auto-Retried", value: "306 (Done)", cls: "text-sky-600 font-bold" },
+          ].map((r, i) => (
+            <div key={i} className="flex justify-between text-xs">
+              <span className="text-muted-foreground">{r.label}</span>
+              <span className={cn("font-bold", r.cls || "text-foreground")}>{r.value}</span>
+            </div>
+          ))}
+          <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-full w-[96%] bg-gradient-to-r from-sky-500 to-blue-500 rounded-full" />
+          </div>
+        </div>
+      ),
+    },
+    {
+      category: "automation",
+      icon: Workflow,
+      title: "Visual No-Code Flow Builder",
+      desc: "Drag-and-drop builder to qualify leads, auto-reply, and route inquiries without writing code.",
+      points: ["Visual drag-and-drop flow builder", "Qualify leads and book calls 24/7", "AI answers trained on your business", "Seamless handoff to a human agent"],
+      color: "text-violet-500 dark:text-violet-400",
+      bg: "bg-violet-500/10 border-violet-500/25",
+      reverse: true,
+      mock: (
+        <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+          <div className="text-xs font-bold text-foreground flex items-center gap-2 border-b border-border pb-2.5">
+            <Workflow className="size-4 text-violet-500" />
+            <span>Flow: Lead Qualification & Booking</span>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2.5 text-xs p-2 rounded-xl bg-violet-500/5 border border-violet-500/20">
+              <span className="size-5 rounded-md bg-violet-500 text-white flex items-center justify-center text-[10px] font-bold">1</span>
+              <span className="text-foreground font-semibold">Incoming WhatsApp Keyword Match</span>
+            </div>
+            <div className="flex items-center gap-2.5 text-xs p-2 rounded-xl bg-slate-50 border border-border">
+              <span className="size-5 rounded-md bg-slate-300 text-slate-800 flex items-center justify-center text-[10px] font-bold">2</span>
+              <span className="text-muted-foreground">AI classifies intent and presents options</span>
+            </div>
+            <div className="flex items-center gap-2.5 text-xs p-2 rounded-xl bg-slate-50 border border-border">
+              <span className="size-5 rounded-md bg-slate-300 text-slate-800 flex items-center justify-center text-[10px] font-bold">3</span>
+              <span className="text-muted-foreground">Auto-updates deal in Pipeline + notifies rep</span>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      category: "education",
+      icon: FolderTree,
+      title: "Tests & Practice Drills",
+      desc: "Create practice drills or timed tests for your customers via WhatsApp interactive buttons — one question at a time, with automatic scoring and pass/fail results.",
+      points: [
+        "Practice mode reveals correct/incorrect after each answer",
+        "Timed test mode enforces a deadline and reports time used",
+        "Configurable intro questions (class, subject, etc.) before the test starts",
+        "Auto-dispatch any test from automations — keyword triggers launch tests on demand",
+        "AI assistant offers tests on demand with Start / Not Now confirmation",
+        "Bulk import questions from CSV"
+      ],
+      color: "text-amber-500 dark:text-amber-400",
+      bg: "bg-amber-500/10 border-amber-500/25",
+      reverse: false,
+      mock: (
+        <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+          <div className="flex justify-between items-center border-b border-border pb-2.5">
+            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <FolderTree className="size-4 text-amber-500" /> Bio Assessment #4
+            </span>
+            <span className="text-[10px] text-amber-700 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">Interactive</span>
+          </div>
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-xs text-foreground space-y-1">
+            <p className="font-extrabold text-[10px] uppercase text-amber-600">Question 1 of 5</p>
+            <p className="text-foreground font-semibold">Which organelle produces cellular energy?</p>
+          </div>
+          <div className="space-y-1.5 text-xs">
+            <div className="p-2 rounded-xl border border-border flex items-center justify-between text-muted-foreground">
+              <span>A. Nucleus</span>
+              <span className="text-[10px]">0 pts</span>
+            </div>
+            <div className="p-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 flex items-center justify-between text-emerald-800 font-bold">
+              <span>B. Mitochondria</span>
+              <span className="text-[10px] font-extrabold bg-emerald-500 text-white px-1.5 py-0.5 rounded">+10 pts ✓</span>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      category: "education",
+      icon: Route,
+      title: "Smart Screening & Insights",
+      desc: "Put an entry screening in front of your tests — two intro questions (e.g. class → subject) answered once, then every student is routed straight to the right test. Results show which subjects and questions need attention.",
+      points: [
+        "Entry test asks the intro questions (class, subject)",
+        "Routing rules send each student to the matching test automatically",
+        "Idle sessions close automatically so they never block the next student",
+        "Timed exams can be attempted only once per phone number",
+        "Every completed test attempt costs one credit — billable only when a student finishes"
+      ],
+      color: "text-teal-500 dark:text-teal-400",
+      bg: "bg-teal-500/10 border-teal-500/25",
+      reverse: true,
+      mock: (
+        <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+          <div className="flex justify-between items-center border-b border-border pb-2.5">
+            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <Route className="size-4 text-teal-600" /> Candidate Screening
+            </span>
+            <span className="text-[10px] text-teal-700 font-bold bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-full">Automated</span>
+          </div>
+          <div className="space-y-2 text-xs">
+            {[
+              { q: "Target Class?", a: "Class 8" },
+              { q: "Subject Track?", a: "Science & Tech" },
+            ].map((row, i) => (
+              <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-border">
+                <span className="font-semibold text-foreground">{row.q}</span>
+                <span className="px-2 py-0.5 rounded-md bg-teal-500/15 text-teal-800 font-extrabold text-[11px]">{row.a}</span>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-xl bg-teal-500/10 border border-teal-500/20 px-3 py-2 text-[11px] text-foreground">
+            <span className="font-bold text-teal-700">Auto Route:</span> Class 8 + Science → Science Paper 2
+          </div>
+        </div>
+      ),
+    },
+    {
+      category: "automation",
+      icon: Users,
+      title: "Shared Team Inbox",
+      desc: "One WhatsApp number for your entire team with multi-agent routing, collision detection, custom tags, internal notes, and per-member access controls.",
+      points: ["Smart routing to the right agent", "Tags, notes, and full chat history", "Assign and collaborate on chats", "Granular permissions per test, per member"],
+      color: "text-blue-500 dark:text-blue-400",
+      bg: "bg-blue-500/10 border-blue-500/25",
+      reverse: false,
+      mock: (
+        <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+          <div className="text-xs font-bold text-foreground border-b border-border pb-2.5 flex items-center justify-between">
+            <span className="flex items-center gap-2"><Users className="size-4 text-blue-500" /> Team Reps Online</span>
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-full">3 Agents</span>
+          </div>
+          {[
+            { name: "Sarah Akello", role: "Key Accounts", chats: "8", color: "bg-emerald-500" },
+            { name: "David Ochieng", role: "Technical Support", chats: "12", color: "bg-sky-500" },
+            { name: "HopeChat AI", role: "AI Virtual Rep", chats: "45", color: "bg-violet-600" },
+          ].map((a, i) => (
+            <div key={i} className="flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-50 transition-colors">
+              <div className="flex items-center gap-2.5">
+                <div className={cn("size-7 rounded-lg text-white flex items-center justify-center text-[10px] font-bold", a.color)}>{a.name[0]}</div>
+                <div>
+                  <div className="text-xs font-bold text-foreground">{a.name}</div>
+                  <div className="text-[10px] text-muted-foreground">{a.role}</div>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-foreground bg-slate-100 px-2 py-0.5 rounded-md">{a.chats} chats</span>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      category: "sales_ai",
+      icon: Bot,
+      title: "Smart Human Handoff",
+      desc: "Your AI knows when it's out of its depth. Off by default, it's there when you need it: it escalates hard conversations — or any message that contains words you choose — flags them for your team, and can pause itself until a person steps in.",
+      points: [
+        "Custom trigger words like \"refund\" or \"speak to a person\"",
+        "Escalated chats tagged \"Needs human\" and surfaced first",
+        "Auto-pause the AI so it never talks over your agent",
+        "Take over, resolve, or hand back to the AI in one click"
+      ],
+      color: "text-rose-500 dark:text-rose-400",
+      bg: "bg-rose-500/10 border-rose-500/25",
+      reverse: true,
+      mock: (
+        <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+          <div className="flex justify-between items-center border-b border-border pb-2.5">
+            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <Bot className="size-4 text-rose-500" /> Escalation Event
+            </span>
+            <span className="text-[10px] text-rose-700 font-extrabold bg-rose-500/15 border border-rose-500/25 px-2 py-0.5 rounded-full">Needs human</span>
+          </div>
+          <div className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/20 text-xs text-foreground font-medium">
+            &ldquo;I need to speak to an account manager regarding an invoice refund.&rdquo;
+          </div>
+          <div className="flex items-center justify-between text-xs pt-1">
+            <span className="text-[11px] text-muted-foreground">AI paused · agent notified</span>
+            <button className="px-3 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-bold shadow-xs">Take Over</button>
+          </div>
+        </div>
+      ),
+    },
+    {
+      category: "sales_ai",
+      icon: Globe,
+      title: "Click-to-WhatsApp Ads",
+      desc: "Auto-capture leads from Facebook, Instagram, or website ads straight into an instant automated WhatsApp sequence.",
+      points: ["Facebook & Instagram ads → WhatsApp", "Capture IndiaMart & JustDial leads", "Instant automated first reply", "No lead goes cold or unanswered"],
+      color: "text-fuchsia-500 dark:text-fuchsia-400",
+      bg: "bg-fuchsia-500/10 border-fuchsia-500/25",
+      reverse: false,
+      mock: (
+        <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+          <div className="flex items-center justify-between border-b border-border pb-2.5 text-xs font-bold text-foreground">
+            <span className="flex items-center gap-2"><Globe className="size-4 text-fuchsia-500" /> Meta Ad → Chat Flow</span>
+            <span className="text-[10px] text-fuchsia-600 font-bold bg-fuchsia-500/10 px-2 py-0.5 rounded-full">Live Campaign</span>
+          </div>
+          <div className="space-y-2 text-xs">
+            <div className="p-2.5 rounded-xl bg-slate-50 border border-border text-foreground font-semibold flex items-center gap-2">
+              <MessageSquare className="size-3.5 text-fuchsia-500" />
+              <span>Instagram Ad: &ldquo;50% Off First Month&rdquo;</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 font-semibold flex items-center gap-2">
+              <Zap className="size-3.5 text-emerald-600" />
+              <span>Instant reply sent in &lt;1s with coupon token</span>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      category: "automation",
+      icon: CalendarCheck,
+      title: "Appointment Bookings",
+      desc: "Connect Cal.com and turn your availability into bookable links you can share over WhatsApp. Book, sync, set your weekly hours, and track every appointment right from your dashboard.",
+      points: [
+        "Toggle which event types are bookable at any time",
+        "Book an appointment on a customer's behalf with a picker of live slots",
+        "Set weekly availability and time zone — slots update on your booking links instantly",
+        "Sync pulls your bookings from Cal.com so nothing is ever missed",
+        "Appointments land on the Bookings page with attendee, event, and time",
+        "Reschedules and cancellations update in place via webhook"
+      ],
+      color: "text-cyan-500 dark:text-cyan-400",
+      bg: "bg-cyan-500/10 border-cyan-500/25",
+      reverse: true,
+      mock: (
+        <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+          <div className="flex justify-between items-center border-b border-border pb-2.5">
+            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <CalendarCheck className="size-4 text-cyan-600" /> Upcoming Bookings
+            </span>
+            <span className="text-[10px] text-cyan-700 font-bold bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-full">Cal.com Sync</span>
+          </div>
+          {[
+            { name: "Amina Nakato", event: "Consultation — 30 min", time: "Today 3:00 PM" },
+            { name: "Brian Okello", event: "Product Demo — 30 min", time: "Tomorrow 10:30 AM" },
+          ].map((b, i) => (
+            <div key={i} className="flex items-center gap-2.5 text-xs p-2 rounded-xl bg-slate-50 border border-border">
+              <div className="size-7 rounded-lg bg-cyan-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">{b.name[0]}</div>
+              <div className="min-w-0">
+                <div className="font-bold text-foreground truncate">{b.name} · {b.event}</div>
+                <div className="text-muted-foreground text-[11px]">{b.time}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      category: "broadcasts",
+      icon: Timer,
+      title: "Automated Drip Sequences",
+      desc: "Multi-step follow-ups scheduled on Day 1, Day 3, Day 7 to revive cold leads and boost conversions.",
+      points: ["Multi-step timed message sequences", "Triggered by lead actions or tags", "Auto-stops when lead replies or buys", "Track opens, clicks, and conversions"],
+      color: "text-indigo-500 dark:text-indigo-400",
+      bg: "bg-indigo-500/10 border-indigo-500/25",
+      reverse: false,
+      mock: (
+        <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+          <div className="text-xs font-bold text-foreground border-b border-border pb-2.5 flex items-center justify-between">
+            <span className="flex items-center gap-2"><Timer className="size-4 text-indigo-500" /> Drip Campaign: New Lead</span>
+            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-500/10 px-2 py-0.5 rounded-full">Active</span>
+          </div>
+          {[
+            { day: "Day 1", msg: "Welcome! Here is your catalog...", status: "Delivered" },
+            { day: "Day 3", msg: "Following up — any questions on pricing?", status: "Pending" },
+            { day: "Day 7", msg: "Special 10% coupon just for you 🎉", status: "Scheduled" },
+          ].map((d, i) => (
+            <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-border text-xs">
+              <span className="font-bold text-indigo-600 w-12">{d.day}</span>
+              <span className="text-muted-foreground truncate flex-1 mx-2">{d.msg}</span>
+              <span className="text-[10px] font-semibold text-foreground bg-white px-2 py-0.5 rounded border border-border">{d.status}</span>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      category: "automation",
+      icon: BarChart3,
+      title: "Activity Trail & Privacy",
+      desc: "See every login, settings change, and automation run across your workspace — so nothing happens invisibly. Visitor IP addresses never appear in your team view.",
+      points: [
+        "Full audit of logins, contacts, pipelines, broadcasts, and automations",
+        "Tenant teams see activity events — never visitor IP addresses or location",
+        "IPs are kept for security only and automatically truncated to their network prefix after 90 days",
+        "Consent first: every new tenant accepts the Terms & Privacy Policy before using the app"
+      ],
+      color: "text-emerald-500 dark:text-emerald-400",
+      bg: "bg-emerald-500/10 border-emerald-500/25",
+      reverse: true,
+      mock: (
+        <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+          <div className="flex justify-between items-center border-b border-border pb-2.5">
+            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <BarChart3 className="size-4 text-emerald-600" /> Activity Audit Trail
+            </span>
+            <span className="text-[10px] text-emerald-700 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">Privacy First</span>
+          </div>
+          {[
+            { ev: "User Login", who: "Admin · Kampala Office", when: "2m ago" },
+            { ev: "Broadcast Dispatched", who: "Sales · 1,240 recipients", when: "1h ago" },
+            { ev: "Automation Rule Updated", who: "Ops · Lead Qualifier", when: "3h ago" },
+          ].map((a, i) => (
+            <div key={i} className="flex items-center justify-between text-xs p-1.5 rounded-xl hover:bg-slate-50">
+              <span className="font-bold text-foreground">{a.ev}</span>
+              <span className="text-muted-foreground text-[11px] truncate max-w-[140px]">{a.who}</span>
+              <span className="text-[11px] font-bold text-emerald-600">{a.when}</span>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      category: "automation",
+      icon: Smartphone,
+      title: "Installable Mobile & Desktop App",
+      desc: "Install HopeChat on any phone or desktop and it opens in its own window — no browser tabs, no address bar, straight to your inbox.",
+      points: [
+        "One-tap install from Chrome, Edge, or the iOS share sheet",
+        "Launches full-screen from your home screen or desktop",
+        "Long-press shortcuts to Inbox, Broadcasts, and Contacts",
+        "Updates ship instantly — no app store review, no waiting"
+      ],
+      color: "text-purple-500 dark:text-purple-400",
+      bg: "bg-purple-500/10 border-purple-500/25",
+      reverse: false,
+      mock: (
+        <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+          <div className="flex items-center justify-between border-b border-border pb-2.5">
+            <span className="text-xs font-bold text-foreground">Progressive Web App (PWA)</span>
+            <span className="text-[10px] text-purple-700 font-bold bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full">Installed</span>
+          </div>
+          <div className="flex items-center gap-3 rounded-2xl border border-purple-500/20 bg-purple-500/5 p-3">
+            <div className="size-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <MessageSquare className="size-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-foreground truncate">HopeChat Workspace</div>
+              <div className="text-[10px] text-muted-foreground">Native Window · Fast Cache</div>
+            </div>
+            <Download className="size-4 text-purple-600 shrink-0 ml-auto" />
+          </div>
+        </div>
+      ),
+    },
+  ];
+
+  const displayedFeatures = selectedFeatureCategory === "all"
+    ? features
+    : features.filter(f => f.category === selectedFeatureCategory);
+
+  const plans = [
+    {
+      name: "Bronze",
+      tagline: "For solo sellers getting started",
+      priceMonthly: "100,000",
+      priceAnnual: "90,000", // 10% annual discount
+      annualTotal: "1,080,000",
+      annualSavings: "120,000",
+      credits: "1,500 credits / month",
+      features: ["AI assistant & shared inbox", "WhatsApp coexistence", "1 team seat", "Sales pipeline & tags"],
+      popular: false,
+    },
+    {
+      name: "Silver",
+      tagline: "For growing teams running campaigns",
+      priceMonthly: "180,000",
+      priceAnnual: "162,000", // 10% annual discount
+      annualTotal: "1,944,000",
+      annualSavings: "216,000",
+      credits: "5,000 credits / month",
+      features: ["Everything in Bronze", "WhatsApp + SMS broadcasts", "Visual flow builder", "3 team seats"],
+      popular: true,
+    },
+    {
+      name: "Gold",
+      tagline: "For high-volume operators",
+      priceMonthly: "450,000",
+      priceAnnual: "405,000", // 10% annual discount
+      annualTotal: "4,860,000",
+      annualSavings: "540,000",
+      credits: "High-volume credits / month",
+      features: ["Everything in Silver", "Multimodal AI", "Larger contact limits", "10 team seats"],
+      popular: false,
+    },
   ];
 
   const faqs = [
@@ -368,7 +872,7 @@ export default function LandingPage() {
 
                         <div className="flex gap-2 max-w-[88%] ml-auto flex-row-reverse">
                           <div className="size-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 shadow-xs">AI</div>
-                          <div className="bg-gradient-to-tr from-emerald-600 to-teal-600 text-white px-3.5 py-2 rounded-2xl rounded-br-none text-xs shadow-md shadow-emerald-700/15">
+                          <div className="bg-gradient-to-tr from-emerald-600 to-teal-600 text-white px-3.5 py-2.5 rounded-2xl rounded-br-none text-xs shadow-md shadow-emerald-700/15">
                             Transferred to Sarah! She has your pricing ready.
                             <div className="mt-1 flex items-center justify-end gap-1 text-[9px] text-emerald-100">
                               <span>Just now</span>
@@ -510,9 +1014,12 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* ─── LIVE SANDBOX PLAYGROUND ─── */}
+        <InteractivePlayground />
+
         {/* ─── FEATURES ─── */}
         <section id="features" className="py-20 lg:py-28 bg-white border-t border-border overflow-hidden">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-16">
             <motion.div className="text-center space-y-4 max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
               <motion.div variants={fadeUp} className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3.5 py-1 text-xs font-extrabold text-emerald-800">
                 <Sparkles className="size-3.5 text-emerald-600" />
@@ -524,478 +1031,72 @@ export default function LandingPage() {
               <motion.p variants={fadeUp} custom={0.1} className="text-base sm:text-lg text-muted-foreground leading-relaxed font-medium">
                 Speed up your entire sales funnel with automation that captures leads, replies instantly, and closes more — all on WhatsApp.
               </motion.p>
+
+              {/* Feature Category Filter Tabs */}
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-4">
+                {FEATURE_CATEGORIES.map((cat) => {
+                  const isSelected = selectedFeatureCategory === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedFeatureCategory(cat.id)}
+                      className={cn(
+                        "px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer shadow-xs",
+                        isSelected
+                          ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                          : "bg-slate-100 text-muted-foreground hover:bg-slate-200/80 hover:text-foreground"
+                      )}
+                    >
+                      {cat.label}
+                    </button>
+                  );
+                })}
+              </div>
             </motion.div>
 
-            {[
-              {
-                icon: Smartphone,
-                title: "WhatsApp Coexistence",
-                desc: "Use your existing phone number with zero downtime. Keep phone app chats intact while HopeChat handles background automation.",
-                points: ["Same number, no migration downtime", "Existing chats & contacts stay intact", "Use phone app and platform together", "Official Meta-approved coexistence"],
-                color: "text-emerald-600 dark:text-emerald-400",
-                bg: "bg-emerald-500/10 border-emerald-500/25",
-                reverse: false,
-                mock: (
-                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
-                    <div className="flex items-center gap-3 pb-3 border-b border-border">
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-border text-xs font-bold text-foreground">
-                        <Smartphone className="size-3.5 text-emerald-600" /> Phone App
+            {/* Filtered Feature List */}
+            <div className="space-y-20">
+              <AnimatePresence mode="wait">
+                {displayedFeatures.map((feature, idx) => (
+                  <motion.div
+                    key={`${selectedFeatureCategory}-${feature.title}`}
+                    className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16"
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.4, delay: idx * 0.05 }}
+                  >
+                    <div className={cn("flex-1 space-y-5", feature.reverse && "lg:order-2")}>
+                      <div className={cn("size-12 rounded-2xl border flex items-center justify-center shadow-xs", feature.bg, feature.color)}>
+                        <feature.icon className="size-6" />
                       </div>
-                      <span className="text-muted-foreground text-xs font-bold">+</span>
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs font-bold text-emerald-700">
-                        <Zap className="size-3.5" /> HopeChat Web
-                      </div>
+                      <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{feature.title}</h3>
+                      <p className="text-base text-muted-foreground leading-relaxed font-medium">{feature.desc}</p>
+                      <ul className="space-y-2.5 pt-1">
+                        {feature.points.map((li, i) => (
+                          <li key={i} className="flex items-center gap-2.5 text-sm font-semibold text-foreground">
+                            <div className="size-5 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 shrink-0">
+                              <Check className="size-3" />
+                            </div>
+                            {li}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <div className="space-y-2 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50">
-                        <div className="size-6 rounded-lg bg-emerald-500/15 text-emerald-700 flex items-center justify-center text-[10px] font-bold">WA</div>
-                        <span className="text-foreground font-semibold">Nalukenge Kate</span> — replied via phone app
-                      </div>
-                      <div className="flex items-center gap-2.5 p-2 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-                        <div className="size-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">HC</div>
-                        <span className="text-foreground font-semibold">Ochieng Kevin</span> — auto-replied by HopeChat AI
-                      </div>
-                    </div>
-                  </div>
-                ),
-              },
-              {
-                icon: Radio,
-                title: "WhatsApp Broadcasts at Scale",
-                desc: "Send broadcast campaigns to thousands of contacts with zero ban risk via the Official WhatsApp API.",
-                points: ["Official API — zero ban risk", "Audience segmentation & targeting", "Rich media: images, videos, buttons", "Real-time delivery & read analytics"],
-                color: "text-rose-500 dark:text-rose-400",
-                bg: "bg-rose-500/10 border-rose-500/25",
-                reverse: true,
-                mock: (
-                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3.5 shadow-xs">
-                    <div className="flex justify-between items-center border-b border-border pb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="size-2 rounded-full bg-rose-500 animate-pulse" />
-                        <span className="text-xs font-bold text-foreground">Spring Promo Blast</span>
-                      </div>
-                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Delivered</span>
-                    </div>
-                    {[
-                      { label: "Target Audience", value: "12,450" },
-                      { label: "Delivered", value: "12,201 (98%)", cls: "text-emerald-600 font-semibold" },
-                      { label: "Read", value: "9,756 (80%)", cls: "text-emerald-600 font-semibold" },
-                      { label: "Replies", value: "1,892 (19%)", cls: "text-rose-600 font-bold" },
-                    ].map((r, i) => (
-                      <div key={i} className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">{r.label}</span>
-                        <span className={cn("font-bold", r.cls || "text-foreground")}>{r.value}</span>
-                      </div>
-                    ))}
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full w-[80%] bg-gradient-to-r from-rose-500 to-pink-500 rounded-full" />
-                    </div>
-                  </div>
-                ),
-              },
-              {
-                icon: MessageSquareText,
-                title: "Bulk SMS Broadcasts",
-                desc: "Reach customers who aren't on WhatsApp with affordable bulk SMS campaigns from the same dashboard — no separate tools needed.",
-                points: ["Bulk SMS to thousands of recipients", "Audience segmentation & targeting", "Pay per message with credit pricing", "Delivery tracking with one-tap retry"],
-                color: "text-sky-500 dark:text-sky-400",
-                bg: "bg-sky-500/10 border-sky-500/25",
-                reverse: false,
-                mock: (
-                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3.5 shadow-xs">
-                    <div className="flex justify-between items-center border-b border-border pb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="size-2 rounded-full bg-sky-500 animate-pulse" />
-                        <span className="text-xs font-bold text-foreground">SMS Campaign #104</span>
-                      </div>
-                      <span className="text-[10px] text-sky-600 font-bold bg-sky-500/10 px-2 py-0.5 rounded-full border border-sky-500/20">Completed</span>
-                    </div>
-                    {[
-                      { label: "Recipients", value: "8,320" },
-                      { label: "Delivered", value: "8,014 (96.3%)", cls: "text-emerald-600 font-semibold" },
-                      { label: "Failed (Invalid)", value: "306", cls: "text-rose-500 font-semibold" },
-                      { label: "Auto-Retried", value: "306 (Done)", cls: "text-sky-600 font-bold" },
-                    ].map((r, i) => (
-                      <div key={i} className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">{r.label}</span>
-                        <span className={cn("font-bold", r.cls || "text-foreground")}>{r.value}</span>
-                      </div>
-                    ))}
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full w-[96%] bg-gradient-to-r from-sky-500 to-blue-500 rounded-full" />
-                    </div>
-                  </div>
-                ),
-              },
-              {
-                icon: Workflow,
-                title: "Visual No-Code Flow Builder",
-                desc: "Drag-and-drop builder to qualify leads, auto-reply, and route inquiries without writing code.",
-                points: ["Visual drag-and-drop flow builder", "Qualify leads and book calls 24/7", "AI answers trained on your business", "Seamless handoff to a human agent"],
-                color: "text-violet-500 dark:text-violet-400",
-                bg: "bg-violet-500/10 border-violet-500/25",
-                reverse: true,
-                mock: (
-                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
-                    <div className="text-xs font-bold text-foreground flex items-center gap-2 border-b border-border pb-2.5">
-                      <Workflow className="size-4 text-violet-500" />
-                      <span>Flow: Lead Qualification & Booking</span>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2.5 text-xs p-2 rounded-xl bg-violet-500/5 border border-violet-500/20">
-                        <span className="size-5 rounded-md bg-violet-500 text-white flex items-center justify-center text-[10px] font-bold">1</span>
-                        <span className="text-foreground font-semibold">Incoming WhatsApp Keyword Match</span>
-                      </div>
-                      <div className="flex items-center gap-2.5 text-xs p-2 rounded-xl bg-slate-50 border border-border">
-                        <span className="size-5 rounded-md bg-slate-300 text-slate-800 flex items-center justify-center text-[10px] font-bold">2</span>
-                        <span className="text-muted-foreground">AI classifies intent and presents options</span>
-                      </div>
-                      <div className="flex items-center gap-2.5 text-xs p-2 rounded-xl bg-slate-50 border border-border">
-                        <span className="size-5 rounded-md bg-slate-300 text-slate-800 flex items-center justify-center text-[10px] font-bold">3</span>
-                        <span className="text-muted-foreground">Auto-updates deal in Pipeline + notifies rep</span>
+                    <div className={cn("flex-1 w-full", feature.reverse && "lg:order-1")}>
+                      <div className="rounded-3xl border border-border/80 bg-slate-50/70 p-6 shadow-sm hover:shadow-xl transition-all duration-300">
+                        {feature.mock}
                       </div>
                     </div>
-                  </div>
-                ),
-              },
-              {
-                icon: FolderTree,
-                title: "Tests & Practice Drills",
-                desc: "Create practice drills or timed tests for your customers via WhatsApp interactive buttons — one question at a time, with automatic scoring and pass/fail results.",
-                points: [
-                  "Practice mode reveals correct/incorrect after each answer",
-                  "Timed test mode enforces a deadline and reports time used",
-                  "Configurable intro questions (class, subject, etc.) before the test starts",
-                  "Auto-dispatch any test from automations — keyword triggers launch tests on demand",
-                  "AI assistant offers tests on demand with Start / Not Now confirmation",
-                  "Bulk import questions from CSV"
-                ],
-                color: "text-amber-500 dark:text-amber-400",
-                bg: "bg-amber-500/10 border-amber-500/25",
-                reverse: false,
-                mock: (
-                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
-                    <div className="flex justify-between items-center border-b border-border pb-2.5">
-                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                        <FolderTree className="size-4 text-amber-500" /> Bio Assessment #4
-                      </span>
-                      <span className="text-[10px] text-amber-700 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">Interactive</span>
-                    </div>
-                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-xs text-foreground space-y-1">
-                      <p className="font-extrabold text-[10px] uppercase text-amber-600">Question 1 of 5</p>
-                      <p className="text-foreground font-semibold">Which organelle produces cellular energy?</p>
-                    </div>
-                    <div className="space-y-1.5 text-xs">
-                      <div className="p-2 rounded-xl border border-border flex items-center justify-between text-muted-foreground">
-                        <span>A. Nucleus</span>
-                        <span className="text-[10px]">0 pts</span>
-                      </div>
-                      <div className="p-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 flex items-center justify-between text-emerald-800 font-bold">
-                        <span>B. Mitochondria</span>
-                        <span className="text-[10px] font-extrabold bg-emerald-500 text-white px-1.5 py-0.5 rounded">+10 pts ✓</span>
-                      </div>
-                    </div>
-                  </div>
-                ),
-              },
-              {
-                icon: Route,
-                title: "Smart Screening & Insights",
-                desc: "Put an entry screening in front of your tests — two intro questions (e.g. class → subject) answered once, then every student is routed straight to the right test. Results show which subjects and questions need attention.",
-                points: [
-                  "Entry test asks the intro questions (class, subject)",
-                  "Routing rules send each student to the matching test automatically",
-                  "Idle sessions close automatically so they never block the next student",
-                  "Timed exams can be attempted only once per phone number",
-                  "Every completed test attempt costs one credit — billable only when a student finishes"
-                ],
-                color: "text-teal-500 dark:text-teal-400",
-                bg: "bg-teal-500/10 border-teal-500/25",
-                reverse: true,
-                mock: (
-                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
-                    <div className="flex justify-between items-center border-b border-border pb-2.5">
-                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                        <Route className="size-4 text-teal-600" /> Candidate Screening
-                      </span>
-                      <span className="text-[10px] text-teal-700 font-bold bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-full">Automated</span>
-                    </div>
-                    <div className="space-y-2 text-xs">
-                      {[
-                        { q: "Target Class?", a: "Class 8" },
-                        { q: "Subject Track?", a: "Science & Tech" },
-                      ].map((row, i) => (
-                        <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-border">
-                          <span className="font-semibold text-foreground">{row.q}</span>
-                          <span className="px-2 py-0.5 rounded-md bg-teal-500/15 text-teal-800 font-extrabold text-[11px]">{row.a}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="rounded-xl bg-teal-500/10 border border-teal-500/20 px-3 py-2 text-[11px] text-foreground">
-                      <span className="font-bold text-teal-700">Auto Route:</span> Class 8 + Science → Science Paper 2
-                    </div>
-                  </div>
-                ),
-              },
-              {
-                icon: Users,
-                title: "Shared Team Inbox",
-                desc: "One WhatsApp number for your entire team with multi-agent routing, collision detection, custom tags, internal notes, and per-member access controls.",
-                points: ["Smart routing to the right agent", "Tags, notes, and full chat history", "Assign and collaborate on chats", "Granular permissions per test, per member"],
-                color: "text-blue-500 dark:text-blue-400",
-                bg: "bg-blue-500/10 border-blue-500/25",
-                reverse: false,
-                mock: (
-                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
-                    <div className="text-xs font-bold text-foreground border-b border-border pb-2.5 flex items-center justify-between">
-                      <span className="flex items-center gap-2"><Users className="size-4 text-blue-500" /> Team Reps Online</span>
-                      <span className="text-[10px] font-bold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-full">3 Agents</span>
-                    </div>
-                    {[
-                      { name: "Sarah Akello", role: "Key Accounts", chats: "8", color: "bg-emerald-500" },
-                      { name: "David Ochieng", role: "Technical Support", chats: "12", color: "bg-sky-500" },
-                      { name: "HopeChat AI", role: "AI Virtual Rep", chats: "45", color: "bg-violet-600" },
-                    ].map((a, i) => (
-                      <div key={i} className="flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-50 transition-colors">
-                        <div className="flex items-center gap-2.5">
-                          <div className={cn("size-7 rounded-lg text-white flex items-center justify-center text-[10px] font-bold", a.color)}>{a.name[0]}</div>
-                          <div>
-                            <div className="text-xs font-bold text-foreground">{a.name}</div>
-                            <div className="text-[10px] text-muted-foreground">{a.role}</div>
-                          </div>
-                        </div>
-                        <span className="text-xs font-bold text-foreground bg-slate-100 px-2 py-0.5 rounded-md">{a.chats} chats</span>
-                      </div>
-                    ))}
-                  </div>
-                ),
-              },
-              {
-                icon: Bot,
-                title: "Smart Human Handoff",
-                desc: "Your AI knows when it's out of its depth. Off by default, it's there when you need it: it escalates hard conversations — or any message that contains words you choose — flags them for your team, and can pause itself until a person steps in.",
-                points: [
-                  "Custom trigger words like \"refund\" or \"speak to a person\"",
-                  "Escalated chats tagged \"Needs human\" and surfaced first",
-                  "Auto-pause the AI so it never talks over your agent",
-                  "Take over, resolve, or hand back to the AI in one click"
-                ],
-                color: "text-rose-500 dark:text-rose-400",
-                bg: "bg-rose-500/10 border-rose-500/25",
-                reverse: true,
-                mock: (
-                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
-                    <div className="flex justify-between items-center border-b border-border pb-2.5">
-                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                        <Bot className="size-4 text-rose-500" /> Escalation Event
-                      </span>
-                      <span className="text-[10px] text-rose-700 font-extrabold bg-rose-500/15 border border-rose-500/25 px-2 py-0.5 rounded-full">Needs human</span>
-                    </div>
-                    <div className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/20 text-xs text-foreground font-medium">
-                      &ldquo;I need to speak to an account manager regarding an invoice refund.&rdquo;
-                    </div>
-                    <div className="flex items-center justify-between text-xs pt-1">
-                      <span className="text-[11px] text-muted-foreground">AI paused · agent notified</span>
-                      <button className="px-3 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-bold shadow-xs">Take Over</button>
-                    </div>
-                  </div>
-                ),
-              },
-              {
-                icon: Globe,
-                title: "Click-to-WhatsApp Ads",
-                desc: "Auto-capture leads from Facebook, Instagram, or website ads straight into an instant automated WhatsApp sequence.",
-                points: ["Facebook & Instagram ads → WhatsApp", "Capture IndiaMart & JustDial leads", "Instant automated first reply", "No lead goes cold or unanswered"],
-                color: "text-fuchsia-500 dark:text-fuchsia-400",
-                bg: "bg-fuchsia-500/10 border-fuchsia-500/25",
-                reverse: false,
-                mock: (
-                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
-                    <div className="flex items-center justify-between border-b border-border pb-2.5 text-xs font-bold text-foreground">
-                      <span className="flex items-center gap-2"><Globe className="size-4 text-fuchsia-500" /> Meta Ad → Chat Flow</span>
-                      <span className="text-[10px] text-fuchsia-600 font-bold bg-fuchsia-500/10 px-2 py-0.5 rounded-full">Live Campaign</span>
-                    </div>
-                    <div className="space-y-2 text-xs">
-                      <div className="p-2.5 rounded-xl bg-slate-50 border border-border text-foreground font-semibold flex items-center gap-2">
-                        <MessageSquare className="size-3.5 text-fuchsia-500" />
-                        <span>Instagram Ad: &ldquo;50% Off First Month&rdquo;</span>
-                      </div>
-                      <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 font-semibold flex items-center gap-2">
-                        <Zap className="size-3.5 text-emerald-600" />
-                        <span>Instant reply sent in &lt;1s with coupon token</span>
-                      </div>
-                    </div>
-                  </div>
-                ),
-              },
-              {
-                icon: CalendarCheck,
-                title: "Appointment Bookings",
-                desc: "Connect Cal.com and turn your availability into bookable links you can share over WhatsApp. Book, sync, set your weekly hours, and track every appointment right from your dashboard.",
-                points: [
-                  "Toggle which event types are bookable at any time",
-                  "Book an appointment on a customer's behalf with a picker of live slots",
-                  "Set weekly availability and time zone — slots update on your booking links instantly",
-                  "Sync pulls your bookings from Cal.com so nothing is ever missed",
-                  "Appointments land on the Bookings page with attendee, event, and time",
-                  "Reschedules and cancellations update in place via webhook"
-                ],
-                color: "text-cyan-500 dark:text-cyan-400",
-                bg: "bg-cyan-500/10 border-cyan-500/25",
-                reverse: true,
-                mock: (
-                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
-                    <div className="flex justify-between items-center border-b border-border pb-2.5">
-                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                        <CalendarCheck className="size-4 text-cyan-600" /> Upcoming Bookings
-                      </span>
-                      <span className="text-[10px] text-cyan-700 font-bold bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-full">Cal.com Sync</span>
-                    </div>
-                    {[
-                      { name: "Amina Nakato", event: "Consultation — 30 min", time: "Today 3:00 PM" },
-                      { name: "Brian Okello", event: "Product Demo — 30 min", time: "Tomorrow 10:30 AM" },
-                    ].map((b, i) => (
-                      <div key={i} className="flex items-center gap-2.5 text-xs p-2 rounded-xl bg-slate-50 border border-border">
-                        <div className="size-7 rounded-lg bg-cyan-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">{b.name[0]}</div>
-                        <div className="min-w-0">
-                          <div className="font-bold text-foreground truncate">{b.name} · {b.event}</div>
-                          <div className="text-muted-foreground text-[11px]">{b.time}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ),
-              },
-              {
-                icon: Timer,
-                title: "Automated Drip Sequences",
-                desc: "Multi-step follow-ups scheduled on Day 1, Day 3, Day 7 to revive cold leads and boost conversions.",
-                points: ["Multi-step timed message sequences", "Triggered by lead actions or tags", "Auto-stops when lead replies or buys", "Track opens, clicks, and conversions"],
-                color: "text-indigo-500 dark:text-indigo-400",
-                bg: "bg-indigo-500/10 border-indigo-500/25",
-                reverse: false,
-                mock: (
-                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
-                    <div className="text-xs font-bold text-foreground border-b border-border pb-2.5 flex items-center justify-between">
-                      <span className="flex items-center gap-2"><Timer className="size-4 text-indigo-500" /> Drip Campaign: New Lead</span>
-                      <span className="text-[10px] font-bold text-indigo-600 bg-indigo-500/10 px-2 py-0.5 rounded-full">Active</span>
-                    </div>
-                    {[
-                      { day: "Day 1", msg: "Welcome! Here is your catalog...", status: "Delivered" },
-                      { day: "Day 3", msg: "Following up — any questions on pricing?", status: "Pending" },
-                      { day: "Day 7", msg: "Special 10% coupon just for you 🎉", status: "Scheduled" },
-                    ].map((d, i) => (
-                      <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-border text-xs">
-                        <span className="font-bold text-indigo-600 w-12">{d.day}</span>
-                        <span className="text-muted-foreground truncate flex-1 mx-2">{d.msg}</span>
-                        <span className="text-[10px] font-semibold text-foreground bg-white px-2 py-0.5 rounded border border-border">{d.status}</span>
-                      </div>
-                    ))}
-                  </div>
-                ),
-              },
-              {
-                icon: BarChart3,
-                title: "Activity Trail & Privacy",
-                desc: "See every login, settings change, and automation run across your workspace — so nothing happens invisibly. Visitor IP addresses never appear in your team view.",
-                points: [
-                  "Full audit of logins, contacts, pipelines, broadcasts, and automations",
-                  "Tenant teams see activity events — never visitor IP addresses or location",
-                  "IPs are kept for security only and automatically truncated to their network prefix after 90 days",
-                  "Consent first: every new tenant accepts the Terms & Privacy Policy before using the app"
-                ],
-                color: "text-emerald-500 dark:text-emerald-400",
-                bg: "bg-emerald-500/10 border-emerald-500/25",
-                reverse: true,
-                mock: (
-                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
-                    <div className="flex justify-between items-center border-b border-border pb-2.5">
-                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                        <BarChart3 className="size-4 text-emerald-600" /> Activity Audit Trail
-                      </span>
-                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">Privacy First</span>
-                    </div>
-                    {[
-                      { ev: "User Login", who: "Admin · Kampala Office", when: "2m ago" },
-                      { ev: "Broadcast Dispatched", who: "Sales · 1,240 recipients", when: "1h ago" },
-                      { ev: "Automation Rule Updated", who: "Ops · Lead Qualifier", when: "3h ago" },
-                    ].map((a, i) => (
-                      <div key={i} className="flex items-center justify-between text-xs p-1.5 rounded-xl hover:bg-slate-50">
-                        <span className="font-bold text-foreground">{a.ev}</span>
-                        <span className="text-muted-foreground text-[11px] truncate max-w-[140px]">{a.who}</span>
-                        <span className="text-[11px] font-bold text-emerald-600">{a.when}</span>
-                      </div>
-                    ))}
-                  </div>
-                ),
-              },
-              {
-                icon: Smartphone,
-                title: "Installable Mobile & Desktop App",
-                desc: "Install HopeChat on any phone or desktop and it opens in its own window — no browser tabs, no address bar, straight to your inbox.",
-                points: [
-                  "One-tap install from Chrome, Edge, or the iOS share sheet",
-                  "Launches full-screen from your home screen or desktop",
-                  "Long-press shortcuts to Inbox, Broadcasts, and Contacts",
-                  "Updates ship instantly — no app store review, no waiting"
-                ],
-                color: "text-purple-500 dark:text-purple-400",
-                bg: "bg-purple-500/10 border-purple-500/25",
-                reverse: false,
-                mock: (
-                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
-                    <div className="flex items-center justify-between border-b border-border pb-2.5">
-                      <span className="text-xs font-bold text-foreground">Progressive Web App (PWA)</span>
-                      <span className="text-[10px] text-purple-700 font-bold bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full">Installed</span>
-                    </div>
-                    <div className="flex items-center gap-3 rounded-2xl border border-purple-500/20 bg-purple-500/5 p-3">
-                      <div className="size-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                        <MessageSquare className="size-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-foreground truncate">HopeChat Workspace</div>
-                        <div className="text-[10px] text-muted-foreground">Native Window · Fast Cache</div>
-                      </div>
-                      <Download className="size-4 text-purple-600 shrink-0 ml-auto" />
-                    </div>
-                  </div>
-                ),
-              },
-            ].map((feature, idx) => (
-              <motion.div
-                key={idx}
-                className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16"
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: idx * 0.08 }}
-              >
-                <div className={cn("flex-1 space-y-5", feature.reverse && "lg:order-2")}>
-                  <div className={cn("size-12 rounded-2xl border flex items-center justify-center shadow-xs", feature.bg, feature.color)}>
-                    <feature.icon className="size-6" />
-                  </div>
-                  <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{feature.title}</h3>
-                  <p className="text-base text-muted-foreground leading-relaxed font-medium">{feature.desc}</p>
-                  <ul className="space-y-2.5 pt-1">
-                    {feature.points.map((li, i) => (
-                      <li key={i} className="flex items-center gap-2.5 text-sm font-semibold text-foreground">
-                        <div className="size-5 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 shrink-0">
-                          <Check className="size-3" />
-                        </div>
-                        {li}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className={cn("flex-1 w-full", feature.reverse && "lg:order-1")}>
-                  <div className="rounded-3xl border border-border/80 bg-slate-50/70 p-6 shadow-sm hover:shadow-xl transition-all duration-300">
-                    {feature.mock}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
           </div>
         </section>
+
+        {/* ─── ROI & TIME SAVINGS CALCULATOR ─── */}
+        <RoiCalculator />
 
         {/* ─── INTEGRATIONS ─── */}
         <section id="integrations" className="py-20 lg:py-28 bg-slate-50/60 border-t border-border overflow-hidden">
@@ -1201,93 +1302,122 @@ export default function LandingPage() {
               <motion.p variants={fadeUp} custom={0.1} className="text-base text-muted-foreground leading-relaxed font-medium">
                 Every plan includes a 14-day free trial. Connect your WhatsApp Business number, test credits, and pay securely via Mobile Money (MTN, Airtel) or Card.
               </motion.p>
-            </motion.div>
 
-            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {[
-                {
-                  name: "Bronze",
-                  tagline: "For solo sellers getting started",
-                  price: "100,000",
-                  credits: "1,500 credits / month",
-                  features: ["AI assistant & shared inbox", "WhatsApp coexistence", "1 team seat", "Sales pipeline & tags"],
-                  popular: false,
-                },
-                {
-                  name: "Silver",
-                  tagline: "For growing teams running campaigns",
-                  price: "180,000",
-                  credits: "5,000 credits / month",
-                  features: ["Everything in Bronze", "WhatsApp + SMS broadcasts", "Visual flow builder", "3 team seats"],
-                  popular: true,
-                },
-                {
-                  name: "Gold",
-                  tagline: "For high-volume operators",
-                  price: "450,000",
-                  credits: "High-volume credits / month",
-                  features: ["Everything in Silver", "Multimodal AI", "Larger contact limits", "10 team seats"],
-                  popular: false,
-                },
-              ].map((plan, i) => (
-                <motion.div
-                  key={i}
-                  className={cn(
-                    "relative flex flex-col rounded-3xl border p-6 lg:p-8 transition-all duration-300",
-                    plan.popular
-                      ? "border-emerald-500/50 bg-white shadow-2xl shadow-emerald-900/10 lg:scale-[1.03] ring-1 ring-emerald-500/30"
-                      : "border-border bg-white shadow-sm hover:shadow-lg hover:border-emerald-500/30",
-                  )}
-                  initial={{ opacity: 0, y: 24 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                >
-                  {plan.popular && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-md shadow-emerald-600/30">
-                      Most Popular
-                    </span>
-                  )}
-                  <h3 className="text-xl font-extrabold text-foreground">{plan.name}</h3>
-                  <p className="text-xs text-muted-foreground font-medium mt-1">{plan.tagline}</p>
-                  <div className="mt-4 flex items-baseline gap-1.5">
-                    <span className="text-3xl sm:text-4xl font-black tracking-tight text-foreground">UGX {plan.price}</span>
-                    <span className="text-xs font-bold text-muted-foreground">/ month</span>
-                  </div>
-                  <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 w-fit">
-                    <Zap className="size-3" />
-                    {plan.credits}
-                  </div>
-                  <ul className="mt-6 space-y-3 flex-1">
-                    {plan.features.map((f, j) => (
-                      <li key={j} className="flex items-start gap-2.5 text-xs sm:text-sm font-medium text-foreground">
-                        <div className="size-4.5 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center mt-0.5 shrink-0">
-                          <Check className="size-3" />
-                        </div>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href="/signup"
+              {/* Monthly vs. Annual Billing Switcher Toggle */}
+              <div className="flex items-center justify-center gap-3 pt-4">
+                <div className="inline-flex items-center p-1 rounded-2xl bg-slate-100 border border-border/80 shadow-inner">
+                  <button
+                    onClick={() => setBillingCycle("monthly")}
                     className={cn(
-                      buttonVariants(),
-                      "w-full mt-8 font-bold rounded-xl h-11 transition-all",
-                      plan.popular
-                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-600/25 border-0"
-                        : "bg-white border border-border text-foreground hover:bg-slate-50",
+                      "px-5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer",
+                      billingCycle === "monthly"
+                        ? "bg-white text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    Start Free Trial
-                  </Link>
-                </motion.div>
-              ))}
+                    Monthly Billing
+                  </button>
+                  <button
+                    onClick={() => setBillingCycle("annual")}
+                    className={cn(
+                      "px-5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer flex items-center gap-2",
+                      billingCycle === "annual"
+                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <span>Annual Billing</span>
+                    <span className={cn(
+                      "text-[10px] font-black uppercase px-2 py-0.5 rounded-full transition-colors",
+                      billingCycle === "annual" ? "bg-white text-emerald-800" : "bg-emerald-500/15 text-emerald-700"
+                    )}>
+                      Save 10%
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Pricing Cards Grid */}
+            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {plans.map((plan, i) => {
+                const currentPrice = billingCycle === "annual" ? plan.priceAnnual : plan.priceMonthly;
+                return (
+                  <motion.div
+                    key={plan.name}
+                    className={cn(
+                      "relative flex flex-col rounded-3xl border p-6 lg:p-8 transition-all duration-300",
+                      plan.popular
+                        ? "border-emerald-500/50 bg-white shadow-2xl shadow-emerald-900/10 lg:scale-[1.03] ring-1 ring-emerald-500/30"
+                        : "border-border bg-white shadow-sm hover:shadow-lg hover:border-emerald-500/30",
+                    )}
+                    initial={{ opacity: 0, y: 24 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    {plan.popular && (
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-md shadow-emerald-600/30">
+                        Most Popular
+                      </span>
+                    )}
+                    <h3 className="text-xl font-extrabold text-foreground">{plan.name}</h3>
+                    <p className="text-xs text-muted-foreground font-medium mt-1">{plan.tagline}</p>
+                    
+                    <div className="mt-4 flex items-baseline gap-1.5">
+                      <span className="text-3xl sm:text-4xl font-black tracking-tight text-foreground transition-all">
+                        UGX {currentPrice}
+                      </span>
+                      <span className="text-xs font-bold text-muted-foreground">/ month</span>
+                    </div>
+
+                    {billingCycle === "annual" ? (
+                      <p className="text-[11px] font-semibold text-emerald-600 mt-1">
+                        Billed UGX {plan.annualTotal} / year (Save UGX {plan.annualSavings})
+                      </p>
+                    ) : (
+                      <p className="text-[11px] font-semibold text-muted-foreground mt-1">
+                        Billed monthly · Cancel anytime
+                      </p>
+                    )}
+
+                    <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 w-fit">
+                      <Zap className="size-3" />
+                      {plan.credits}
+                    </div>
+
+                    <ul className="mt-6 space-y-3 flex-1">
+                      {plan.features.map((f, j) => (
+                        <li key={j} className="flex items-start gap-2.5 text-xs sm:text-sm font-medium text-foreground">
+                          <div className="size-4.5 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center mt-0.5 shrink-0">
+                            <Check className="size-3" />
+                          </div>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+
+                    <Link
+                      href="/signup"
+                      className={cn(
+                        buttonVariants(),
+                        "w-full mt-8 font-bold rounded-xl h-11 transition-all",
+                        plan.popular
+                          ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-600/25 border-0"
+                          : "bg-white border border-border text-foreground hover:bg-slate-50",
+                      )}
+                    >
+                      Start Free Trial
+                    </Link>
+                  </motion.div>
+                );
+              })}
             </div>
 
             <motion.div className="text-center" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
               <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-5 py-3 text-sm font-semibold text-emerald-900 shadow-xs">
                 <Zap className="size-4 text-emerald-600 shrink-0" />
-                Pay upfront and save: 3 months at standard rate, 6 months get 5% discount, 12 months get 10% discount. Powered by Pesapal.
+                Prepay and save: 3 months at standard rate, 6 months get 5% discount, 12 months get 10% discount. Powered by Pesapal.
               </div>
             </motion.div>
           </div>
