@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { buttonVariants } from "@/components/ui/button";
+import { getAvatarGradient } from "@/lib/avatar-colors";
 import {
   MessageSquare,
   ArrowRight,
@@ -17,7 +18,6 @@ import {
   Users,
   Workflow,
   Radio,
-  Quote,
   Mail,
   Webhook,
   Target,
@@ -25,7 +25,6 @@ import {
   Cpu,
   Layers,
   Smartphone,
-  Search,
   Timer,
   MessageSquareText,
   Check,
@@ -37,6 +36,11 @@ import {
   Database,
   ShoppingCart,
   Download,
+  Star,
+  CheckCircle2,
+  TrendingUp,
+  ShieldCheck,
+  Flame,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -54,13 +58,12 @@ const fadeUp = {
 
 const stagger = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+  visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
 };
 
 export default function LandingPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
-  const [activeFeature, setActiveFeature] = useState(0);
 
   const navLinks = [
     { label: "Features", href: "#features" },
@@ -98,47 +101,11 @@ export default function LandingPage() {
     },
     {
       q: "How does the AI train on my business data?",
-      a: "Upload your product catalogues, price lists, FAQs, and website URLs. HopeChat AI learns your business automatically and answers customer questions based on what you teach it. Connect a Google Sheet and the AI can answer live questions like \"is item X in stock?\" or \"what does it cost?\" — each spreadsheet lookup the AI performs costs one credit. It escalates to a human when it doesn't know the answer.",
-    },
-    {
-      q: "Can I control when the AI replies?",
-      a: "Yes. In the AI Hub you can set AI availability hours — choose the days of the week and the start and end times the AI assistant is allowed to reply, in your own time zone. Outside those hours the AI stays quiet and leaves the conversation for your team to handle, and no reply credit is used. Overnight windows such as 22:00 to 06:00 are supported too.",
-    },
-    {
-      q: "How does the AI hand a chat over to a human?",
-      a: "You set the rules in the AI Hub under Configuration → Escalation to a human. It's off by default — turn it on when you're ready. Choose trigger words (such as \"refund\" or \"speak to a person\"), and the AI escalates whenever a customer uses one — or when it can't confidently answer. Escalated chats are tagged \"Needs human\", surfaced first in your inbox, and can auto-pause the AI so it never talks over your agent. Any teammate can then take over, resolve, or hand the conversation back to the AI with one click — and the tag clears itself once the chat is handled.",
-    },
-    {
-      q: "Is HopeChat compliant with Meta's Official WhatsApp API policies?",
-      a: "Yes. HopeChat connects directly through Meta Business using the official WhatsApp Business API. Every message — broadcasts, chatbot replies, order updates — is delivered with enterprise-grade reliability and full Meta compliance.",
-    },
-    {
-      q: "How much does HopeChat cost?",
-      a: "HopeChat runs on simple monthly plans: Bronze at 100,000 UGX, Silver at 180,000 UGX, and Gold at 450,000 UGX per month. Save up to 10% by paying for 3, 6, or 12 months upfront. Every plan starts with a free trial — no credit card required.",
-    },
-    {
-      q: "When do I get my free trial credits?",
-      a: "Your free trial credits are unlocked the moment you connect your WhatsApp Business number (Settings → WhatsApp Config). We release them only after WhatsApp is connected so the free credits go to businesses that are actually running on WhatsApp — SMS-only or automated signups don't qualify. Connect once and your credits appear in Billing instantly.",
-    },
-    {
-      q: "How do I pay for my subscription?",
-      a: "Pay securely through Pesapal using Mobile Money or credit card, right from your dashboard. You can also top up message credits any time, and your plan, billing period, and credit balance are all visible in the Billing section.",
-    },
-    {
-      q: "Do you offer setup or onboarding help?",
-      a: "Yes. Our concierge onboarding team can configure your Meta / WhatsApp API credentials, set up automations, and train your AI assistant for you. It's a one-time fee based on company size, starting at 300,000 UGX. Request a free demo and we'll send you a tailored quote.",
-    },
-    {
-      q: "Can customers book appointments through WhatsApp?",
-      a: "Yes. Connect your Cal.com account once in Settings → Integrations, choose which event types are bookable, and copy a booking link to share with customers — paste it into the AI assistant prompt or a chat and the assistant sends it for you. You can also book an appointment on a customer's behalf with the in-app picker, or hit Sync to pull your bookings from Cal.com at any time. Everything lands on the Bookings page with the attendee, event, and time, and reschedules or cancellations sync automatically.",
-    },
-    {
-      q: "Can the AI book or send appointments for me?",
-      a: "Your AI assistant can send booking links from the Bookings page when a customer asks for an appointment, and conversations can hand off straight into an open booking link. You can set your weekly availability and time zone right in the Bookings page — available slots drop automatically from your Cal.com calendar — while HopeChat handles the chat-side sharing and tracking.",
+      a: "Upload your PDFs, documents, product catalogs, and website links directly into your knowledge base. HopeChat indexes your content and feeds relevant snippets to the AI engine so answers reflect your real prices, inventory, and policies without hallucinations.",
     },
     {
       q: "Can I install HopeChat on my phone like a normal app?",
-      a: "Yes. HopeChat is a Progressive Web App. On Android and desktop Chrome or Edge you'll see an install banner the first time you sign in — tap Install App and it lands on your home screen. On iPhone or iPad, tap the Share button and choose \"Add to Home Screen\". Either way it launches full-screen with no browser address bar, supports home-screen shortcuts to your inbox, broadcasts, and contacts, and updates the moment we deploy — no app store in the loop.",
+      a: "Yes. HopeChat is a Progressive Web App. On Android and desktop Chrome or Edge you'll see an install banner the first time you sign in — tap Install App and it lands on your home screen. On iPhone or iPad, tap the Share button and choose 'Add to Home Screen'. Either way it launches full-screen with no browser address bar, supports home-screen shortcuts to your inbox, broadcasts, and contacts, and updates the moment we deploy — no app store in the loop.",
     },
     {
       q: "Can HopeChat send SMS as well as WhatsApp messages?",
@@ -155,41 +122,61 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="landing-light flex min-h-screen flex-col bg-white text-foreground antialiased font-sans selection:bg-primary/20">
+    <div className="landing-light flex min-h-screen flex-col bg-white text-foreground antialiased font-sans selection:bg-emerald-500/20">
 
       {/* ─── HEADER ─── */}
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-white/90 backdrop-blur-md">
+      <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-white/80 backdrop-blur-xl transition-all">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary shadow-md shadow-primary/20">
-                <MessageSquare className="h-4.5 w-4.5 text-primary-foreground" />
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-500/25 transition-transform duration-200 group-hover:scale-105">
+                <MessageSquare className="size-4.5" />
               </div>
-              <span className="text-lg font-extrabold tracking-tight text-foreground">HopeChat</span>
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-extrabold tracking-tight text-foreground">HopeChat</span>
+                <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 text-[10px] font-extrabold text-emerald-600">
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  v2.0 AI Hub
+                </span>
+              </div>
             </Link>
             <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-muted-foreground">
               {navLinks.map((l) => (
-                <Link key={l.href} href={l.href} className="hover:text-primary transition-colors duration-200">{l.label}</Link>
+                <Link key={l.href} href={l.href} className="hover:text-primary transition-colors duration-200">
+                  {l.label}
+                </Link>
               ))}
-              <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors duration-200">Docs</a>
+              <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors duration-200">
+                Docs
+              </a>
             </nav>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/login" className={cn(buttonVariants({ variant: "ghost" }), "text-sm font-bold text-muted-foreground hover:text-foreground h-9 px-4 hidden sm:inline-flex")}>Log In</Link>
-            <Link href="/signup" className={cn(buttonVariants(), "bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-5 h-9 text-xs sm:text-sm shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 rounded-lg border-0")}>Start Free Trial</Link>
-            <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground" aria-label="Toggle Menu">
+            <Link href="/login" className={cn(buttonVariants({ variant: "ghost" }), "text-sm font-bold text-muted-foreground hover:text-foreground h-9 px-4 hidden sm:inline-flex")}>
+              Log In
+            </Link>
+            <Link href="/signup" className={cn(buttonVariants(), "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-5 h-9 text-xs sm:text-sm shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/30 transition-all duration-300 rounded-xl border-0")}>
+              Start Free Trial
+            </Link>
+            <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden flex h-9 w-9 items-center justify-center rounded-xl border border-border text-muted-foreground" aria-label="Toggle Menu">
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
         {mobileOpen && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="md:hidden border-b border-border bg-white px-4 py-4 space-y-3">
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="md:hidden border-b border-border bg-white/95 backdrop-blur-md px-4 py-4 space-y-3">
             {navLinks.map((l) => (
-              <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)} className="block px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground rounded-lg hover:bg-background">{l.label}</Link>
+              <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)} className="block px-3 py-2.5 text-sm font-semibold text-muted-foreground hover:text-foreground rounded-lg hover:bg-background">
+                {l.label}
+              </Link>
             ))}
-            <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)} className="block px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground rounded-lg hover:bg-background">Docs</a>
+            <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)} className="block px-3 py-2.5 text-sm font-semibold text-muted-foreground hover:text-foreground rounded-lg hover:bg-background">
+              Docs
+            </a>
             <div className="pt-2 border-t border-border flex flex-col gap-2">
-              <Link href="/login" onClick={() => setMobileOpen(false)} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center")}>Log In</Link>
+              <Link href="/login" onClick={() => setMobileOpen(false)} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center")}>
+                Log In
+              </Link>
             </div>
           </motion.div>
         )}
@@ -198,112 +185,208 @@ export default function LandingPage() {
       <main className="flex-1">
 
         {/* ─── HERO ─── */}
-        <section className="relative pt-12 pb-20 md:pt-20 md:pb-32 lg:pt-28 lg:pb-40 overflow-hidden bg-white">
-          <div className="absolute inset-0 -z-10">
-            <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-primary/[0.03] rounded-full blur-[150px]" />
-            <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-primary/[0.04] rounded-full blur-[120px]" />
+        <section className="relative pt-12 pb-20 md:pt-20 md:pb-32 lg:pt-24 lg:pb-36 overflow-hidden bg-white">
+          {/* Ambient Multi-Mesh Glow */}
+          <div className="absolute inset-0 -z-10 pointer-events-none">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[550px] bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.12),rgba(14,165,233,0.06),transparent_70%)]" />
+            <div className="absolute top-1/4 -left-20 w-[450px] h-[450px] bg-emerald-500/[0.05] rounded-full blur-[120px]" />
+            <div className="absolute top-1/3 -right-20 w-[450px] h-[450px] bg-teal-500/[0.06] rounded-full blur-[140px]" />
           </div>
+
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
 
-              {/* Left */}
+              {/* Left Column */}
               <motion.div className="flex-1 text-center lg:text-left space-y-6 max-w-xl" initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: "easeOut" }}>
-                <motion.div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs sm:text-sm font-bold text-foreground" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1, duration: 0.4 }}>
-                  <Zap className="h-3.5 w-3.5 text-primary" />
-                  <span>Official WhatsApp Business API</span>
+                <motion.div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3.5 py-1.5 text-xs sm:text-sm font-bold text-emerald-800 shadow-sm" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1, duration: 0.4 }}>
+                  <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>Official Meta WhatsApp Business Solution</span>
                 </motion.div>
 
-                <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl leading-[1.1] text-foreground">
+                <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl leading-[1.08] text-foreground">
                   More Leads. Faster Follow-Up.{" "}
-                  <span className="text-primary">More Revenue.</span>
+                  <span className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 bg-clip-text text-transparent">
+                    More Revenue.
+                  </span>
                 </h1>
 
                 <p className="text-base sm:text-lg text-muted-foreground leading-relaxed font-medium">
                   HopeChat replies instantly, follows up automatically, and closes sales right inside WhatsApp — so no lead ever goes cold.
                 </p>
 
-                <div className="flex flex-col sm:flex-row items-center lg:justify-start gap-3">
-                  <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto h-12 px-8 text-base bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/25 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all rounded-xl border-0 group")}>
+                <div className="flex flex-col sm:flex-row items-center lg:justify-start gap-3 pt-1">
+                  <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto h-12 px-8 text-base bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-xl shadow-emerald-600/25 hover:shadow-emerald-600/35 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-xl border-0 group")}>
                     Start Free Trial
                     <ArrowRight className="ml-2 h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />
                   </Link>
-                  <Link href="/request-demo" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full sm:w-auto h-12 px-8 text-base border-border bg-white text-foreground font-bold hover:scale-[1.02] active:scale-[0.98] transition-all rounded-xl")}>
+                  <Link href="/request-demo" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full sm:w-auto h-12 px-8 text-base border-border/80 bg-white/80 hover:bg-muted/50 text-foreground font-bold hover:scale-[1.02] active:scale-[0.98] transition-all rounded-xl shadow-sm")}>
                     Book a Demo
                   </Link>
                 </div>
 
-                <p className="text-xs text-muted-foreground font-medium">No credit card required · Set up in minutes · Cancel anytime</p>
+                <p className="text-xs text-muted-foreground font-medium flex items-center justify-center lg:justify-start gap-1.5">
+                  <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
+                  No credit card required · 14-day trial · Setup in minutes
+                </p>
 
-                <div className="grid grid-cols-3 gap-6 pt-4">
+                {/* 3 Metric Glass Micro-Cards */}
+                <div className="grid grid-cols-3 gap-3 sm:gap-4 pt-3">
                   {[
-                    { value: "98%", label: "Open rate", sub: "vs. ~20% on email" },
-                    { value: "5x", label: "Faster replies", sub: "vs. manual follow-up" },
-                    { value: "24/7", label: "Always on", sub: "Never miss a lead" },
+                    { value: "98%", label: "Open Rate", sub: "vs 20% on email", color: "text-emerald-600", bg: "bg-emerald-500/10 border-emerald-500/20", icon: Flame },
+                    { value: "5x", label: "Faster Replies", sub: "Instant AI speed", color: "text-sky-600", bg: "bg-sky-500/10 border-sky-500/20", icon: Zap },
+                    { value: "24/7", label: "Always On", sub: "Never miss a deal", color: "text-violet-600", bg: "bg-violet-500/10 border-violet-500/20", icon: TrendingUp },
                   ].map((s, i) => (
-                    <motion.div key={i} className="text-center lg:text-left" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.1 }}>
-                      <div className="text-3xl font-extrabold text-primary">{s.value}</div>
-                      <div className="text-sm font-bold text-foreground">{s.label}</div>
-                      <div className="text-xs text-muted-foreground font-medium">{s.sub}</div>
+                    <motion.div
+                      key={i}
+                      className="rounded-2xl border border-border/80 bg-card/60 backdrop-blur-sm p-3 sm:p-4 shadow-sm hover:shadow-md hover:border-emerald-500/30 transition-all text-center lg:text-left group"
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 + i * 0.1 }}
+                    >
+                      <div className="flex items-center justify-center lg:justify-between mb-1.5">
+                        <span className={cn("text-2xl sm:text-3xl font-extrabold tracking-tight", s.color)}>{s.value}</span>
+                        <div className={cn("hidden sm:flex size-7 items-center justify-center rounded-lg border", s.bg)}>
+                          <s.icon className={cn("size-3.5", s.color)} />
+                        </div>
+                      </div>
+                      <div className="text-xs sm:text-sm font-bold text-foreground leading-tight">{s.label}</div>
+                      <div className="text-[10px] sm:text-xs text-muted-foreground font-medium mt-0.5">{s.sub}</div>
                     </motion.div>
                   ))}
                 </div>
               </motion.div>
 
-              {/* Right - Hero Mock */}
-              <motion.div className="flex-1 w-full" initial={{ opacity: 0, x: 32 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7, delay: 0.2 }}>
-                <div className="rounded-2xl border border-border bg-white shadow-xl shadow-black/[0.04] overflow-hidden">
+              {/* Right Column - Elevated WhatsApp Mockup */}
+              <motion.div className="flex-1 w-full relative" initial={{ opacity: 0, x: 32 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7, delay: 0.2 }}>
+                {/* Floating Badge Top-Left */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6, duration: 0.5 }}
+                  className="hidden sm:flex absolute -top-4 -left-4 z-20 items-center gap-2 rounded-2xl border border-emerald-500/30 bg-white/95 px-3.5 py-2 shadow-xl shadow-emerald-500/10 backdrop-blur-md"
+                >
+                  <span className="flex size-2 rounded-full bg-emerald-500 animate-ping" />
+                  <span className="text-xs font-bold text-foreground">
+                    ⚡ 0.8s avg reply speed
+                  </span>
+                </motion.div>
+
+                {/* Floating Badge Bottom-Right */}
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7, duration: 0.5 }}
+                  className="hidden sm:flex absolute -bottom-4 -right-4 z-20 items-center gap-2 rounded-2xl border border-sky-500/30 bg-white/95 px-3.5 py-2 shadow-xl shadow-sky-500/10 backdrop-blur-md"
+                >
+                  <TrendingUp className="size-4 text-sky-500" />
+                  <span className="text-xs font-bold text-foreground">
+                    📈 5x lead conversion
+                  </span>
+                </motion.div>
+
+                {/* Main WhatsApp Window Container */}
+                <div className="rounded-3xl border border-border/80 bg-white shadow-2xl shadow-emerald-950/5 overflow-hidden">
                   <div className="flex">
-                    <div className="hidden sm:flex w-44 border-r border-border bg-background/50 flex-col">
+                    {/* Conversation Sidebar */}
+                    <div className="hidden sm:flex w-48 border-r border-border bg-slate-50/70 flex-col">
                       <div className="p-3 border-b border-border flex items-center justify-between">
-                        <span className="font-bold text-xs text-foreground">Conversations</span>
-                        <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="font-bold text-xs text-foreground">Live Chats</span>
+                        <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
+                          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          3 Active
+                        </div>
                       </div>
                       <div className="flex-1 p-2 space-y-1">
                         {[
-                          ["NK", "Nalukenge Kate", "Active"],
-                          ["OK", "Ochieng Kevin", "Bot"],
-                          ["JM", "Jean Mugisha", ""],
-                        ].map(([initials, name, tag], i) => (
-                          <div key={i} className={cn("p-2 rounded-lg flex items-center gap-2 cursor-pointer", i === 0 ? "bg-primary/10 border border-primary/20" : "hover:bg-background")}>
-                            <div className={cn("h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0", i === 0 ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground")}>{initials}</div>
+                          ["NK", "Nalukenge Kate", "Active", "bg-emerald-500"],
+                          ["OK", "Ochieng Kevin", "Bot", "bg-sky-500"],
+                          ["JM", "Jean Mugisha", "", "bg-violet-500"],
+                        ].map(([initials, name, tag, colorClass], i) => (
+                          <div key={i} className={cn("p-2 rounded-xl flex items-center gap-2 cursor-pointer transition-colors", i === 0 ? "bg-white border border-emerald-500/30 shadow-xs" : "hover:bg-white/80")}>
+                            <div className={cn("size-7 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-xs", colorClass)}>{initials}</div>
                             <div className="overflow-hidden flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-semibold truncate">{name}</span>
-                                {tag === "Active" && <span className="text-[8px] text-primary font-bold bg-primary/10 px-1 rounded shrink-0">ACTIVE</span>}
-                                {tag === "Bot" && <span className="text-[8px] text-emerald-600 font-bold bg-emerald-500/10 px-1 rounded shrink-0">BOT</span>}
+                                <span className="text-xs font-bold truncate text-foreground">{name}</span>
+                                {tag === "Active" && <span className="text-[8px] text-emerald-700 font-extrabold bg-emerald-500/15 border border-emerald-500/20 px-1 rounded-sm shrink-0">LIVE</span>}
+                                {tag === "Bot" && <span className="text-[8px] text-sky-700 font-extrabold bg-sky-500/15 border border-sky-500/20 px-1 rounded-sm shrink-0">AI</span>}
                               </div>
-                              <p className="text-[10px] text-muted-foreground truncate">WhatsApp Business</p>
+                              <p className="text-[10px] text-muted-foreground truncate font-medium">WhatsApp Business</p>
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className="flex-1 flex flex-col min-h-[320px]">
-                      <div className="p-3 border-b border-border bg-background/30 flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                        <span className="text-xs font-bold text-foreground">Nalukenge Kate</span>
-                        <span className="text-[10px] text-muted-foreground ml-auto">AI Agent · Retail</span>
+
+                    {/* Chat Area */}
+                    <div className="flex-1 flex flex-col min-h-[340px] bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]">
+                      {/* Chat Header */}
+                      <div className="p-3 border-b border-border bg-white/90 backdrop-blur-sm flex items-center gap-2.5">
+                        <div className="relative">
+                          <div className="size-8 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center text-xs font-bold">NK</div>
+                          <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-bold text-foreground">Nalukenge Kate</span>
+                            <CheckCircle2 className="size-3 text-emerald-600" />
+                          </div>
+                          <p className="text-[10px] text-emerald-600 font-semibold">Online · WhatsApp Verified</p>
+                        </div>
+                        <span className="text-[10px] font-semibold text-muted-foreground ml-auto bg-muted/60 px-2 py-0.5 rounded-full">AI Agent Engaged</span>
                       </div>
+
+                      {/* Chat Messages */}
                       <div className="flex-1 p-4 space-y-3">
                         <div className="flex gap-2 max-w-[85%]">
-                          <div className="h-6 w-6 rounded-full bg-background text-muted-foreground flex items-center justify-center text-[10px] font-bold shrink-0">U</div>
-                          <div className="bg-white text-foreground px-3.5 py-2.5 rounded-2xl rounded-bl-none border border-border text-xs shadow-sm">Hi! Do you offer bulk delivery in Kampala?</div>
+                          <div className="size-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold shrink-0">U</div>
+                          <div className="bg-white text-foreground px-3.5 py-2 rounded-2xl rounded-bl-none border border-border/80 text-xs shadow-xs font-medium">
+                            Hi! Do you offer bulk delivery in Kampala?
+                          </div>
                         </div>
-                        <div className="flex gap-2 max-w-[85%] ml-auto flex-row-reverse">
-                          <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold shrink-0">AI</div>
-                          <div className="bg-primary text-primary-foreground px-3.5 py-2.5 rounded-2xl rounded-br-none border border-primary/20 text-xs shadow-sm">Yes! Orders over 500,000 UGX qualify for free delivery. Want me to connect you with sales?</div>
+
+                        <div className="flex gap-2 max-w-[88%] ml-auto flex-row-reverse">
+                          <div className="size-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 shadow-xs">AI</div>
+                          <div className="bg-gradient-to-tr from-emerald-600 to-teal-600 text-white px-3.5 py-2.5 rounded-2xl rounded-br-none text-xs shadow-md shadow-emerald-700/15">
+                            <p className="leading-snug">Yes! Orders over 500,000 UGX qualify for free delivery today. What items are you interested in?</p>
+                            <div className="mt-2 flex gap-1.5 flex-wrap">
+                              <span className="rounded-md bg-white/20 border border-white/30 px-2 py-0.5 text-[10px] font-bold cursor-pointer hover:bg-white/30">Bulk Catalog</span>
+                              <span className="rounded-md bg-white/20 border border-white/30 px-2 py-0.5 text-[10px] font-bold cursor-pointer hover:bg-white/30">Talk to Human</span>
+                            </div>
+                            <div className="mt-1 flex items-center justify-end gap-1 text-[9px] text-emerald-100">
+                              <span>Just now</span>
+                              <span className="text-emerald-200 font-bold">✓✓</span>
+                            </div>
+                          </div>
                         </div>
+
                         <div className="flex gap-2 max-w-[85%]">
-                          <div className="h-6 w-6 rounded-full bg-background text-muted-foreground flex items-center justify-center text-[10px] font-bold shrink-0">U</div>
-                          <div className="bg-white text-foreground px-3.5 py-2.5 rounded-2xl rounded-bl-none border border-border text-xs shadow-sm">Yes please. Also send your price list.</div>
+                          <div className="size-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold shrink-0">U</div>
+                          <div className="bg-white text-foreground px-3.5 py-2 rounded-2xl rounded-bl-none border border-border/80 text-xs shadow-xs font-medium">
+                            Yes please. Connect me with Sarah in sales!
+                          </div>
                         </div>
-                        <div className="flex gap-2 max-w-[85%] ml-auto flex-row-reverse">
-                          <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold shrink-0">AI</div>
-                          <div className="bg-primary text-primary-foreground px-3.5 py-2.5 rounded-2xl rounded-br-none border border-primary/20 text-xs shadow-sm">Transferred you to Sarah. She has your pricing guide ready!</div>
+
+                        <div className="flex gap-2 max-w-[88%] ml-auto flex-row-reverse">
+                          <div className="size-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 shadow-xs">AI</div>
+                          <div className="bg-gradient-to-tr from-emerald-600 to-teal-600 text-white px-3.5 py-2 rounded-2xl rounded-br-none text-xs shadow-md shadow-emerald-700/15">
+                            Transferred to Sarah! She has your pricing ready.
+                            <div className="mt-1 flex items-center justify-end gap-1 text-[9px] text-emerald-100">
+                              <span>Just now</span>
+                              <span className="text-emerald-200 font-bold">✓✓</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
+
+                      {/* Input Footer */}
                       <div className="p-3 border-t border-border bg-white">
-                        <div className="bg-background/50 border border-border rounded-xl px-4 py-2.5 text-muted-foreground text-[11px]">AI agent is drafting a response...</div>
+                        <div className="bg-slate-50 border border-border/80 rounded-xl px-4 py-2 text-muted-foreground text-[11px] flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            HopeChat AI is actively listening...
+                          </span>
+                          <span className="text-[10px] font-bold text-emerald-600">Encrypted</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -314,39 +397,73 @@ export default function LandingPage() {
         </section>
 
         {/* ─── AI ASSISTANT ─── */}
-        <section className="py-20 lg:py-28 bg-background border-t border-border overflow-hidden">
+        <section className="py-20 lg:py-28 bg-slate-50/60 border-t border-border overflow-hidden relative">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
               <motion.div className="flex-1 space-y-8" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
                 <motion.div variants={fadeUp} custom={0}>
-                  <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-primary">
-                    <Bot className="h-3.5 w-3.5" /> AI-Powered WhatsApp Agent
+                  <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-emerald-600 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full">
+                    <Bot className="h-3.5 w-3.5" /> AI-Powered WhatsApp Agents
                   </span>
                 </motion.div>
-                <motion.h2 variants={fadeUp} custom={0.1} className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-                  Doesn&apos;t just chat. It closes.
+                <motion.h2 variants={fadeUp} custom={0.1} className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground">
+                  Doesn&apos;t just chat. <br className="hidden sm:block" />
+                  <span className="bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 bg-clip-text text-transparent">
+                    It qualifies and closes.
+                  </span>
                 </motion.h2>
                 <motion.p variants={fadeUp} custom={0.2} className="text-base text-muted-foreground leading-relaxed font-medium">
-                  Train HopeChat on your own documents, website URLs, and catalogs. It understands customer intent, answers 24/7, and triggers real actions.
+                  Train HopeChat on your own business documents, catalogs, and URLs. It recognizes buying intent, answers accurately 24/7 without hallucinations, and triggers real actions inside your CRM.
                 </motion.p>
+                
+                {/* 4 Multi-Color Feature Cards */}
                 <motion.div variants={fadeUp} custom={0.3} className="grid sm:grid-cols-2 gap-4">
                   {[
-                    { icon: Target, title: "Intent Detection", desc: "Spot high-value leads instantly and prioritize conversations that drive revenue." },
-                    { icon: Brain, title: "Data-Driven Memory", desc: "Train AI in minutes using PDFs, web links, and Google Sheets for accurate replies." },
-                    { icon: Cpu, title: "Real Actions, Not Just Replies", desc: "Auto-trigger workflows, qualify leads, and assign to sales reps seamlessly." },
-                    { icon: Layers, title: "Structured WhatsApp Flows", desc: "Interactive buttons, lists, and forms to guide buyers from curiosity to payment." },
+                    {
+                      icon: Target,
+                      title: "Intent Detection",
+                      desc: "Spot high-value leads instantly and prioritize conversations that drive revenue.",
+                      color: "text-rose-500 dark:text-rose-400",
+                      bg: "bg-rose-500/10 border-rose-500/20",
+                    },
+                    {
+                      icon: Brain,
+                      title: "Data-Driven Memory",
+                      desc: "Train AI in minutes using PDFs, web links, and Google Sheets for accurate replies.",
+                      color: "text-indigo-500 dark:text-indigo-400",
+                      bg: "bg-indigo-500/10 border-indigo-500/20",
+                    },
+                    {
+                      icon: Cpu,
+                      title: "Real Actions, Not Replies",
+                      desc: "Auto-trigger workflows, update pipeline stages, and assign to reps seamlessly.",
+                      color: "text-amber-500 dark:text-amber-400",
+                      bg: "bg-amber-500/10 border-amber-500/20",
+                    },
+                    {
+                      icon: Layers,
+                      title: "WhatsApp Flow Buttons",
+                      desc: "Interactive buttons, list menus, and forms to guide buyers straight to payment.",
+                      color: "text-emerald-500 dark:text-emerald-400",
+                      bg: "bg-emerald-500/10 border-emerald-500/20",
+                    },
                   ].map((item, i) => (
-                    <motion.div key={i} className="p-5 rounded-xl bg-white border border-border shadow-sm hover:shadow-md hover:border-primary/30 hover:-translate-y-1 transition-all duration-300" whileHover={{ y: -4 }}>
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-3">
-                        <item.icon className="h-5 w-5" />
+                    <motion.div
+                      key={i}
+                      className="p-5 rounded-2xl bg-white border border-border shadow-xs hover:shadow-lg hover:border-emerald-500/40 hover:-translate-y-1 transition-all duration-300 group"
+                      whileHover={{ y: -4 }}
+                    >
+                      <div className={cn("size-10 rounded-xl border flex items-center justify-center mb-3 transition-transform duration-300 group-hover:scale-110", item.bg, item.color)}>
+                        <item.icon className="size-5" />
                       </div>
                       <h3 className="text-sm font-bold text-foreground mb-1.5">{item.title}</h3>
                       <p className="text-xs text-muted-foreground leading-relaxed font-medium">{item.desc}</p>
                     </motion.div>
                   ))}
                 </motion.div>
+
                 <motion.div variants={fadeUp} custom={0.4}>
-                  <Link href="/signup" className={cn(buttonVariants(), "bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 h-11 rounded-xl border-0 shadow-md group")}>
+                  <Link href="/signup" className={cn(buttonVariants(), "bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 h-11 rounded-xl border-0 shadow-md shadow-emerald-600/20 group")}>
                     Start Free Trial <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </motion.div>
@@ -354,30 +471,38 @@ export default function LandingPage() {
 
               {/* Chat Widget */}
               <motion.div className="flex-1 w-full max-w-md mx-auto" initial={{ opacity: 0, x: 32 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
-                <div className="rounded-2xl border border-border bg-white shadow-lg overflow-hidden">
-                  <div className="p-3 bg-background/50 border-b border-border flex items-center gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                      <span className="text-xs font-bold text-foreground">HopeChat Assistant</span>
+                <div className="rounded-3xl border border-border bg-white shadow-xl overflow-hidden">
+                  <div className="p-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white flex items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="size-2 rounded-full bg-emerald-300 animate-pulse" />
+                      <span className="text-xs font-bold text-white">HopeChat Assistant</span>
                     </div>
-                    <span className="text-[10px] text-emerald-600 ml-auto font-bold">● Online</span>
+                    <span className="text-[10px] text-emerald-100 ml-auto font-bold bg-white/20 px-2 py-0.5 rounded-full">Gemini 2.0 Live</span>
                   </div>
-                  <div className="p-4 space-y-3 min-h-[220px]">
+                  <div className="p-4 space-y-3 min-h-[240px] bg-slate-50/50">
                     <div className="flex gap-2 items-start">
-                      <div className="h-7 w-7 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">H</div>
-                      <div className="bg-background px-3.5 py-2.5 rounded-2xl rounded-bl-none border border-border text-xs max-w-[85%] shadow-sm">👋 Hi! I&apos;m your HopeChat assistant. How can I help today?</div>
+                      <div className="size-7 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">H</div>
+                      <div className="bg-white px-3.5 py-2.5 rounded-2xl rounded-bl-none border border-border text-xs max-w-[85%] shadow-xs">
+                        👋 Hi! I&apos;m your HopeChat virtual agent. Looking for our wholesale price list or retail catalog?
+                      </div>
                     </div>
                     <div className="flex gap-2 items-start ml-auto flex-row-reverse max-w-[85%]">
-                      <div className="h-7 w-7 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[10px] font-bold shrink-0">U</div>
-                      <div className="bg-primary text-primary-foreground px-3.5 py-2.5 rounded-2xl rounded-br-none text-xs shadow-sm">Do you ship to Mombasa?</div>
+                      <div className="size-7 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[10px] font-bold shrink-0">U</div>
+                      <div className="bg-emerald-600 text-white px-3.5 py-2.5 rounded-2xl rounded-br-none text-xs shadow-xs font-medium">
+                        Do you ship to Mombasa and Nairobi?
+                      </div>
                     </div>
                     <div className="flex gap-2 items-start">
-                      <div className="h-7 w-7 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">H</div>
-                      <div className="bg-background px-3.5 py-2.5 rounded-2xl rounded-bl-none border border-border text-xs max-w-[85%] shadow-sm">Yes! Orders to Mombasa ship free in 2–3 days. Want me to start your order?</div>
+                      <div className="size-7 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">H</div>
+                      <div className="bg-white px-3.5 py-2.5 rounded-2xl rounded-bl-none border border-border text-xs max-w-[85%] shadow-xs">
+                        Yes! We deliver across Kenya in 2–3 days. Orders over KSh 15,000 qualify for free express shipping. Ready to place an order?
+                      </div>
                     </div>
                   </div>
-                  <div className="p-3 border-t border-border">
-                    <div className="bg-background/50 border border-border rounded-xl px-4 py-2.5 text-muted-foreground text-[11px]">Type your message...</div>
+                  <div className="p-3 border-t border-border bg-white">
+                    <div className="bg-slate-100 border border-border/80 rounded-xl px-4 py-2 text-muted-foreground text-[11px]">
+                      Type your message or tap an option...
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -389,7 +514,13 @@ export default function LandingPage() {
         <section id="features" className="py-20 lg:py-28 bg-white border-t border-border overflow-hidden">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-20">
             <motion.div className="text-center space-y-4 max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
-              <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Everything you need to grow on WhatsApp</motion.h2>
+              <motion.div variants={fadeUp} className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3.5 py-1 text-xs font-extrabold text-emerald-800">
+                <Sparkles className="size-3.5 text-emerald-600" />
+                Comprehensive Feature Suite
+              </motion.div>
+              <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground">
+                Everything you need to grow on WhatsApp
+              </motion.h2>
               <motion.p variants={fadeUp} custom={0.1} className="text-base sm:text-lg text-muted-foreground leading-relaxed font-medium">
                 Speed up your entire sales funnel with automation that captures leads, replies instantly, and closes more — all on WhatsApp.
               </motion.p>
@@ -401,17 +532,29 @@ export default function LandingPage() {
                 title: "WhatsApp Coexistence",
                 desc: "Use your existing phone number with zero downtime. Keep phone app chats intact while HopeChat handles background automation.",
                 points: ["Same number, no migration downtime", "Existing chats & contacts stay intact", "Use phone app and platform together", "Official Meta-approved coexistence"],
+                color: "text-emerald-600 dark:text-emerald-400",
+                bg: "bg-emerald-500/10 border-emerald-500/25",
                 reverse: false,
                 mock: (
-                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
-                    <div className="flex items-center gap-3 pb-2 border-b border-border">
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-border text-xs font-bold text-foreground"><Smartphone className="h-3.5 w-3.5 text-primary" /> Business App</div>
+                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+                    <div className="flex items-center gap-3 pb-3 border-b border-border">
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-border text-xs font-bold text-foreground">
+                        <Smartphone className="size-3.5 text-emerald-600" /> Phone App
+                      </div>
                       <span className="text-muted-foreground text-xs font-bold">+</span>
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 text-xs font-bold text-primary"><Zap className="h-3.5 w-3.5" /> HopeChat</div>
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs font-bold text-emerald-700">
+                        <Zap className="size-3.5" /> HopeChat Web
+                      </div>
                     </div>
                     <div className="space-y-2 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-2"><div className="h-5 w-5 rounded bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold">WA</div>Nalukenge Kate — replied via phone app</div>
-                      <div className="flex items-center gap-2"><div className="h-5 w-5 rounded bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold">HC</div>Ochieng Kevin — auto-replied by HopeChat AI</div>
+                      <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50">
+                        <div className="size-6 rounded-lg bg-emerald-500/15 text-emerald-700 flex items-center justify-center text-[10px] font-bold">WA</div>
+                        <span className="text-foreground font-semibold">Nalukenge Kate</span> — replied via phone app
+                      </div>
+                      <div className="flex items-center gap-2.5 p-2 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+                        <div className="size-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">HC</div>
+                        <span className="text-foreground font-semibold">Ochieng Kevin</span> — auto-replied by HopeChat AI
+                      </div>
                     </div>
                   </div>
                 ),
@@ -421,22 +564,32 @@ export default function LandingPage() {
                 title: "WhatsApp Broadcasts at Scale",
                 desc: "Send broadcast campaigns to thousands of contacts with zero ban risk via the Official WhatsApp API.",
                 points: ["Official API — zero ban risk", "Audience segmentation & targeting", "Rich media: images, videos, buttons", "Real-time delivery & read analytics"],
+                color: "text-rose-500 dark:text-rose-400",
+                bg: "bg-rose-500/10 border-rose-500/25",
                 reverse: true,
                 mock: (
-                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
-                    <div className="flex justify-between items-center border-b border-border pb-2">
-                      <span className="text-xs font-bold text-foreground">Recent Broadcast</span>
-                      <span className="text-[10px] text-primary font-bold bg-primary/10 px-2 py-0.5 rounded">Delivered</span>
+                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3.5 shadow-xs">
+                    <div className="flex justify-between items-center border-b border-border pb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="size-2 rounded-full bg-rose-500 animate-pulse" />
+                        <span className="text-xs font-bold text-foreground">Spring Promo Blast</span>
+                      </div>
+                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Delivered</span>
                     </div>
                     {[
-                      { label: "Sent", value: "12,450" },
-                      { label: "Delivered", value: "12,201", cls: "text-emerald-600" },
-                      { label: "Read", value: "9,756", cls: "text-emerald-600" },
-                      { label: "Replied", value: "1,892", cls: "text-primary font-bold" },
+                      { label: "Target Audience", value: "12,450" },
+                      { label: "Delivered", value: "12,201 (98%)", cls: "text-emerald-600 font-semibold" },
+                      { label: "Read", value: "9,756 (80%)", cls: "text-emerald-600 font-semibold" },
+                      { label: "Replies", value: "1,892 (19%)", cls: "text-rose-600 font-bold" },
                     ].map((r, i) => (
-                      <div key={i} className="flex justify-between text-xs"><span className="text-muted-foreground">{r.label}</span><span className={cn("font-bold", r.cls || "text-foreground")}>{r.value}</span></div>
+                      <div key={i} className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">{r.label}</span>
+                        <span className={cn("font-bold", r.cls || "text-foreground")}>{r.value}</span>
+                      </div>
                     ))}
-                    <div className="h-2 w-full bg-background rounded-full overflow-hidden"><div className="h-full w-[78%] bg-primary rounded-full" /></div>
+                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full w-[80%] bg-gradient-to-r from-rose-500 to-pink-500 rounded-full" />
+                    </div>
                   </div>
                 ),
               },
@@ -445,22 +598,32 @@ export default function LandingPage() {
                 title: "Bulk SMS Broadcasts",
                 desc: "Reach customers who aren't on WhatsApp with affordable bulk SMS campaigns from the same dashboard — no separate tools needed.",
                 points: ["Bulk SMS to thousands of recipients", "Audience segmentation & targeting", "Pay per message with credit pricing", "Delivery tracking with one-tap retry"],
+                color: "text-sky-500 dark:text-sky-400",
+                bg: "bg-sky-500/10 border-sky-500/25",
                 reverse: false,
                 mock: (
-                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
-                    <div className="flex justify-between items-center border-b border-border pb-2">
-                      <span className="text-xs font-bold text-foreground">SMS Broadcast</span>
-                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">Delivered</span>
+                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3.5 shadow-xs">
+                    <div className="flex justify-between items-center border-b border-border pb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="size-2 rounded-full bg-sky-500 animate-pulse" />
+                        <span className="text-xs font-bold text-foreground">SMS Campaign #104</span>
+                      </div>
+                      <span className="text-[10px] text-sky-600 font-bold bg-sky-500/10 px-2 py-0.5 rounded-full border border-sky-500/20">Completed</span>
                     </div>
                     {[
-                      { label: "Sent", value: "8,320" },
-                      { label: "Delivered", value: "8,014", cls: "text-emerald-600" },
-                      { label: "Failed", value: "306", cls: "text-red-500" },
-                      { label: "Retried", value: "306", cls: "text-primary font-bold" },
+                      { label: "Recipients", value: "8,320" },
+                      { label: "Delivered", value: "8,014 (96.3%)", cls: "text-emerald-600 font-semibold" },
+                      { label: "Failed (Invalid)", value: "306", cls: "text-rose-500 font-semibold" },
+                      { label: "Auto-Retried", value: "306 (Done)", cls: "text-sky-600 font-bold" },
                     ].map((r, i) => (
-                      <div key={i} className="flex justify-between text-xs"><span className="text-muted-foreground">{r.label}</span><span className={cn("font-bold", r.cls || "text-foreground")}>{r.value}</span></div>
+                      <div key={i} className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">{r.label}</span>
+                        <span className={cn("font-bold", r.cls || "text-foreground")}>{r.value}</span>
+                      </div>
                     ))}
-                    <div className="h-2 w-full bg-background rounded-full overflow-hidden"><div className="h-full w-[96%] bg-emerald-500 rounded-full" /></div>
+                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full w-[96%] bg-gradient-to-r from-sky-500 to-blue-500 rounded-full" />
+                    </div>
                   </div>
                 ),
               },
@@ -469,19 +632,35 @@ export default function LandingPage() {
                 title: "Visual No-Code Flow Builder",
                 desc: "Drag-and-drop builder to qualify leads, auto-reply, and route inquiries without writing code.",
                 points: ["Visual drag-and-drop flow builder", "Qualify leads and book calls 24/7", "AI answers trained on your business", "Seamless handoff to a human agent"],
-                reverse: false,
+                color: "text-violet-500 dark:text-violet-400",
+                bg: "bg-violet-500/10 border-violet-500/25",
+                reverse: true,
                 mock: (
-                  <div className="bg-white border border-border rounded-xl p-4 space-y-2">
-                    <div className="text-xs font-bold text-foreground flex items-center gap-2 border-b border-border pb-2"><Workflow className="h-4 w-4 text-primary" /> Automation: Lead Qualification</div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground py-1.5"><div className="h-6 w-6 rounded bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold">1</div>Customer sends message</div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground py-1.5"><div className="h-6 w-6 rounded bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold">2</div>AI detects intent & qualifies</div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground py-1.5"><div className="h-6 w-6 rounded bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold">3</div>Auto-reply with pricing or handoff</div>
+                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+                    <div className="text-xs font-bold text-foreground flex items-center gap-2 border-b border-border pb-2.5">
+                      <Workflow className="size-4 text-violet-500" />
+                      <span>Flow: Lead Qualification & Booking</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2.5 text-xs p-2 rounded-xl bg-violet-500/5 border border-violet-500/20">
+                        <span className="size-5 rounded-md bg-violet-500 text-white flex items-center justify-center text-[10px] font-bold">1</span>
+                        <span className="text-foreground font-semibold">Incoming WhatsApp Keyword Match</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-xs p-2 rounded-xl bg-slate-50 border border-border">
+                        <span className="size-5 rounded-md bg-slate-300 text-slate-800 flex items-center justify-center text-[10px] font-bold">2</span>
+                        <span className="text-muted-foreground">AI classifies intent and presents options</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-xs p-2 rounded-xl bg-slate-50 border border-border">
+                        <span className="size-5 rounded-md bg-slate-300 text-slate-800 flex items-center justify-center text-[10px] font-bold">3</span>
+                        <span className="text-muted-foreground">Auto-updates deal in Pipeline + notifies rep</span>
+                      </div>
+                    </div>
                   </div>
                 ),
               },
               {
                 icon: FolderTree,
-                title: "Tests & Practice",
+                title: "Tests & Practice Drills",
                 desc: "Create practice drills or timed tests for your customers via WhatsApp interactive buttons — one question at a time, with automatic scoring and pass/fail results.",
                 points: [
                   "Practice mode reveals correct/incorrect after each answer",
@@ -491,21 +670,30 @@ export default function LandingPage() {
                   "AI assistant offers tests on demand with Start / Not Now confirmation",
                   "Bulk import questions from CSV"
                 ],
-                reverse: true,
+                color: "text-amber-500 dark:text-amber-400",
+                bg: "bg-amber-500/10 border-amber-500/25",
+                reverse: false,
                 mock: (
-                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
-                    <div className="flex justify-between items-center border-b border-border pb-2">
-                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5"><FolderTree className="h-4 w-4 text-primary" /> Bio Assessment: Q1</span>
-                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">Interactive</span>
+                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+                    <div className="flex justify-between items-center border-b border-border pb-2.5">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <FolderTree className="size-4 text-amber-500" /> Bio Assessment #4
+                      </span>
+                      <span className="text-[10px] text-amber-700 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">Interactive</span>
                     </div>
-                    <div className="bg-primary/5 rounded-lg p-2.5 text-xs text-foreground space-y-1">
-                      <p className="font-bold text-[11px] text-primary">QUESTION 1</p>
-                      <p className="text-muted-foreground">Which organelle produces cellular energy?</p>
+                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-xs text-foreground space-y-1">
+                      <p className="font-extrabold text-[10px] uppercase text-amber-600">Question 1 of 5</p>
+                      <p className="text-foreground font-semibold">Which organelle produces cellular energy?</p>
                     </div>
-                    <div className="space-y-1 text-xs">
-                      <div className="p-1.5 rounded border border-border flex items-center justify-between text-muted-foreground"><span>A. Nucleus</span><span className="text-[10px]">0 pts</span></div>
-                      <div className="p-1.5 rounded border border-emerald-500/40 bg-emerald-500/10 flex items-center justify-between text-emerald-700 font-semibold"><span>B. Mitochondria</span><span className="text-[10px] font-bold">+10 pts ✓</span></div>
-                      <div className="p-1.5 rounded border border-border flex items-center justify-between text-muted-foreground"><span>C. Ribosome</span><span className="text-[10px]">0 pts</span></div>
+                    <div className="space-y-1.5 text-xs">
+                      <div className="p-2 rounded-xl border border-border flex items-center justify-between text-muted-foreground">
+                        <span>A. Nucleus</span>
+                        <span className="text-[10px]">0 pts</span>
+                      </div>
+                      <div className="p-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 flex items-center justify-between text-emerald-800 font-bold">
+                        <span>B. Mitochondria</span>
+                        <span className="text-[10px] font-extrabold bg-emerald-500 text-white px-1.5 py-0.5 rounded">+10 pts ✓</span>
+                      </div>
                     </div>
                   </div>
                 ),
@@ -521,52 +709,62 @@ export default function LandingPage() {
                   "Timed exams can be attempted only once per phone number",
                   "Every completed test attempt costs one credit — billable only when a student finishes"
                 ],
+                color: "text-teal-500 dark:text-teal-400",
+                bg: "bg-teal-500/10 border-teal-500/25",
                 reverse: true,
                 mock: (
-                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
-                    <div className="flex justify-between items-center border-b border-border pb-2">
-                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5"><Route className="h-4 w-4 text-primary" /> Entry screening</span>
-                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">Live</span>
+                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+                    <div className="flex justify-between items-center border-b border-border pb-2.5">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <Route className="size-4 text-teal-600" /> Candidate Screening
+                      </span>
+                      <span className="text-[10px] text-teal-700 font-bold bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-full">Automated</span>
                     </div>
-                    <div className="space-y-1.5 text-xs">
+                    <div className="space-y-2 text-xs">
                       {[
-                        { q: "Which class?", a: "Class 8" },
-                        { q: "Which subject?", a: "Science" },
+                        { q: "Target Class?", a: "Class 8" },
+                        { q: "Subject Track?", a: "Science & Tech" },
                       ].map((row, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <div className="font-semibold text-foreground min-w-[110px]">{row.q}</div>
-                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 font-bold">{row.a}</span>
+                        <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-border">
+                          <span className="font-semibold text-foreground">{row.q}</span>
+                          <span className="px-2 py-0.5 rounded-md bg-teal-500/15 text-teal-800 font-extrabold text-[11px]">{row.a}</span>
                         </div>
                       ))}
                     </div>
-                    <div className="rounded-lg bg-primary/5 border border-primary/10 px-3 py-2 text-[11px] text-foreground">
-                      <span className="font-bold text-primary">Routing:</span> Class 8 + Science → Science Paper 2
+                    <div className="rounded-xl bg-teal-500/10 border border-teal-500/20 px-3 py-2 text-[11px] text-foreground">
+                      <span className="font-bold text-teal-700">Auto Route:</span> Class 8 + Science → Science Paper 2
                     </div>
                   </div>
                 ),
               },
               {
                 icon: Users,
-
                 title: "Shared Team Inbox",
                 desc: "One WhatsApp number for your entire team with multi-agent routing, collision detection, custom tags, internal notes, and per-member access controls.",
                 points: ["Smart routing to the right agent", "Tags, notes, and full chat history", "Assign and collaborate on chats", "Granular permissions per test, per member"],
-                reverse: true,
+                color: "text-blue-500 dark:text-blue-400",
+                bg: "bg-blue-500/10 border-blue-500/25",
+                reverse: false,
                 mock: (
-                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
-                    <div className="text-xs font-bold text-foreground border-b border-border pb-2 flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> Team Inbox — 3 agents online</div>
+                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+                    <div className="text-xs font-bold text-foreground border-b border-border pb-2.5 flex items-center justify-between">
+                      <span className="flex items-center gap-2"><Users className="size-4 text-blue-500" /> Team Reps Online</span>
+                      <span className="text-[10px] font-bold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-full">3 Agents</span>
+                    </div>
                     {[
-                      { name: "Sarah", role: "Sales", chats: "8" },
-                      { name: "David", role: "Support", chats: "12" },
-                      { name: "HopeChat AI", role: "Virtual Agent", chats: "45" },
+                      { name: "Sarah Akello", role: "Key Accounts", chats: "8", color: "bg-emerald-500" },
+                      { name: "David Ochieng", role: "Technical Support", chats: "12", color: "bg-sky-500" },
+                      { name: "HopeChat AI", role: "AI Virtual Rep", chats: "45", color: "bg-violet-600" },
                     ].map((a, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="h-7 w-7 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[10px] font-bold">{a.name[0]}</div>
-                          <div><div className="text-xs font-semibold text-foreground">{a.name}</div><div className="text-[10px] text-muted-foreground">{a.role}</div></div>
+                      <div key={i} className="flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-50 transition-colors">
+                        <div className="flex items-center gap-2.5">
+                          <div className={cn("size-7 rounded-lg text-white flex items-center justify-center text-[10px] font-bold", a.color)}>{a.name[0]}</div>
+                          <div>
+                            <div className="text-xs font-bold text-foreground">{a.name}</div>
+                            <div className="text-[10px] text-muted-foreground">{a.role}</div>
+                          </div>
                         </div>
-                        <span className="text-xs font-bold text-foreground">{a.chats} chats</span>
+                        <span className="text-xs font-bold text-foreground bg-slate-100 px-2 py-0.5 rounded-md">{a.chats} chats</span>
                       </div>
                     ))}
                   </div>
@@ -582,23 +780,23 @@ export default function LandingPage() {
                   "Auto-pause the AI so it never talks over your agent",
                   "Take over, resolve, or hand back to the AI in one click"
                 ],
-                reverse: false,
+                color: "text-rose-500 dark:text-rose-400",
+                bg: "bg-rose-500/10 border-rose-500/25",
+                reverse: true,
                 mock: (
-                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
-                    <div className="flex justify-between items-center border-b border-border pb-2">
-                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5"><Bot className="h-4 w-4 text-primary" /> Escalated to a human</span>
-                      <span className="text-[10px] text-red-600 font-bold bg-red-500/10 px-2 py-0.5 rounded">Needs attention</span>
+                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+                    <div className="flex justify-between items-center border-b border-border pb-2.5">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <Bot className="size-4 text-rose-500" /> Escalation Event
+                      </span>
+                      <span className="text-[10px] text-rose-700 font-extrabold bg-rose-500/15 border border-rose-500/25 px-2 py-0.5 rounded-full">Needs human</span>
                     </div>
-                    <div className="space-y-2 text-xs">
-                      <div className="p-2 rounded-lg bg-red-500/5 border border-red-500/20 text-muted-foreground">&ldquo;I want to speak to a real person about my refund.&rdquo;</div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 font-bold text-[10px]">Needs human</span>
-                        <span className="text-[11px] text-muted-foreground">AI paused · waiting for an agent</span>
-                      </div>
-                      <div className="flex gap-2 pt-1">
-                        <span className="px-2.5 py-1 rounded-md bg-primary text-primary-foreground text-[10px] font-semibold">Take over</span>
-                        <span className="px-2.5 py-1 rounded-md border border-border text-[10px] font-semibold text-muted-foreground">Return to AI</span>
-                      </div>
+                    <div className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/20 text-xs text-foreground font-medium">
+                      &ldquo;I need to speak to an account manager regarding an invoice refund.&rdquo;
+                    </div>
+                    <div className="flex items-center justify-between text-xs pt-1">
+                      <span className="text-[11px] text-muted-foreground">AI paused · agent notified</span>
+                      <button className="px-3 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-bold shadow-xs">Take Over</button>
                     </div>
                   </div>
                 ),
@@ -608,13 +806,24 @@ export default function LandingPage() {
                 title: "Click-to-WhatsApp Ads",
                 desc: "Auto-capture leads from Facebook, Instagram, or website ads straight into an instant automated WhatsApp sequence.",
                 points: ["Facebook & Instagram ads → WhatsApp", "Capture IndiaMart & JustDial leads", "Instant automated first reply", "No lead goes cold or unanswered"],
+                color: "text-fuchsia-500 dark:text-fuchsia-400",
+                bg: "bg-fuchsia-500/10 border-fuchsia-500/25",
                 reverse: false,
                 mock: (
-                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-bold text-foreground border-b border-border pb-2"><Globe className="h-4 w-4 text-primary" /> Ad → WhatsApp Flow</div>
-                    <div className="space-y-2 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-2 p-2 rounded-lg bg-background"><MessageSquare className="h-4 w-4 text-primary" /> Facebook Ad: &ldquo;50% Off Today&rdquo; → Chat</div>
-                      <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/5"><Zap className="h-4 w-4 text-primary" /> Auto-reply sent: &ldquo;Hi! Here&apos;s your discount code...&rdquo;</div>
+                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+                    <div className="flex items-center justify-between border-b border-border pb-2.5 text-xs font-bold text-foreground">
+                      <span className="flex items-center gap-2"><Globe className="size-4 text-fuchsia-500" /> Meta Ad → Chat Flow</span>
+                      <span className="text-[10px] text-fuchsia-600 font-bold bg-fuchsia-500/10 px-2 py-0.5 rounded-full">Live Campaign</span>
+                    </div>
+                    <div className="space-y-2 text-xs">
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-border text-foreground font-semibold flex items-center gap-2">
+                        <MessageSquare className="size-3.5 text-fuchsia-500" />
+                        <span>Instagram Ad: &ldquo;50% Off First Month&rdquo;</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 font-semibold flex items-center gap-2">
+                        <Zap className="size-3.5 text-emerald-600" />
+                        <span>Instant reply sent in &lt;1s with coupon token</span>
+                      </div>
                     </div>
                   </div>
                 ),
@@ -631,23 +840,26 @@ export default function LandingPage() {
                   "Appointments land on the Bookings page with attendee, event, and time",
                   "Reschedules and cancellations update in place via webhook"
                 ],
+                color: "text-cyan-500 dark:text-cyan-400",
+                bg: "bg-cyan-500/10 border-cyan-500/25",
                 reverse: true,
                 mock: (
-                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
-                    <div className="flex justify-between items-center border-b border-border pb-2">
-                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5"><CalendarCheck className="h-4 w-4 text-primary" /> Upcoming bookings</span>
-                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">Live</span>
+                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+                    <div className="flex justify-between items-center border-b border-border pb-2.5">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <CalendarCheck className="size-4 text-cyan-600" /> Upcoming Bookings
+                      </span>
+                      <span className="text-[10px] text-cyan-700 font-bold bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-full">Cal.com Sync</span>
                     </div>
                     {[
                       { name: "Amina Nakato", event: "Consultation — 30 min", time: "Today 3:00 PM" },
                       { name: "Brian Okello", event: "Product Demo — 30 min", time: "Tomorrow 10:30 AM" },
-                      { name: "Cathy Achieng", event: "Strategy Call — 60 min", time: "Thu 2:00 PM" },
                     ].map((b, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs">
-                        <div className="h-7 w-7 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">{b.name[0]}</div>
+                      <div key={i} className="flex items-center gap-2.5 text-xs p-2 rounded-xl bg-slate-50 border border-border">
+                        <div className="size-7 rounded-lg bg-cyan-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">{b.name[0]}</div>
                         <div className="min-w-0">
-                          <div className="font-semibold text-foreground truncate">{b.name} · {b.event}</div>
-                          <div className="text-muted-foreground">{b.time}</div>
+                          <div className="font-bold text-foreground truncate">{b.name} · {b.event}</div>
+                          <div className="text-muted-foreground text-[11px]">{b.time}</div>
                         </div>
                       </div>
                     ))}
@@ -659,18 +871,24 @@ export default function LandingPage() {
                 title: "Automated Drip Sequences",
                 desc: "Multi-step follow-ups scheduled on Day 1, Day 3, Day 7 to revive cold leads and boost conversions.",
                 points: ["Multi-step timed message sequences", "Triggered by lead actions or tags", "Auto-stops when lead replies or buys", "Track opens, clicks, and conversions"],
-                reverse: true,
+                color: "text-indigo-500 dark:text-indigo-400",
+                bg: "bg-indigo-500/10 border-indigo-500/25",
+                reverse: false,
                 mock: (
-                  <div className="bg-white border border-border rounded-xl p-4 space-y-2">
-                    <div className="text-xs font-bold text-foreground border-b border-border pb-2 flex items-center gap-2"><Timer className="h-4 w-4 text-primary" /> Drip Sequence: New Lead</div>
+                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+                    <div className="text-xs font-bold text-foreground border-b border-border pb-2.5 flex items-center justify-between">
+                      <span className="flex items-center gap-2"><Timer className="size-4 text-indigo-500" /> Drip Campaign: New Lead</span>
+                      <span className="text-[10px] font-bold text-indigo-600 bg-indigo-500/10 px-2 py-0.5 rounded-full">Active</span>
+                    </div>
                     {[
-                      { day: "Day 1", msg: "Welcome! Here's what we offer..." },
-                      { day: "Day 3", msg: "Following up — need any help?" },
-                      { day: "Day 7", msg: "Special offer just for you 🎉" },
+                      { day: "Day 1", msg: "Welcome! Here is your catalog...", status: "Delivered" },
+                      { day: "Day 3", msg: "Following up — any questions on pricing?", status: "Pending" },
+                      { day: "Day 7", msg: "Special 10% coupon just for you 🎉", status: "Scheduled" },
                     ].map((d, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs">
-                        <span className="font-bold text-primary shrink-0 w-12">{d.day}</span>
-                        <span className="text-muted-foreground">{d.msg}</span>
+                      <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-border text-xs">
+                        <span className="font-bold text-indigo-600 w-12">{d.day}</span>
+                        <span className="text-muted-foreground truncate flex-1 mx-2">{d.msg}</span>
+                        <span className="text-[10px] font-semibold text-foreground bg-white px-2 py-0.5 rounded border border-border">{d.status}</span>
                       </div>
                     ))}
                   </div>
@@ -686,34 +904,34 @@ export default function LandingPage() {
                   "IPs are kept for security only and automatically truncated to their network prefix after 90 days",
                   "Consent first: every new tenant accepts the Terms & Privacy Policy before using the app"
                 ],
-                reverse: false,
+                color: "text-emerald-500 dark:text-emerald-400",
+                bg: "bg-emerald-500/10 border-emerald-500/25",
+                reverse: true,
                 mock: (
-                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
-                    <div className="flex justify-between items-center border-b border-border pb-2">
-                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5"><BarChart3 className="h-4 w-4 text-primary" /> Recent activity</span>
-                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">Live</span>
+                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+                    <div className="flex justify-between items-center border-b border-border pb-2.5">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <BarChart3 className="size-4 text-emerald-600" /> Activity Audit Trail
+                      </span>
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">Privacy First</span>
                     </div>
                     {[
-                      { ev: "Login", who: "Admin · Kampala", when: "2m ago" },
-                      { ev: "Broadcast sent", who: "Sales · 1,240 recipients", when: "1h ago" },
-                      { ev: "Automation updated", who: "Ops · Lead qualifier", when: "3h ago" },
-                      { ev: "Contact imported", who: "Sales · 350 rows", when: "Yesterday" },
+                      { ev: "User Login", who: "Admin · Kampala Office", when: "2m ago" },
+                      { ev: "Broadcast Dispatched", who: "Sales · 1,240 recipients", when: "1h ago" },
+                      { ev: "Automation Rule Updated", who: "Ops · Lead Qualifier", when: "3h ago" },
                     ].map((a, i) => (
-                      <div key={i} className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-foreground">{a.ev}</span>
-                        <span className="text-muted-foreground min-w-0">{a.who}</span>
-                        <span className="text-xs font-bold text-primary shrink-0">{a.when}</span>
+                      <div key={i} className="flex items-center justify-between text-xs p-1.5 rounded-xl hover:bg-slate-50">
+                        <span className="font-bold text-foreground">{a.ev}</span>
+                        <span className="text-muted-foreground text-[11px] truncate max-w-[140px]">{a.who}</span>
+                        <span className="text-[11px] font-bold text-emerald-600">{a.when}</span>
                       </div>
                     ))}
-                    <div className="rounded-lg bg-primary/5 border border-primary/10 px-3 py-2 text-[11px] text-foreground">
-                      <span className="font-bold text-primary">Privacy:</span> IP addresses truncated automatically after 90 days.
-                    </div>
                   </div>
                 ),
               },
               {
                 icon: Smartphone,
-                title: "Installable Mobile App",
+                title: "Installable Mobile & Desktop App",
                 desc: "Install HopeChat on any phone or desktop and it opens in its own window — no browser tabs, no address bar, straight to your inbox.",
                 points: [
                   "One-tap install from Chrome, Edge, or the iOS share sheet",
@@ -721,25 +939,24 @@ export default function LandingPage() {
                   "Long-press shortcuts to Inbox, Broadcasts, and Contacts",
                   "Updates ship instantly — no app store review, no waiting"
                 ],
+                color: "text-purple-500 dark:text-purple-400",
+                bg: "bg-purple-500/10 border-purple-500/25",
                 reverse: false,
                 mock: (
-                  <div className="bg-white border border-border rounded-xl p-4 space-y-3">
-                    <div className="flex items-center justify-between border-b border-border pb-2">
-                      <span className="text-xs font-bold text-foreground">Install HopeChat</span>
-                      <span className="text-[10px] text-primary font-bold bg-primary/10 px-2 py-0.5 rounded">PWA</span>
+                  <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+                    <div className="flex items-center justify-between border-b border-border pb-2.5">
+                      <span className="text-xs font-bold text-foreground">Progressive Web App (PWA)</span>
+                      <span className="text-[10px] text-purple-700 font-bold bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full">Installed</span>
                     </div>
-                    <div className="flex items-center gap-3 rounded-xl border border-border bg-background p-3">
-                      <div className="h-10 w-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0"><MessageSquare className="h-5 w-5" /></div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-foreground truncate">HopeChat</div>
-                        <div className="text-[10px] text-muted-foreground">Standalone &middot; No browser needed</div>
+                    <div className="flex items-center gap-3 rounded-2xl border border-purple-500/20 bg-purple-500/5 p-3">
+                      <div className="size-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                        <MessageSquare className="size-5" />
                       </div>
-                      <Download className="h-4 w-4 text-primary shrink-0" />
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {["Inbox", "Broadcasts", "Contacts"].map((s) => (
-                        <div key={s} className="rounded-lg border border-border px-2 py-2 text-center text-[10px] font-bold text-foreground">Shortcut: {s}</div>
-                      ))}
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-foreground truncate">HopeChat Workspace</div>
+                        <div className="text-[10px] text-muted-foreground">Native Window · Fast Cache</div>
+                      </div>
+                      <Download className="size-4 text-purple-600 shrink-0 ml-auto" />
                     </div>
                   </div>
                 ),
@@ -751,25 +968,27 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: idx * 0.1 }}
+                transition={{ duration: 0.5, delay: idx * 0.08 }}
               >
                 <div className={cn("flex-1 space-y-5", feature.reverse && "lg:order-2")}>
-                  <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                    <feature.icon className="h-6 w-6" />
+                  <div className={cn("size-12 rounded-2xl border flex items-center justify-center shadow-xs", feature.bg, feature.color)}>
+                    <feature.icon className="size-6" />
                   </div>
-                  <h3 className="text-2xl font-bold text-foreground">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed font-medium">{feature.desc}</p>
-                  <ul className="space-y-2">
+                  <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{feature.title}</h3>
+                  <p className="text-base text-muted-foreground leading-relaxed font-medium">{feature.desc}</p>
+                  <ul className="space-y-2.5 pt-1">
                     {feature.points.map((li, i) => (
-                      <li key={i} className="flex items-center gap-2.5 text-sm font-medium text-foreground">
-                        <div className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                      <li key={i} className="flex items-center gap-2.5 text-sm font-semibold text-foreground">
+                        <div className="size-5 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 shrink-0">
+                          <Check className="size-3" />
+                        </div>
                         {li}
                       </li>
                     ))}
                   </ul>
                 </div>
                 <div className={cn("flex-1 w-full", feature.reverse && "lg:order-1")}>
-                  <div className="rounded-2xl border border-border bg-background/50 p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
+                  <div className="rounded-3xl border border-border/80 bg-slate-50/70 p-6 shadow-sm hover:shadow-xl transition-all duration-300">
                     {feature.mock}
                   </div>
                 </div>
@@ -779,37 +998,49 @@ export default function LandingPage() {
         </section>
 
         {/* ─── INTEGRATIONS ─── */}
-        <section id="integrations" className="py-20 lg:py-28 bg-background border-t border-border overflow-hidden">
+        <section id="integrations" className="py-20 lg:py-28 bg-slate-50/60 border-t border-border overflow-hidden">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-12">
             <motion.div className="text-center space-y-4 max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
-              <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Connects to the tools you already run</motion.h2>
+              <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-emerald-600 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full">
+                Ecosystem
+              </span>
+              <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground">
+                Connects to the tools you already run
+              </motion.h2>
               <motion.p variants={fadeUp} custom={0.1} className="text-base text-muted-foreground leading-relaxed font-medium">
-                HopeChat plugs straight into WhatsApp, your spreadsheets, scheduling, and the rest of your stack — no code required.
+                HopeChat plugs straight into WhatsApp, spreadsheets, calendars, and your external databases — no complex code required.
               </motion.p>
             </motion.div>
 
-            <motion.div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
-              {([
-                ["WhatsApp", MessageSquare, null],
-                ["Google Sheets", Database, null],
-                ["Cal.com", CalendarCheck, null],
-                ["Webhooks & REST API", Webhook, null],
-                ["Shopify", ShoppingCart, "Coming soon"],
-              ] as [string, any, string | null][]).map(([name, Icon, status], i) => (
-                <motion.div key={i} variants={fadeUp} custom={i * 0.03} className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-white border border-border shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300">
-                  <Icon className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-bold text-foreground">{name}</span>
-                  {status && (
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{status}</span>
-                  )}
+            <motion.div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 max-w-4xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
+              {[
+                { name: "WhatsApp Cloud", icon: MessageSquare, color: "text-emerald-600", bg: "bg-emerald-500/10 border-emerald-500/25", status: "Official API" },
+                { name: "Google Sheets", icon: Database, color: "text-green-600", bg: "bg-green-500/10 border-green-500/25", status: "Real-time Sync" },
+                { name: "Cal.com", icon: CalendarCheck, color: "text-sky-600", bg: "bg-sky-500/10 border-sky-500/25", status: "Live Booking" },
+                { name: "REST APIs", icon: Webhook, color: "text-violet-600", bg: "bg-violet-500/10 border-violet-500/25", status: "Webhooks" },
+                { name: "Shopify", icon: ShoppingCart, color: "text-amber-600", bg: "bg-amber-500/10 border-amber-500/25", status: "Coming Soon" },
+              ].map((item, i) => (
+                <motion.div
+                  key={i}
+                  variants={fadeUp}
+                  custom={i * 0.05}
+                  className="flex flex-col items-center text-center p-4 rounded-2xl bg-white border border-border shadow-xs hover:shadow-lg hover:border-emerald-500/40 hover:-translate-y-1 transition-all duration-300 group"
+                >
+                  <div className={cn("size-12 rounded-xl border flex items-center justify-center mb-3 transition-transform duration-300 group-hover:scale-110", item.bg, item.color)}>
+                    <item.icon className="size-6" />
+                  </div>
+                  <span className="text-sm font-bold text-foreground mb-1">{item.name}</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-muted-foreground border border-border/60">
+                    {item.status}
+                  </span>
                 </motion.div>
               ))}
             </motion.div>
 
             <motion.div className="text-center" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
-              <div className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-5 py-3 text-sm font-medium text-foreground">
-                <Zap className="h-4 w-4 text-primary" />
-                Need a custom connection? HopeChat supports Webhooks and REST APIs out of the box.
+              <div className="inline-flex items-center gap-2 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-5 py-3 text-sm font-semibold text-emerald-900 shadow-xs">
+                <Zap className="size-4 text-emerald-600 shrink-0" />
+                Need custom webhooks or enterprise ERP connectors? We provide full REST API documentation out of the box.
               </div>
             </motion.div>
           </div>
@@ -819,24 +1050,38 @@ export default function LandingPage() {
         <section id="how-it-works" className="py-20 lg:py-28 bg-white border-t border-border overflow-hidden">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-16">
             <motion.div className="text-center space-y-4 max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
-              <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Getting started takes minutes, not months</motion.h2>
+              <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-emerald-600 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full">
+                Quick Setup
+              </span>
+              <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground">
+                Live in minutes, not months
+              </motion.h2>
               <motion.p variants={fadeUp} custom={0.1} className="text-base text-muted-foreground leading-relaxed font-medium">
-                No developers, no long onboarding. Go from sign-up to live automation in three simple steps.
+                No developers or complex migration needed. Connect and automate in three simple steps.
               </motion.p>
             </motion.div>
 
             <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
               {[
-                { step: "01", title: "Connect Your Number", desc: "Link HopeChat in minutes via the official API. No developer required — your existing WhatsApp number works instantly.", highlight: "Live in minutes" },
-                { step: "02", title: "Set Up Automations", desc: "Upload your catalog and PDFs, set up visual flows, and configure instant trigger rules that match your business.", highlight: "No code needed" },
-                { step: "03", title: "Scale & Automate", desc: "Conversations, lead routing, and follow-ups run 24/7 while you focus on growing your business.", highlight: "Runs 24/7" },
+                { step: "01", title: "Connect Your Number", desc: "Link HopeChat in minutes via the official Meta API. No developer required — your existing WhatsApp Business app stays connected.", highlight: "Instant Coexistence" },
+                { step: "02", title: "Upload Data & Flows", desc: "Upload your PDFs, price lists, and catalogs. Configure simple trigger rules or let the AI assist your incoming chats.", highlight: "Zero Code Needed" },
+                { step: "03", title: "Automate & Scale", desc: "Your inquiries, lead follow-ups, and appointment bookings run 24/7 on autopilot while you close more deals.", highlight: "Runs 24/7" },
               ].map((item, i) => (
-                <motion.div key={i} className="text-center space-y-4" initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.15 }}>
-                  <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary font-black text-lg">{item.step}</div>
+                <motion.div
+                  key={i}
+                  className="rounded-3xl border border-border bg-white p-6 sm:p-8 text-center space-y-4 shadow-xs hover:shadow-xl hover:border-emerald-500/40 hover:-translate-y-1 transition-all duration-300"
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.15 }}
+                >
+                  <div className="inline-flex size-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-black text-xl shadow-md shadow-emerald-600/20">
+                    {item.step}
+                  </div>
                   <h3 className="text-lg font-bold text-foreground">{item.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed font-medium">{item.desc}</p>
-                  <div className="inline-flex items-center gap-1.5 text-xs font-bold text-primary bg-primary/5 px-3 py-1 rounded-full border border-primary/20">
-                    <Zap className="h-3 w-3" />
+                  <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/25">
+                    <Zap className="size-3" />
                     {item.highlight}
                   </div>
                 </motion.div>
@@ -846,14 +1091,17 @@ export default function LandingPage() {
         </section>
 
         {/* ─── SETUP SERVICE ─── */}
-        <section id="setup-service" className="py-20 lg:py-28 bg-white border-t border-border overflow-hidden">
+        <section id="setup-service" className="py-20 lg:py-28 bg-slate-50/60 border-t border-border overflow-hidden">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-12">
             <motion.div className="text-center space-y-4 max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
-              <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Don&apos;t have time? We&apos;ll set it up for you.</motion.h2>
+              <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-emerald-600 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full">
+                White-Glove Onboarding
+              </span>
+              <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground">
+                Don&apos;t have time? We&apos;ll set it up for you.
+              </motion.h2>
               <motion.p variants={fadeUp} custom={0.1} className="text-base text-muted-foreground leading-relaxed font-medium">
-                Our concierge onboarding team handles your Meta / WhatsApp API configuration,
-                automation setup, and AI assistant training for you — a one-time setup fee based
-                on company size, starting at 800,000 UGX. You focus on your business.
+                Our concierge engineering team handles your Meta verification, WhatsApp API credentials, custom flows, and AI assistant training — so you can focus 100% on sales.
               </motion.p>
             </motion.div>
 
@@ -861,20 +1109,20 @@ export default function LandingPage() {
               {[
                 {
                   size: "1–5 staff",
-                  tag: "Small business",
+                  tag: "Small Business",
                   price: "800,000",
                   features: ["Meta / WhatsApp API configuration", "AI assistant training on your business", "Welcome message & basic automations", "1-hour team onboarding session"],
                 },
                 {
                   size: "6–20 staff",
-                  tag: "Growing business",
+                  tag: "Growing Business",
                   price: "1,200,000",
                   popular: true,
                   features: ["Everything in Small", "Broadcast & SMS campaign setup", "Flow-builder automations & drip sequences", "Team training (up to 3 hours)"],
                 },
                 {
                   size: "21+ staff",
-                  tag: "Large business",
+                  tag: "Large Business",
                   price: "1,500,000",
                   features: ["Everything in Growing", "Full Meta Business configuration", "Custom integrations (CRM, Sheets, webhooks)", "Dedicated onboarding engineer"],
                 },
@@ -882,10 +1130,10 @@ export default function LandingPage() {
                 <motion.div
                   key={i}
                   className={cn(
-                    "relative flex flex-col rounded-2xl border p-6 lg:p-8",
+                    "relative flex flex-col rounded-3xl border p-6 lg:p-8 transition-all duration-300",
                     tier.popular
-                      ? "border-primary/40 bg-white shadow-xl shadow-primary/10 lg:scale-[1.03]"
-                      : "border-border bg-white shadow-sm",
+                      ? "border-emerald-500/50 bg-white shadow-2xl shadow-emerald-900/10 lg:scale-[1.03] ring-1 ring-emerald-500/30"
+                      : "border-border bg-white shadow-sm hover:shadow-lg hover:border-emerald-500/30",
                   )}
                   initial={{ opacity: 0, y: 24 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -893,23 +1141,23 @@ export default function LandingPage() {
                   transition={{ delay: i * 0.1 }}
                 >
                   {tier.popular && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-[10px] font-extrabold uppercase tracking-wider text-primary-foreground shadow-md">
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-md shadow-emerald-600/30">
                       Most Popular
                     </span>
                   )}
-                  <div className="inline-flex items-center gap-2 text-xs font-bold text-primary bg-primary/5 px-3 py-1 rounded-full border border-primary/20 w-fit">
+                  <div className="inline-flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/25 w-fit">
                     {tier.tag}
                   </div>
                   <div className="mt-4 flex items-baseline gap-1.5">
-                    <span className="text-4xl font-extrabold tracking-tight text-foreground">UGX {tier.price}</span>
-                    <span className="text-sm font-bold text-muted-foreground">/ one-time</span>
+                    <span className="text-3xl sm:text-4xl font-black tracking-tight text-foreground">UGX {tier.price}</span>
+                    <span className="text-xs font-bold text-muted-foreground">/ one-time</span>
                   </div>
-                  <p className="mt-1 text-sm font-bold text-muted-foreground">{tier.size}</p>
-                  <ul className="mt-6 space-y-2.5 flex-1">
+                  <p className="mt-1 text-xs font-bold text-muted-foreground">{tier.size}</p>
+                  <ul className="mt-6 space-y-3 flex-1">
                     {tier.features.map((f, j) => (
-                      <li key={j} className="flex items-start gap-2.5 text-sm font-medium text-foreground">
-                        <div className="h-4 w-4 rounded-full bg-primary/10 text-primary flex items-center justify-center mt-0.5 shrink-0">
-                          <Check className="h-2.5 w-2.5" />
+                      <li key={j} className="flex items-start gap-2.5 text-xs sm:text-sm font-medium text-foreground">
+                        <div className="size-4.5 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center mt-0.5 shrink-0">
+                          <Check className="size-3" />
                         </div>
                         {f}
                       </li>
@@ -919,10 +1167,10 @@ export default function LandingPage() {
                     href="/request-demo"
                     className={cn(
                       buttonVariants(),
-                      "w-full mt-8 font-bold rounded-xl h-11",
+                      "w-full mt-8 font-bold rounded-xl h-11 transition-all",
                       tier.popular
-                        ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 border-0"
-                        : "bg-white border border-primary/30 text-primary hover:bg-primary/5",
+                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-600/25 border-0"
+                        : "bg-white border border-border text-foreground hover:bg-slate-50",
                     )}
                   >
                     Request Setup & Demo
@@ -932,21 +1180,26 @@ export default function LandingPage() {
             </div>
 
             <motion.div className="text-center" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
-              <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-5 py-3 text-sm font-medium text-foreground">
-                <Sparkles className="h-4 w-4 text-primary" />
-                Not sure what you need? Book a free demo and we&apos;ll recommend the right setup for your business.
+              <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-5 py-3 text-sm font-semibold text-emerald-900 shadow-xs">
+                <Sparkles className="size-4 text-emerald-600 shrink-0" />
+                Not sure which package fits? Book a free demo call and we will evaluate your tech stack.
               </div>
             </motion.div>
           </div>
         </section>
 
         {/* ─── PRICING ─── */}
-        <section id="pricing" className="py-20 lg:py-28 bg-background border-t border-border overflow-hidden">
+        <section id="pricing" className="py-20 lg:py-28 bg-white border-t border-border overflow-hidden">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-12">
             <motion.div className="text-center space-y-4 max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
-              <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Simple plans that grow with you</motion.h2>
+              <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-emerald-600 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full">
+                Transparent Pricing
+              </span>
+              <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground">
+                Simple plans that grow with you
+              </motion.h2>
               <motion.p variants={fadeUp} custom={0.1} className="text-base text-muted-foreground leading-relaxed font-medium">
-                Every plan includes a free trial — connect your WhatsApp Business number to unlock your free trial credits, then pay securely with Mobile Money or cards and switch plans any time.
+                Every plan includes a 14-day free trial. Connect your WhatsApp Business number, test credits, and pay securely via Mobile Money (MTN, Airtel) or Card.
               </motion.p>
             </motion.div>
 
@@ -980,10 +1233,10 @@ export default function LandingPage() {
                 <motion.div
                   key={i}
                   className={cn(
-                    "relative flex flex-col rounded-2xl border p-6 lg:p-8",
+                    "relative flex flex-col rounded-3xl border p-6 lg:p-8 transition-all duration-300",
                     plan.popular
-                      ? "border-primary/40 bg-white shadow-xl shadow-primary/10 lg:scale-[1.03]"
-                      : "border-border bg-white shadow-sm",
+                      ? "border-emerald-500/50 bg-white shadow-2xl shadow-emerald-900/10 lg:scale-[1.03] ring-1 ring-emerald-500/30"
+                      : "border-border bg-white shadow-sm hover:shadow-lg hover:border-emerald-500/30",
                   )}
                   initial={{ opacity: 0, y: 24 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -991,22 +1244,25 @@ export default function LandingPage() {
                   transition={{ delay: i * 0.1 }}
                 >
                   {plan.popular && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-[10px] font-extrabold uppercase tracking-wider text-primary-foreground shadow-md">
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-md shadow-emerald-600/30">
                       Most Popular
                     </span>
                   )}
-                  <h3 className="text-lg font-extrabold text-foreground">{plan.name}</h3>
+                  <h3 className="text-xl font-extrabold text-foreground">{plan.name}</h3>
                   <p className="text-xs text-muted-foreground font-medium mt-1">{plan.tagline}</p>
                   <div className="mt-4 flex items-baseline gap-1.5">
-                    <span className="text-4xl font-extrabold tracking-tight text-foreground">UGX {plan.price}</span>
-                    <span className="text-sm font-bold text-muted-foreground">/ month</span>
+                    <span className="text-3xl sm:text-4xl font-black tracking-tight text-foreground">UGX {plan.price}</span>
+                    <span className="text-xs font-bold text-muted-foreground">/ month</span>
                   </div>
-                  <p className="mt-1 text-xs font-bold text-primary">{plan.credits}</p>
-                  <ul className="mt-6 space-y-2.5 flex-1">
+                  <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 w-fit">
+                    <Zap className="size-3" />
+                    {plan.credits}
+                  </div>
+                  <ul className="mt-6 space-y-3 flex-1">
                     {plan.features.map((f, j) => (
-                      <li key={j} className="flex items-start gap-2.5 text-sm font-medium text-foreground">
-                        <div className="h-4 w-4 rounded-full bg-primary/10 text-primary flex items-center justify-center mt-0.5 shrink-0">
-                          <Check className="h-2.5 w-2.5" />
+                      <li key={j} className="flex items-start gap-2.5 text-xs sm:text-sm font-medium text-foreground">
+                        <div className="size-4.5 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center mt-0.5 shrink-0">
+                          <Check className="size-3" />
                         </div>
                         {f}
                       </li>
@@ -1016,10 +1272,10 @@ export default function LandingPage() {
                     href="/signup"
                     className={cn(
                       buttonVariants(),
-                      "w-full mt-8 font-bold rounded-xl h-11",
+                      "w-full mt-8 font-bold rounded-xl h-11 transition-all",
                       plan.popular
-                        ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 border-0"
-                        : "bg-white border border-primary/30 text-primary hover:bg-primary/5",
+                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-600/25 border-0"
+                        : "bg-white border border-border text-foreground hover:bg-slate-50",
                     )}
                   >
                     Start Free Trial
@@ -1029,38 +1285,63 @@ export default function LandingPage() {
             </div>
 
             <motion.div className="text-center" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
-              <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-5 py-3 text-sm font-medium text-foreground">
-                <Zap className="h-4 w-4 text-primary" />
-                Pay upfront and save: 3 months at full price, 6 months get 5% off, 12 months get 10% off. Powered by Pesapal.
+              <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-5 py-3 text-sm font-semibold text-emerald-900 shadow-xs">
+                <Zap className="size-4 text-emerald-600 shrink-0" />
+                Pay upfront and save: 3 months at standard rate, 6 months get 5% discount, 12 months get 10% discount. Powered by Pesapal.
               </div>
             </motion.div>
           </div>
         </section>
 
         {/* ─── TESTIMONIALS ─── */}
-        <section className="py-20 lg:py-28 bg-background border-t border-border overflow-hidden">
+        <section className="py-20 lg:py-28 bg-slate-50/60 border-t border-border overflow-hidden">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-16">
             <motion.div className="text-center space-y-4 max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
-              <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Trusted by growing businesses across East Africa</motion.h2>
+              <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-emerald-600 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full">
+                Customer Proof
+              </span>
+              <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground">
+                Trusted by high-growth businesses across East Africa
+              </motion.h2>
               <motion.p variants={fadeUp} custom={0.1} className="text-base text-muted-foreground leading-relaxed font-medium">
-                See why businesses choose HopeChat to automate their WhatsApp communication.
+                Real results from retail brands, distribution networks, and digital service companies.
               </motion.p>
             </motion.div>
 
             <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
               {[
-                { quote: "HopeChat tripled our lead response speed in week one. The shared inbox eliminated chaos across our 8 sales representatives.", name: "Sarah Akello", role: "Operations Manager, Kampala Retail", initials: "SA" },
-                { quote: "Our broadcast campaign open rates jumped from 18% on email to 82% on WhatsApp. HopeChat is now essential to our marketing stack.", name: "David Ochieng", role: "Marketing Head, Nairobi Mart", initials: "DO" },
-                { quote: "We replaced three separate tools with HopeChat. The AI handles 70% of customer inquiries automatically — our team can finally focus on closing deals.", name: "Grace Mugisha", role: "COO, Kigali Exports", initials: "GM" },
+                { quote: "HopeChat tripled our lead response speed in week one. The shared inbox eliminated chaos across our 8 sales representatives.", name: "Sarah Akello", role: "Operations Manager, Kampala Retail", company: "Retail Hub" },
+                { quote: "Our broadcast campaign open rates jumped from 18% on email to 82% on WhatsApp. HopeChat is now essential to our marketing stack.", name: "David Ochieng", role: "Marketing Head, Nairobi Mart", company: "E-Commerce" },
+                { quote: "We replaced three separate tools with HopeChat. The AI handles 70% of customer inquiries automatically — our team can finally focus on closing deals.", name: "Grace Mugisha", role: "COO, Kigali Exports", company: "Logistics" },
               ].map((t, i) => (
-                <motion.div key={i} className="p-6 rounded-2xl bg-white border border-border shadow-sm hover:shadow-lg hover:border-primary/30 hover:-translate-y-1 transition-all duration-500 h-full flex flex-col" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
-                  <Quote className="h-6 w-6 text-primary/30 mb-3" />
-                  <p className="text-sm text-muted-foreground leading-relaxed font-medium flex-1">&ldquo;{t.quote}&rdquo;</p>
-                  <div className="flex items-center gap-3 mt-6 pt-4 border-t border-border">
-                    <div className="h-10 w-10 rounded-full bg-primary/15 text-primary flex items-center justify-center text-sm font-bold">{t.initials}</div>
-                    <div>
-                      <div className="text-sm font-bold text-foreground">{t.name}</div>
-                      <div className="text-xs text-muted-foreground font-medium">{t.role}</div>
+                <motion.div
+                  key={i}
+                  className="p-6 sm:p-8 rounded-3xl bg-white border border-border shadow-xs hover:shadow-xl hover:border-emerald-500/40 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col justify-between"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                >
+                  <div>
+                    {/* 5 Gold Stars */}
+                    <div className="flex items-center gap-1 mb-4 text-amber-400">
+                      {[...Array(5)].map((_, sIdx) => (
+                        <Star key={sIdx} className="size-4 fill-amber-400 text-amber-400" />
+                      ))}
+                    </div>
+                    <p className="text-sm text-foreground/90 leading-relaxed font-medium">&ldquo;{t.quote}&rdquo;</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 mt-6 pt-5 border-t border-border">
+                    <div className={cn("size-10 rounded-xl flex items-center justify-center text-sm font-bold text-white shadow-sm select-none", getAvatarGradient(t.name))}>
+                      {t.name[0]}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-bold text-foreground truncate">{t.name}</span>
+                        <CheckCircle2 className="size-3 text-emerald-600 shrink-0" />
+                      </div>
+                      <div className="text-xs text-muted-foreground font-medium truncate">{t.role}</div>
                     </div>
                   </div>
                 </motion.div>
@@ -1073,45 +1354,69 @@ export default function LandingPage() {
         <section id="faq" className="py-20 lg:py-28 bg-white border-t border-border overflow-hidden">
           <div className="mx-auto max-w-3xl px-4 text-center space-y-12">
             <motion.div className="space-y-3" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
-              <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Frequently asked questions</motion.h2>
-              <motion.p variants={fadeUp} custom={0.1} className="text-base text-muted-foreground font-medium">Still have questions? Chat with us and we&apos;ll help you get started.</motion.p>
+              <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-emerald-600 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full">
+                Help & Answers
+              </span>
+              <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground">
+                Frequently asked questions
+              </motion.h2>
+              <motion.p variants={fadeUp} custom={0.1} className="text-base text-muted-foreground font-medium">
+                Everything you need to know about setup, official Meta APIs, and billing.
+              </motion.p>
             </motion.div>
 
             <motion.div className="text-left space-y-3" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
               {faqs.map((faq, i) => (
-                <motion.div key={i} variants={fadeUp} custom={i * 0.05} className="rounded-xl border border-border bg-white overflow-hidden shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300">
-                  <button onClick={() => setActiveFaq(activeFaq === i ? null : i)} className="w-full px-6 py-4 flex justify-between items-center text-left font-bold text-foreground text-sm sm:text-base hover:bg-background transition-colors">
+                <motion.div
+                  key={i}
+                  variants={fadeUp}
+                  custom={i * 0.04}
+                  className="rounded-2xl border border-border bg-white overflow-hidden shadow-xs hover:shadow-md hover:border-emerald-500/30 transition-all duration-200"
+                >
+                  <button
+                    onClick={() => setActiveFaq(activeFaq === i ? null : i)}
+                    className="w-full px-6 py-4.5 flex justify-between items-center text-left font-bold text-foreground text-sm sm:text-base hover:bg-slate-50/70 transition-colors"
+                  >
                     <span className="pr-4">{faq.q}</span>
-                    <ChevronRight className={cn("h-5 w-5 shrink-0 transition-transform duration-300 text-muted-foreground", activeFaq === i && "rotate-90 text-primary")} />
+                    <ChevronRight className={cn("size-5 shrink-0 transition-transform duration-300 text-muted-foreground", activeFaq === i && "rotate-90 text-emerald-600")} />
                   </button>
-                  <div className="faq-content" data-open={activeFaq === i}>
-                    <div className="px-6 pb-4 pt-1 text-xs sm:text-sm text-muted-foreground leading-relaxed border-t border-border font-medium bg-white">
+                  {activeFaq === i && (
+                    <div className="px-6 pb-5 pt-1 text-xs sm:text-sm text-muted-foreground leading-relaxed border-t border-border/60 font-medium bg-slate-50/40">
                       {faq.a}
                     </div>
-                  </div>
+                  )}
                 </motion.div>
               ))}
             </motion.div>
           </div>
         </section>
 
-        {/* ─── CTA ─── */}
-        <section className="py-16 md:py-24 bg-background border-t border-border overflow-hidden">
+        {/* ─── CTA BANNER ─── */}
+        <section className="py-16 md:py-24 bg-slate-50/60 border-t border-border overflow-hidden">
           <div className="mx-auto max-w-7xl px-4">
-            <motion.div className="rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 p-8 md:p-16 lg:p-20 text-center overflow-hidden relative shadow-md" initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+            <motion.div
+              className="rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-700 to-emerald-900 border border-emerald-500/30 p-8 md:p-16 lg:p-20 text-center overflow-hidden relative shadow-2xl text-white"
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_60%)] pointer-events-none" />
               <div className="relative z-10 space-y-6 max-w-2xl mx-auto">
-                <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-none text-foreground">
-                  Turn WhatsApp into your best sales channel today.
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 border border-white/30 px-3.5 py-1 text-xs font-bold text-white shadow-xs backdrop-blur-md">
+                  <Sparkles className="size-3.5" /> Start within 5 minutes
+                </span>
+                <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
+                  Turn WhatsApp into your highest-converting sales channel.
                 </h2>
-                <p className="text-sm sm:text-base text-muted-foreground leading-relaxed font-medium">
-                  Join hundreds of growing businesses automating conversations, campaigns, and follow-ups with HopeChat.
+                <p className="text-sm sm:text-base text-emerald-100 leading-relaxed font-medium">
+                  Join hundreds of growing businesses automating customer chats, broadcasts, and lead follow-ups with HopeChat.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                  <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-12 px-8 text-base font-bold rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all border-0 group")}>
-                    Start Free Trial
+                  <Link href="/signup" className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto bg-white hover:bg-slate-100 text-emerald-900 h-12 px-8 text-base font-extrabold rounded-xl shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all border-0 group")}>
+                    Start 14-Day Free Trial
                     <ArrowRight className="ml-2 h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />
                   </Link>
-                  <Link href="/request-demo" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full sm:w-auto h-12 px-8 text-base border-border bg-white text-foreground font-bold rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all")}>
+                  <Link href="/request-demo" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full sm:w-auto h-12 px-8 text-base border-white/40 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl backdrop-blur-sm transition-all")}>
                     Schedule a Demo
                   </Link>
                 </div>
@@ -1127,22 +1432,22 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-12">
           <div className="grid grid-cols-2 md:grid-cols-6 gap-8">
             <div className="col-span-2 md:col-span-2 space-y-4">
-              <Link href="/" className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                  <MessageSquare className="h-4 w-4 text-primary-foreground" />
+              <Link href="/" className="flex items-center gap-2 group">
+                <div className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-sm transition-transform duration-200 group-hover:scale-105">
+                  <MessageSquare className="size-4" />
                 </div>
-                <span className="font-bold tracking-tight text-foreground">HopeChat</span>
+                <span className="font-extrabold tracking-tight text-foreground text-lg">HopeChat</span>
               </Link>
               <p className="text-xs text-muted-foreground leading-relaxed font-medium max-w-xs">
                 The WhatsApp CRM and automation platform built for East African businesses. Automate conversations, run broadcast campaigns, build no-code chatbots, and connect your existing tools — all on the official WhatsApp Business API.
               </p>
               <p className="text-xs font-bold text-muted-foreground">Built by HopeTech Solutions Ltd · Kampala, Uganda</p>
               <div className="space-y-2 pt-1">
-                <a href="tel:+256763149276" className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors">
-                  <Phone className="h-3.5 w-3.5 text-primary" /> +256 763 149 276
+                <a href="tel:+256763149276" className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-emerald-600 transition-colors">
+                  <Phone className="size-3.5 text-emerald-600" /> +256 763 149 276
                 </a>
-                <a href="mailto:info@hopechat.net" className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors">
-                  <Mail className="h-3.5 w-3.5 text-primary" /> info@hopechat.net
+                <a href="mailto:info@hopechat.net" className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-emerald-600 transition-colors">
+                  <Mail className="size-3.5 text-emerald-600" /> info@hopechat.net
                 </a>
               </div>
             </div>
@@ -1150,50 +1455,50 @@ export default function LandingPage() {
             <div>
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-foreground mb-4">Product</h4>
               <ul className="space-y-2.5 text-xs text-muted-foreground font-semibold">
-                <li><Link href="#features" className="hover:text-primary transition-colors">Shared Inbox</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">AI Assistant</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">Broadcasts</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">SMS</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">Mobile App</Link></li>
-                <li><Link href="#pricing" className="hover:text-primary transition-colors">Pricing</Link></li>
+                <li><Link href="#features" className="hover:text-emerald-600 transition-colors">Shared Inbox</Link></li>
+                <li><Link href="#features" className="hover:text-emerald-600 transition-colors">AI Assistant</Link></li>
+                <li><Link href="#features" className="hover:text-emerald-600 transition-colors">Broadcasts</Link></li>
+                <li><Link href="#features" className="hover:text-emerald-600 transition-colors">SMS</Link></li>
+                <li><Link href="#features" className="hover:text-emerald-600 transition-colors">Mobile App</Link></li>
+                <li><Link href="#pricing" className="hover:text-emerald-600 transition-colors">Pricing</Link></li>
               </ul>
             </div>
 
             <div>
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-foreground mb-4">Features</h4>
               <ul className="space-y-2.5 text-xs text-muted-foreground font-semibold">
-                <li><Link href="#features" className="hover:text-primary transition-colors">Coexistence</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">Drip Campaigns</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">WhatsApp Ads</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">Flow Builder</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">Tests & Practice</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">Smart Screening</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">Team Inbox</Link></li>
-                <li><Link href="#features" className="hover:text-primary transition-colors">Mobile App</Link></li>
+                <li><Link href="#features" className="hover:text-emerald-600 transition-colors">Coexistence</Link></li>
+                <li><Link href="#features" className="hover:text-emerald-600 transition-colors">Drip Campaigns</Link></li>
+                <li><Link href="#features" className="hover:text-emerald-600 transition-colors">WhatsApp Ads</Link></li>
+                <li><Link href="#features" className="hover:text-emerald-600 transition-colors">Flow Builder</Link></li>
+                <li><Link href="#features" className="hover:text-emerald-600 transition-colors">Tests & Practice</Link></li>
+                <li><Link href="#features" className="hover:text-emerald-600 transition-colors">Smart Screening</Link></li>
+                <li><Link href="#features" className="hover:text-emerald-600 transition-colors">Team Inbox</Link></li>
+                <li><Link href="#features" className="hover:text-emerald-600 transition-colors">Mobile App</Link></li>
               </ul>
             </div>
 
             <div>
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-foreground mb-4">Integrations</h4>
               <ul className="space-y-2.5 text-xs text-muted-foreground font-semibold">
-                <li><Link href="#integrations" className="hover:text-primary transition-colors">WhatsApp</Link></li>
-                <li><Link href="#integrations" className="hover:text-primary transition-colors">Google Sheets</Link></li>
-                <li><Link href="#integrations" className="hover:text-primary transition-colors">Cal.com</Link></li>
-                <li><Link href="#integrations" className="hover:text-primary transition-colors">REST API</Link></li>
+                <li><Link href="#integrations" className="hover:text-emerald-600 transition-colors">WhatsApp</Link></li>
+                <li><Link href="#integrations" className="hover:text-emerald-600 transition-colors">Google Sheets</Link></li>
+                <li><Link href="#integrations" className="hover:text-emerald-600 transition-colors">Cal.com</Link></li>
+                <li><Link href="#integrations" className="hover:text-emerald-600 transition-colors">REST API</Link></li>
               </ul>
             </div>
 
             <div>
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-foreground mb-4">Company</h4>
               <ul className="space-y-2.5 text-xs text-muted-foreground font-semibold">
-                <li><Link href="/request-demo" className="hover:text-primary transition-colors">Request a Demo</Link></li>
-                <li><a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">Docs & Guides</a></li>
-                <li><Link href="#setup-service" className="hover:text-primary transition-colors">Setup Service</Link></li>
-                <li><a href="tel:+256763149276" className="hover:text-primary transition-colors">+256 763 149 276</a></li>
-                <li><a href="mailto:info@hopechat.net" className="hover:text-primary transition-colors">Email Us</a></li>
-                <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-                <li><Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
-                <li><Link href="/terms#refunds" className="hover:text-primary transition-colors">Refund Policy</Link></li>
+                <li><Link href="/request-demo" className="hover:text-emerald-600 transition-colors">Request a Demo</Link></li>
+                <li><a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-600 transition-colors">Docs & Guides</a></li>
+                <li><Link href="#setup-service" className="hover:text-emerald-600 transition-colors">Setup Service</Link></li>
+                <li><a href="tel:+256763149276" className="hover:text-emerald-600 transition-colors">+256 763 149 276</a></li>
+                <li><a href="mailto:info@hopechat.net" className="hover:text-emerald-600 transition-colors">Email Us</a></li>
+                <li><Link href="/privacy" className="hover:text-emerald-600 transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="hover:text-emerald-600 transition-colors">Terms of Service</Link></li>
+                <li><Link href="/terms#refunds" className="hover:text-emerald-600 transition-colors">Refund Policy</Link></li>
               </ul>
             </div>
           </div>
@@ -1201,8 +1506,8 @@ export default function LandingPage() {
           <div className="pt-6 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
             <p>© {new Date().getFullYear()} HopeChat by HopeTech Solutions Ltd. All rights reserved.</p>
             <div className="flex gap-6">
-              <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
-              <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
+              <Link href="/privacy" className="hover:text-emerald-600 transition-colors">Privacy Policy</Link>
+              <Link href="/terms" className="hover:text-emerald-600 transition-colors">Terms of Service</Link>
             </div>
           </div>
         </div>
