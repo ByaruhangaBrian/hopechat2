@@ -44,7 +44,18 @@ import {
   ShieldCheck,
   Flame,
   GraduationCap,
+  Calculator,
+  ChevronDown,
+  HelpCircle,
 } from "lucide-react";
+
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 import { cn } from "@/lib/utils";
 
@@ -166,17 +177,6 @@ export default function LandingPage() {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [selectedFeatureCategory, setSelectedFeatureCategory] = useState<string>("all");
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
-
-  const navLinks = [
-    { label: "Features", href: "#features" },
-    { label: "Live Demo", href: "#demo-playground" },
-    { label: "ROI Calculator", href: "#roi-calculator" },
-    { label: "Pricing", href: "#pricing" },
-    { label: "Integrations", href: "#integrations" },
-    { label: "How It Works", href: "#how-it-works" },
-    { label: "Setup Service", href: "#setup-service" },
-    { label: "FAQ", href: "#faq" },
-  ];
 
   const features = [
     {
@@ -734,12 +734,81 @@ export default function LandingPage() {
                 </span>
               </div>
             </Link>
-            <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-muted-foreground">
-              {navLinks.map((l) => (
-                <Link key={l.href} href={l.href} className="hover:text-primary transition-colors duration-200">
-                  {l.label}
-                </Link>
-              ))}
+            <nav className="hidden md:flex items-center gap-7 text-sm font-semibold text-muted-foreground">
+              <Link href="#features" className="hover:text-primary transition-colors duration-200">
+                Features
+              </Link>
+              <Link href="#demo-playground" className="hover:text-primary transition-colors duration-200">
+                Demo
+              </Link>
+              <Link href="#pricing" className="hover:text-primary transition-colors duration-200">
+                Pricing
+              </Link>
+
+              {/* Grouped Resources Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-1 hover:text-primary transition-colors duration-200 cursor-pointer outline-none">
+                  <span>Resources</span>
+                  <ChevronDown className="size-3.5 opacity-70" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" sideOffset={8} className="w-64 p-2 bg-white/95 backdrop-blur-xl border border-border/80 rounded-2xl shadow-xl z-50">
+                  <div className="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">
+                    Interactive Tools
+                  </div>
+                  <DropdownMenuItem
+                    render={<Link href="#roi-calculator" className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-bold hover:bg-slate-50 cursor-pointer" />}
+                  >
+                    <Calculator className="size-4 text-emerald-600" />
+                    <div>
+                      <div className="text-foreground">ROI Calculator</div>
+                      <div className="text-[10px] text-muted-foreground font-normal">Live hours & revenue model</div>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    render={<Link href="#integrations" className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-bold hover:bg-slate-50 cursor-pointer" />}
+                  >
+                    <Layers className="size-4 text-sky-600" />
+                    <div>
+                      <div className="text-foreground">Integrations</div>
+                      <div className="text-[10px] text-muted-foreground font-normal">Sheets, Cal.com & APIs</div>
+                    </div>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator className="my-1.5 bg-border/60" />
+
+                  <div className="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">
+                    Solutions & Help
+                  </div>
+                  <DropdownMenuItem
+                    render={<Link href="#how-it-works" className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-bold hover:bg-slate-50 cursor-pointer" />}
+                  >
+                    <Workflow className="size-4 text-violet-600" />
+                    <div>
+                      <div className="text-foreground">How It Works</div>
+                      <div className="text-[10px] text-muted-foreground font-normal">3-step setup walkthrough</div>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    render={<Link href="#setup-service" className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-bold hover:bg-slate-50 cursor-pointer" />}
+                  >
+                    <Sparkles className="size-4 text-amber-600" />
+                    <div>
+                      <div className="text-foreground">Setup Service</div>
+                      <div className="text-[10px] text-muted-foreground font-normal">White-glove team migration</div>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    render={<Link href="#faq" className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-bold hover:bg-slate-50 cursor-pointer" />}
+                  >
+                    <HelpCircle className="size-4 text-emerald-600" />
+                    <div>
+                      <div className="text-foreground">FAQ</div>
+                      <div className="text-[10px] text-muted-foreground font-normal">Common questions & answers</div>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors duration-200">
                 Docs
               </a>
@@ -758,18 +827,48 @@ export default function LandingPage() {
           </div>
         </div>
         {mobileOpen && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="md:hidden border-b border-border bg-white/95 backdrop-blur-md px-4 py-4 space-y-3">
-            {navLinks.map((l) => (
-              <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)} className="block px-3 py-2.5 text-sm font-semibold text-muted-foreground hover:text-foreground rounded-lg hover:bg-background">
-                {l.label}
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="md:hidden border-b border-border bg-white/95 backdrop-blur-md px-4 py-4 space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="space-y-1">
+              <div className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Product</div>
+              <Link href="#features" onClick={() => setMobileOpen(false)} className="block px-3 py-2 text-sm font-semibold text-foreground rounded-lg hover:bg-slate-100">
+                Features
               </Link>
-            ))}
-            <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)} className="block px-3 py-2.5 text-sm font-semibold text-muted-foreground hover:text-foreground rounded-lg hover:bg-background">
-              Docs
-            </a>
-            <div className="pt-2 border-t border-border flex flex-col gap-2">
+              <Link href="#demo-playground" onClick={() => setMobileOpen(false)} className="block px-3 py-2 text-sm font-semibold text-foreground rounded-lg hover:bg-slate-100">
+                Demo
+              </Link>
+              <Link href="#pricing" onClick={() => setMobileOpen(false)} className="block px-3 py-2 text-sm font-semibold text-foreground rounded-lg hover:bg-slate-100">
+                Pricing
+              </Link>
+            </div>
+
+            <div className="pt-2 border-t border-border/60 space-y-1">
+              <div className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Tools & Solutions</div>
+              <Link href="#roi-calculator" onClick={() => setMobileOpen(false)} className="block px-3 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground rounded-lg hover:bg-slate-100">
+                ROI Calculator
+              </Link>
+              <Link href="#integrations" onClick={() => setMobileOpen(false)} className="block px-3 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground rounded-lg hover:bg-slate-100">
+                Integrations
+              </Link>
+              <Link href="#how-it-works" onClick={() => setMobileOpen(false)} className="block px-3 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground rounded-lg hover:bg-slate-100">
+                How It Works
+              </Link>
+              <Link href="#setup-service" onClick={() => setMobileOpen(false)} className="block px-3 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground rounded-lg hover:bg-slate-100">
+                Setup Service
+              </Link>
+              <Link href="#faq" onClick={() => setMobileOpen(false)} className="block px-3 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground rounded-lg hover:bg-slate-100">
+                FAQ
+              </Link>
+              <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)} className="block px-3 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground rounded-lg hover:bg-slate-100">
+                Documentation
+              </a>
+            </div>
+
+            <div className="pt-3 border-t border-border flex flex-col gap-2">
               <Link href="/login" onClick={() => setMobileOpen(false)} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center")}>
                 Log In
+              </Link>
+              <Link href="/signup" onClick={() => setMobileOpen(false)} className={cn(buttonVariants(), "w-full justify-center bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold")}>
+                Start Free Trial
               </Link>
             </div>
           </motion.div>
