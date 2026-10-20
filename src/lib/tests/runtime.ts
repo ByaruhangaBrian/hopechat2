@@ -40,6 +40,7 @@ interface TestSessionState {
   conversation_id: string
   user_id: string
   business_id: string
+  last_message_id?: string | null
 }
 
 interface FlowStepRow {
@@ -64,10 +65,13 @@ interface FlowState {
   user_id: string
   business_id: string
   started_at: string
+  last_message_id?: string | null
 }
 
 function sortQuestions(rows: TestQuestionRow[]): TestQuestionRow[] {
-  return [...(rows || [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+  return [...(rows || [])].sort(
+    (a, b) => (a.position ?? 0) - (b.position ?? 0) || String(a.id || '').localeCompare(String(b.id || ''))
+  )
 }
 
 function introFieldsOf(test: { intro_fields?: unknown }): TestIntroField[] {
@@ -293,6 +297,7 @@ export interface TestOfferResult {
   /** present when ok: true — the test title (for AI echo/confirmation copy). */
   title?: string
   test_id?: string
+  is_entry?: boolean
   /** present when ok: false — machine-readable reason for the AI prompt. */
   reason?: 'already_in_test' | 'already_attempted' | 'test_unavailable' | 'error'
 }
@@ -317,7 +322,7 @@ export async function stageTestOffer(input: {
 
   const { data: test } = await db
     .from('tests')
-    .select('id, business_id, title, mode, duration_minutes, is_active')
+    .select('id, business_id, title, mode, duration_minutes, is_active, is_entry')
     .eq('id', testId)
     .single()
   if (!test || test.is_active !== true || test.business_id !== businessId) {
@@ -366,7 +371,7 @@ export async function stageTestOffer(input: {
       },
       { onConflict: 'business_id,contact_id' },
     )
-    return { ok: true, test_id: test.id, title: test.title }
+    return { ok: true, test_id: test.id, title: test.title, is_entry: test.is_entry === true }
   } catch (err) {
     console.error('[tests/runtime] stageTestOffer error:', err)
     return { ok: false, reason: 'error' }
@@ -497,6 +502,7 @@ export async function handleTestReply(
   contactId: string,
   selectedOptionKey: string | null,
   messageText: string,
+  messageId?: string | null,
 ): Promise<TestReplyResult> {
   const db = supabaseAdmin()
 
@@ -506,8 +512,13 @@ export async function handleTestReply(
     .eq('contact_id', contactId)
     .maybeSingle()
 
-const state = session?.session_data as TestSessionState | null | undefined
+  const state = session?.session_data as TestSessionState | null | undefined
   if (!state || state.module !== 'test') return { handled: false }
+
+  // Deduplication guard: ignore re-delivered webhook payloads for the same message ID
+  if (messageId && state.last_message_id === messageId) {
+    return { handled: true }
+  }
 
   // Coalesce concurrent webhook deliveries: claim this reply by CAS-ing
   // last_interaction_at against the value we just read. Only the winning
@@ -524,7 +535,7 @@ const state = session?.session_data as TestSessionState | null | undefined
     .maybeSingle()
   if (!claimed) return { handled: true }
 
-// A completed session only accepts two buttons: "Start over" (re-runs the
+  // A completed session only accepts two buttons: "Start over" (re-runs the
   // screening it came through — routing flow, entry test, or nothing) and
   // "Done" (permanently closes the session so nothing can restart it).
   if (state.status === 'completed') {
@@ -561,7 +572,20 @@ const state = session?.session_data as TestSessionState | null | undefined
     return { handled: true }
   }
 
-const questions = sortQuestions(test.test_questions as TestQuestionRow[])
+  // Cancellation keywords: student wants to quit/exit the test
+  const normalizedMsg = normalize(messageText)
+  if (['stop', 'quit', 'exit', 'cancel', 'leave'].includes(normalizedMsg)) {
+    await db.from('user_sessions').delete().eq('contact_id', contactId)
+    await engineSendText({
+      userId: state.user_id,
+      conversationId: state.conversation_id,
+      contactId,
+      text: 'You have exited the test. You can start again anytime by sending a message.',
+    })
+    return { handled: true }
+  }
+
+  const questions = sortQuestions(test.test_questions as TestQuestionRow[])
   const introFields = introFieldsOf(test)
   const isEntry = test.is_entry === true
 
@@ -604,8 +628,12 @@ const questions = sortQuestions(test.test_questions as TestQuestionRow[])
       await db.from('user_sessions').delete().eq('contact_id', contactId)
       return { handled: false }
     }
+    if (messageId) state.last_message_id = messageId
     await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
-    await sendInteractive(state.user_id, state.conversation_id, contactId, `Would you like to start "${test.title}"?`, [
+    const confirmPrompt = test.is_entry === true
+      ? 'Would you like to start the test?'
+      : `Would you like to start "${test.title}"?`
+    await sendInteractive(state.user_id, state.conversation_id, contactId, confirmPrompt, [
       { id: 'test:confirm', label: 'Start' },
       { id: 'test:cancel', label: 'Not Now' },
     ])
@@ -624,7 +652,7 @@ const questions = sortQuestions(test.test_questions as TestQuestionRow[])
   // Extract the raw answer value from a button reply or typed text.
   const answerValue = selectedOptionKey ? selectedOptionKey.split(':').slice(1).join(':') : (messageText || '')
 
-// --- INTRO STAGE ---
+  // --- INTRO STAGE ---
   if (state.stage === 'intro') {
     const field = introFields[state.index]
 
@@ -639,6 +667,7 @@ const questions = sortQuestions(test.test_questions as TestQuestionRow[])
         const matched = (field.options || []).find((opt) => normalize(opt) === normalize(typed))
         if (!tapped && !matched) {
           state.invalid_replies = (state.invalid_replies ?? 0) + 1
+          if (messageId) state.last_message_id = messageId
           await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
           await nudgeAndReaskIntro(contactId, state, field, state.invalid_replies)
           return { handled: true }
@@ -647,6 +676,7 @@ const questions = sortQuestions(test.test_questions as TestQuestionRow[])
       } else if (!typed) {
         // Text field: a tap / audio / empty reply is not an answer.
         state.invalid_replies = (state.invalid_replies ?? 0) + 1
+        if (messageId) state.last_message_id = messageId
         await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
         await nudgeAndReaskIntro(contactId, state, field, state.invalid_replies)
         return { handled: true }
@@ -662,6 +692,8 @@ const questions = sortQuestions(test.test_questions as TestQuestionRow[])
       state.stage = 'question'
       state.index = 0
     }
+
+    if (messageId) state.last_message_id = messageId
 
     // Entry test: the last intro answer triggers routing to the matching test.
     if (state.stage === 'question' && (isEntry || questions.length === 0)) {
@@ -689,16 +721,47 @@ const questions = sortQuestions(test.test_questions as TestQuestionRow[])
   const current = questions[state.index]
   const hasOptions = (current.options || []).some((o) => o && o.key)
 
-  // Choice questions must receive a tapped button or a typed option label
-  // (matched case-insensitively and recorded as the option key so grading and
-  // feedback stay correct). Audio / empty / unrelated text is re-asked.
+  // Choice questions must receive a tapped button or a typed option label/key
+  // (matched case-insensitively, e.g. "A", "b", "Option A", "1", or "31").
+  // Stale buttons from prior questions are discarded rather than re-asked.
   let finalAnswer = answerValue
   if (hasOptions) {
     const typed = String(answerValue ?? '').trim()
     const tapped = !!selectedOptionKey?.startsWith(`${current.id}:`)
-    const matched = (current.options || []).find((o) => o && o.key && normalize(o.label) === normalize(typed))
+
+    // Stale reply guard: if the user clicked an interactive button from an ALREADY answered question
+    // or a different question, do not grade it against current question! Ignore stale taps.
+    if (selectedOptionKey && !tapped) {
+      const [qId] = selectedOptionKey.split(':')
+      const isPriorQuestion = state.answered.some((a) => a.question_id === qId)
+      if (isPriorQuestion || (qId && qId !== current.id)) {
+        return { handled: true }
+      }
+    }
+
+    // Flexible option matching:
+    // 1. Tapped exact button: finalAnswer is option key
+    // 2. Exact label match (e.g. "31")
+    // 3. Option key match (e.g. "A", "b", "c")
+    // 4. Formatted key match (e.g. "A)", "a.", "Option A")
+    // 5. 1-based index (e.g. "1" for option A, "2" for option B)
+    const normalizedTyped = normalize(typed)
+    const strippedTyped = normalizedTyped.replace(/^(option\s+|choice\s+)/, '').replace(/[\)\.\:]/g, '').trim()
+
+    let matched = (current.options || []).find((o) => o && o.key && normalize(o.label) === normalizedTyped)
+    if (!tapped && !matched) {
+      matched = (current.options || []).find((o) => o && o.key && normalize(o.key) === strippedTyped)
+    }
+    if (!tapped && !matched) {
+      const num = parseInt(strippedTyped, 10)
+      if (!isNaN(num) && num >= 1 && num <= (current.options || []).length) {
+        matched = current.options[num - 1]
+      }
+    }
+
     if (!tapped && !matched) {
       state.invalid_replies = (state.invalid_replies ?? 0) + 1
+      if (messageId) state.last_message_id = messageId
       await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
       await nudgeAndReaskQuestion(contactId, state, current, state.invalid_replies)
       return { handled: true }
@@ -713,6 +776,7 @@ const questions = sortQuestions(test.test_questions as TestQuestionRow[])
   state.invalid_replies = 0
   state.answered = [...state.answered, { question_id: current.id, selected: finalAnswer, correct, points: earned }]
   state.index++
+  if (messageId) state.last_message_id = messageId
 
   await db
     .from('user_sessions')
@@ -1167,6 +1231,7 @@ export async function handleFlowReply(
   contactId: string,
   selectedOptionKey: string | null,
   messageText: string,
+  messageId?: string | null,
 ): Promise<TestReplyResult> {
   const db = supabaseAdmin()
 
@@ -1175,8 +1240,14 @@ export async function handleFlowReply(
     .select('*')
     .eq('contact_id', contactId)
     .maybeSingle()
-const state = session?.session_data as FlowState | null | undefined
+
+  const state = session?.session_data as FlowState | null | undefined
   if (!state || state.module !== 'flow' || state.status !== 'active') return { handled: false }
+
+  // Deduplication guard
+  if (messageId && state.last_message_id === messageId) {
+    return { handled: true }
+  }
 
   // Claim this reply (CAS on last_interaction_at) so overlapping webhook
   // deliveries for the same contact can't both advance the flow.
@@ -1228,6 +1299,7 @@ const state = session?.session_data as FlowState | null | undefined
       return { handled: true }
     }
     state.answers[step.key] = value
+    if (messageId) state.last_message_id = messageId
     await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
     await followFlowTarget(contactId, state, flow, steps, {
       next_step_id: step.next_step_id,
@@ -1236,7 +1308,7 @@ const state = session?.session_data as FlowState | null | undefined
     return { handled: true }
   }
 
-// choice: option buttons are id `${stepId}:${index}`; typed option labels are
+  // choice: option buttons are id `${stepId}:${index}`; typed option labels are
   // also accepted (case-insensitively). Audio / empty text re-asks the step.
   const parts = (selectedOptionKey || '').split(':')
   const idx = parts.length >= 2 ? Number(parts[parts.length - 1]) : NaN
@@ -1248,6 +1320,7 @@ const state = session?.session_data as FlowState | null | undefined
     return { handled: true }
   }
   state.answers[step.key] = option.label
+  if (messageId) state.last_message_id = messageId
   await db.from('user_sessions').update({ session_data: state }).eq('contact_id', contactId)
   await followFlowTarget(contactId, state, flow, steps, option)
   return { handled: true }

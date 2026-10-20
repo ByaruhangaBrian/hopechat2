@@ -180,7 +180,7 @@ export async function generateGeminiResponse(
     declarations.push({
       name: 'start_test',
       description:
-        'Offer one of this business\'s tests (quiz/exam/assessment) to the customer. Call this ONLY when the customer clearly wants to take a test. If the customer did NOT name a specific test, offer the ENTRY screening test — its intro questions ask what they need and route them automatically; do NOT ask which test. It stages the offer for confirmation — it does NOT start anything; the customer must confirm first.',
+        'Offer one of this business\'s tests (quiz/exam/assessment) to the customer. Call this ONLY when the customer clearly wants to take a test. If the customer did NOT name a specific test, offer the entry test — but refer to it simply as "the test" or "a quick test" (do NOT call it "Entry Screening" or mention routing). It stages the offer for confirmation — it does NOT start anything; the customer must confirm first.',
       parameters: {
         type: Type.OBJECT,
         properties: {
@@ -272,7 +272,8 @@ export async function generateGeminiResponse(
             } else {
               const offer = await stageTestOffer({ businessId, contactId, conversationId, testId });
               if (offer.ok) {
-                result = `Offer for "${offer.title}" is staged and waiting; the customer has NOT started yet. Confirm with a short question naming the test — the customer will confirm before it begins.`;
+                const displayName = offer.is_entry ? 'the test' : `"${offer.title}"`;
+                result = `Offer for ${displayName} is staged and waiting; the customer has NOT started yet. Confirm with a short friendly question (e.g. "Would you like to start the test now?") — do NOT say "Entry Screening". The customer will confirm before it begins.`;
               } else if (offer.reason === 'already_in_test') {
                 result = 'The customer is already inside an active test right now. Do not offer another one at this time.';
               } else if (offer.reason === 'already_attempted') {

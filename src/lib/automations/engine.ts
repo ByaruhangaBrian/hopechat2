@@ -806,7 +806,7 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
             if (t.description) info += ` — ${t.description}`;
             info +=
               t.is_entry
-                ? ' [ENTRY screening — intro questions ask what the customer needs and route them to the right test]'
+                ? ' [ENTRY screening — introductory questions route them to the right test]'
                 : t.mode === 'test' && t.duration_minutes
                   ? ` [timed ${t.duration_minutes} min, once per phone number]`
                   : ` [${t.mode === 'practice' ? 'practice' : 'test'}]`;
@@ -814,9 +814,9 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
           });
           systemInstruction += `\nWhen a customer wants to take a test/quiz/exam/assessment, call start_test as follows:\n`;
           systemInstruction += `- They named a specific test (e.g. "the Science test")? Offer that test.\n`;
-          systemInstruction += `- Otherwise, offer the ENTRY screening test above — its intro questions ask what they need and route them automatically. Do NOT list the tests or ask which test the customer wants.\n`;
+          systemInstruction += `- Otherwise, offer the ENTRY screening test above — but to the customer, refer to it simply as "the test" or "a quick test". NEVER call it "Entry Screening" or say "screening test" to the customer. Do NOT list the tests or ask which test the customer wants.\n`;
           systemInstruction += `- No entry test exists? Offer the single best-matching active test, or ask only if no clear single fit.\n`;
-          systemInstruction += `NEVER start a test directly — always offer it via start_test, then confirm with the customer before it runs.\n`;
+          systemInstruction += `NEVER start a test directly — always offer it via start_test, then confirm with the customer before it runs. Keep confirmation simple: e.g. "I can offer you a quick test to help you get started. Would you like to start now?"\n`;
         }
       }
 

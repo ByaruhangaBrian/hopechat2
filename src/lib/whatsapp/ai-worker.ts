@@ -499,7 +499,7 @@ async function executeAiJob(job: any): Promise<void> {
         if (t.description) info += ` — ${t.description}`;
         info +=
           t.is_entry
-            ? ' [ENTRY screening — intro questions ask what the customer needs and route them to the right test]'
+            ? ' [ENTRY screening — introductory questions route them to the right test]'
             : t.mode === 'test' && t.duration_minutes
               ? ` [timed ${t.duration_minutes} min, once per phone number]`
               : ` [${t.mode === 'practice' ? 'practice' : 'test'}]`;
@@ -507,9 +507,9 @@ async function executeAiJob(job: any): Promise<void> {
       });
       systemInstruction += `\nWhen a customer wants to take a test/quiz/exam/assessment, call start_test as follows:\n`;
       systemInstruction += `- They named a specific test (e.g. "the Science test")? Offer that test.\n`;
-      systemInstruction += `- Otherwise, offer the ENTRY screening test above — its intro questions ask what they need and route them automatically. Do NOT list the tests or ask which test the customer wants.\n`;
+      systemInstruction += `- Otherwise, offer the ENTRY screening test above — but to the customer, refer to it simply as "the test" or "a quick test". NEVER call it "Entry Screening" or say "screening test" to the customer. Do NOT list the tests or ask which test the customer wants.\n`;
       systemInstruction += `- No entry test exists? Offer the single best-matching active test, or ask only if no clear single fit.\n`;
-      systemInstruction += `NEVER start a test directly — always offer it via start_test, then confirm with the customer before it runs.\n\n`;
+      systemInstruction += `NEVER start a test directly — always offer it via start_test, then confirm with the customer before it runs. Keep confirmation simple: e.g. "I can offer you a quick test to help you get started. Would you like to start now?"\n\n`;
     }
   }
 
@@ -733,18 +733,17 @@ async function handleIncomingMessageSaving(
   }
   if (!conv) return null;
 
-  // Handle Interactive Replies (Buttons/Lists/Flows)
+  // Extract message content and interactive values upfront
   const isInteractive = message.type === 'interactive';
   const interactiveData = (message as any).interactive;
   const replyContextId = message.context?.id;
 
   let handledByTest = false;
   let selectedOptionTitle: string | null = null;
+  let selectedOptionId: string | null = null;
+  let interactionValue: any = null;
 
   if (isInteractive && interactiveData) {
-    let interactionValue: any = null;
-    let selectedOptionId: string | null = null;
-
     if (interactiveData.type === 'button_reply') {
       interactionValue = interactiveData.button_reply.id;
       selectedOptionId = interactiveData.button_reply.id;
@@ -754,7 +753,6 @@ async function handleIncomingMessageSaving(
       selectedOptionId = interactiveData.list_reply.id;
       selectedOptionTitle = interactiveData.list_reply.title || null;
     } else if (interactiveData.type === 'nfm_reply' && interactiveData.nfm_reply.name === 'flow') {
-      // Flow response
       try {
         const flowResponse = JSON.parse(interactiveData.nfm_reply.response_json);
         interactionValue = flowResponse;
@@ -762,38 +760,75 @@ async function handleIncomingMessageSaving(
         console.error('[ai-worker] Failed to parse flow response:', e);
       }
     }
+  }
 
-    // 1. Test/Practice session resolution. Any interactive reply (or plain
-    //    text while an intro prompt is pending) is consumed by the active
-    //    test (or routing-flow) session when one exists.
-    if (selectedOptionId) {
-      try {
-        const flowRes = await handleFlowReply(contact.id, selectedOptionId, '');
-        if (flowRes.handled) {
-          handledByTest = true;
-        } else {
-          const testRes = await handleTestReply(contact.id, selectedOptionId, '');
-          if (testRes.handled) {
-            handledByTest = true;
-          }
-        }
-      } catch (testErr) {
-        console.error('[ai-worker] Session interaction error:', testErr);
+  const messageText = message.text?.body || selectedOptionTitle || (isInteractive ? '[Interaction Reply]' : '');
+
+  // 1. Save Message immediately to guarantee idempotency and drop duplicate retries from Meta
+  if (message.id) {
+    const { error: insertErr } = await db.from('messages').insert({
+      conversation_id: conv.id,
+      sender_type: 'customer',
+      content_text: messageText,
+      message_id: message.id,
+      status: 'delivered',
+      created_at: new Date(Number(message.timestamp) * 1000).toISOString()
+    });
+    if (insertErr) {
+      // 23505 is PostgreSQL unique constraint violation on message_id
+      if ((insertErr as any).code === '23505') {
+        console.log('[ai-worker] Duplicate message received concurrently, skipping:', message.id);
+        return { conversationId: conv.id, handledByTest: true, aiReplied: false };
       }
+      console.error('[ai-worker] Message insert error:', insertErr);
+    }
+  } else {
+    await db.from('messages').insert({
+      conversation_id: conv.id,
+      sender_type: 'customer',
+      content_text: messageText,
+      status: 'delivered',
+      created_at: new Date(Number(message.timestamp) * 1000).toISOString()
+    });
+  }
+
+  // Update Conversation
+  await db.from('conversations').update({
+    last_message_text: messageText,
+    last_message_at: new Date().toISOString(),
+    unread_count: 1
+  }).eq('id', conv.id);
+
+  // 2. Test/Practice session resolution. Any interactive reply (or plain
+  //    text while an intro prompt is pending) is consumed by the active
+  //    test (or routing-flow) session when one exists.
+  if (selectedOptionId) {
+    try {
+      const flowRes = await handleFlowReply(contact.id, selectedOptionId, '', message.id);
+      if (flowRes.handled) {
+        handledByTest = true;
+      } else {
+        const testRes = await handleTestReply(contact.id, selectedOptionId, '', message.id);
+        if (testRes.handled) {
+          handledByTest = true;
+        }
+      }
+    } catch (testErr) {
+      console.error('[ai-worker] Session interaction error:', testErr);
     }
 
-    // 2. Automation resumption (if waiting on interactive message)
+    // Resume Automation (if waiting on interactive message)
     if (interactionValue && replyContextId) {
       await resumeAutomationWithInteraction(replyContextId, interactionValue);
     }
   } else if (message.text?.body) {
-    // 1a. Plain text: route to test/flow sessions when one is waiting.
+    // Plain text: route to test/flow sessions when one is waiting.
     try {
-      const flowRes = await handleFlowReply(contact.id, null, message.text.body);
+      const flowRes = await handleFlowReply(contact.id, null, message.text.body, message.id);
       if (flowRes.handled) {
         handledByTest = true;
       } else {
-        const testRes = await handleTestReply(contact.id, null, message.text.body);
+        const testRes = await handleTestReply(contact.id, null, message.text.body, message.id);
         if (testRes.handled) {
           handledByTest = true;
         }
@@ -802,25 +837,6 @@ async function handleIncomingMessageSaving(
       console.error('[ai-worker] Session text error:', testErr);
     }
   }
-
-  const messageText = message.text?.body || selectedOptionTitle || (isInteractive ? '[Interaction Reply]' : '');
-
-  // Save Message
-  await db.from('messages').insert({
-    conversation_id: conv.id,
-    sender_type: 'customer',
-    content_text: messageText,
-    message_id: message.id,
-    status: 'delivered',
-    created_at: new Date(Number(message.timestamp) * 1000).toISOString()
-  });
-
-  // Update Conversation
-  await db.from('conversations').update({
-    last_message_text: messageText,
-    last_message_at: new Date().toISOString(),
-    unread_count: 1 // In a real app, this would be an increment
-  }).eq('id', conv.id);
 
   // 3. Fire Automations
   // We await this now to ensure it completes within the webhook request (instant response).

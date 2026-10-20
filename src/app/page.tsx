@@ -315,6 +315,7 @@ export default function LandingPage() {
       points: [
         "Entry test asks the intro questions (class, subject)",
         "Routing rules send each student to the matching test automatically",
+        "Flexible answering: students can tap interactive buttons or type A, B, 1, 2, or answer text directly",
         "Idle sessions close automatically so they never block the next student",
         "Timed exams can be attempted only once per phone number",
         "Every completed test attempt costs one credit — billable only when a student finishes"
