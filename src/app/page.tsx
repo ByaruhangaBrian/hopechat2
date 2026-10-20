@@ -87,49 +87,49 @@ interface FeatureCategory {
 
 const FEATURE_CATEGORIES: FeatureCategory[] = [
   {
-    id: "all",
-    label: "All Capabilities",
-    shortLabel: "All",
-    count: 13,
-    icon: Sparkles,
-    tag: "Complete Suite",
-    desc: "Complete end-to-end platform for WhatsApp sales, outbound broadcasts, no-code workflows, and quizzes.",
-  },
-  {
     id: "sales_ai",
-    label: "AI & Conversations",
+    label: "AI & Inbound",
     shortLabel: "AI Chat",
     count: 4,
     icon: Bot,
-    tag: "4 Features",
-    desc: "Official WhatsApp coexistence, multimodal voice & image AI, custom knowledge training, and shared team inbox.",
+    tag: "Inbound AI",
+    desc: "WhatsApp coexistence, multimodal voice/image AI, custom knowledge training, and shared team inbox.",
   },
   {
     id: "broadcasts",
-    label: "Broadcasts & Outreach",
+    label: "Broadcasts & Drips",
     shortLabel: "Campaigns",
     count: 3,
     icon: Radio,
-    tag: "3 Features",
+    tag: "Outbound",
     desc: "Scale WhatsApp blasts, multi-channel SMS gateway, and automated lead nurturing drips.",
   },
   {
     id: "automation",
-    label: "Flows, CRM & Ops",
+    label: "Flows & CRM",
     shortLabel: "Flows & CRM",
     count: 4,
     icon: Workflow,
-    tag: "4 Features",
+    tag: "Operations",
     desc: "Visual drag-and-drop bot builder, sales pipeline Kanban, privacy audit trail, and standalone desktop/mobile PWA.",
   },
   {
     id: "education",
-    label: "Quizzes & Screening",
+    label: "Quizzes & Tests",
     shortLabel: "Quizzes",
     count: 2,
     icon: GraduationCap,
-    tag: "2 Features",
+    tag: "Assessment",
     desc: "Interactive WhatsApp practice drills, timed tests, and smart candidate screening with routing.",
+  },
+  {
+    id: "all",
+    label: "View All (13)",
+    shortLabel: "All (13)",
+    count: 13,
+    icon: Sparkles,
+    tag: "Complete Suite",
+    desc: "Complete catalog of all 13 features across AI, campaigns, workflows, and testing.",
   },
 ];
 
@@ -175,7 +175,8 @@ const FEATURE_PILLARS = [
 export default function LandingPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
-  const [selectedFeatureCategory, setSelectedFeatureCategory] = useState<string>("all");
+  const [selectedFeatureCategory, setSelectedFeatureCategory] = useState<string>("sales_ai");
+  const [activeFeatureIndex, setActiveFeatureIndex] = useState<number>(0);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
 
   const features = [
@@ -631,6 +632,8 @@ export default function LandingPage() {
   const displayedFeatures = selectedFeatureCategory === "all"
     ? features
     : features.filter(f => f.category === selectedFeatureCategory);
+
+  const activeFeature = displayedFeatures[activeFeatureIndex] || displayedFeatures[0] || features[0];
 
   const plans = [
     {
@@ -1221,7 +1224,7 @@ export default function LandingPage() {
                 Speed up your entire sales funnel with automation that captures leads, replies instantly, and closes more — all on WhatsApp.
               </motion.p>
 
-              {/* Feature Category Filter Tabs - Grouped Segmented Dock */}
+              {/* Feature Category Filter Tabs - Clean Segmented Dock */}
               <div className="flex justify-center pt-4">
                 <div className="inline-flex flex-wrap sm:flex-nowrap items-center p-1.5 rounded-2xl bg-slate-100/90 border border-border/80 shadow-inner backdrop-blur-md gap-1 max-w-full overflow-x-auto">
                   {FEATURE_CATEGORIES.map((cat) => {
@@ -1229,7 +1232,10 @@ export default function LandingPage() {
                     return (
                       <button
                         key={cat.id}
-                        onClick={() => setSelectedFeatureCategory(cat.id)}
+                        onClick={() => {
+                          setSelectedFeatureCategory(cat.id);
+                          setActiveFeatureIndex(0);
+                        }}
                         className={cn(
                           "relative flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 whitespace-nowrap cursor-pointer select-none",
                           isSelected
@@ -1261,133 +1267,199 @@ export default function LandingPage() {
                   })}
                 </div>
               </div>
-
-              {/* Group Context Banner & Quick Jump Pills */}
-              {selectedFeatureCategory !== "all" ? (
-                (() => {
-                  const activeCat = FEATURE_CATEGORIES.find((c) => c.id === selectedFeatureCategory);
-                  if (!activeCat) return null;
-                  return (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="rounded-2xl border border-border/80 bg-slate-50/80 p-4 max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 shadow-xs"
-                    >
-                      <div className="flex items-center gap-3 text-left w-full md:w-auto">
-                        <div className="size-10 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 shrink-0">
-                          <activeCat.icon className="size-5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-foreground">{activeCat.label}</span>
-                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
-                              {activeCat.tag}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">{activeCat.desc}</p>
-                        </div>
-                      </div>
-
-                      {/* Sub-feature quick jump */}
-                      <div className="flex flex-wrap items-center gap-1.5 justify-start md:justify-end w-full md:w-auto shrink-0">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mr-1 hidden lg:inline">Quick Jump:</span>
-                        {displayedFeatures.map((f) => (
-                          <a
-                            key={f.title}
-                            href={`#feature-${f.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
-                            className="text-[11px] font-semibold text-muted-foreground hover:text-emerald-700 bg-white border border-border px-2.5 py-1 rounded-lg hover:border-emerald-500/40 transition-colors shadow-2xs"
-                          >
-                            {f.title}
-                          </a>
-                        ))}
-                      </div>
-                    </motion.div>
-                  );
-                })()
-              ) : (
-                <div className="flex flex-wrap items-center justify-center gap-2 pt-1 text-xs">
-                  <span className="text-muted-foreground font-semibold">Jump to pillar:</span>
-                  {FEATURE_PILLARS.map((p) => (
-                    <a
-                      key={p.id}
-                      href={`#pillar-${p.id}`}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 hover:bg-emerald-50 text-foreground hover:text-emerald-700 border border-border/80 font-bold transition-colors"
-                    >
-                      <p.icon className="size-3.5 text-muted-foreground" />
-                      <span>{p.title.split("&")[0].trim()}</span>
-                      <span className="text-[10px] text-muted-foreground bg-white px-1.5 py-0.2 rounded border border-border/50">{p.count.split(" ")[0]}</span>
-                    </a>
-                  ))}
-                </div>
-              )}
             </motion.div>
 
-            {/* Feature Content */}
-            <div className="space-y-20">
-              {selectedFeatureCategory === "all" ? (
-                <div className="space-y-24">
+            {/* Feature Content: Interactive Split Showcase or Bento Grid */}
+            <div className="pt-2">
+              {selectedFeatureCategory !== "all" ? (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  {/* Left Column: Interactive Feature Selector Cards (5 cols) */}
+                  <div className="lg:col-span-5 space-y-3">
+                    <div className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground px-1 pb-1 flex items-center justify-between">
+                      <span>Capabilities in this pillar</span>
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                        {displayedFeatures.length} Features
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {displayedFeatures.map((feature, idx) => {
+                        const isActive = (activeFeatureIndex === idx);
+                        return (
+                          <button
+                            key={feature.title}
+                            onClick={() => setActiveFeatureIndex(idx)}
+                            className={cn(
+                              "w-full text-left p-4 rounded-2xl border transition-all duration-200 cursor-pointer select-none group flex items-start gap-3.5",
+                              isActive
+                                ? "bg-white border-emerald-500 shadow-md ring-1 ring-emerald-500/20"
+                                : "bg-slate-50/70 hover:bg-white border-border/80 hover:border-slate-300 shadow-xs"
+                            )}
+                          >
+                            <div className={cn(
+                              "size-10 rounded-xl border flex items-center justify-center shrink-0 transition-transform duration-200",
+                              feature.bg,
+                              feature.color,
+                              isActive && "scale-105"
+                            )}>
+                              <feature.icon className="size-5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <h4 className={cn(
+                                  "text-sm font-bold truncate",
+                                  isActive ? "text-emerald-950 font-extrabold" : "text-foreground"
+                                )}>
+                                  {feature.title}
+                                </h4>
+                                {isActive && (
+                                  <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground line-clamp-2 mt-1 leading-relaxed">
+                                {feature.desc}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Category summary note */}
+                    <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/15 text-xs text-muted-foreground flex items-center gap-3">
+                      <Sparkles className="size-4 text-emerald-600 shrink-0" />
+                      <span>Included in all standard HopeChat subscription plans with no extra plugins required.</span>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Active Feature Canvas & Live Mock (7 cols) */}
+                  <div className="lg:col-span-7">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={activeFeature.title}
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.25 }}
+                        className="rounded-3xl border border-border/80 bg-white p-6 sm:p-8 shadow-lg shadow-slate-200/50 space-y-6"
+                      >
+                        {/* Header */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between gap-3 flex-wrap">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-slate-100 text-xs font-bold text-foreground border border-border/60">
+                              <activeFeature.icon className="size-3.5 text-emerald-600" />
+                              <span>{activeFeature.title}</span>
+                            </div>
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
+                              Official Meta Verified
+                            </span>
+                          </div>
+
+                          <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground leading-tight">
+                            {activeFeature.title}
+                          </h3>
+
+                          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                            {activeFeature.desc}
+                          </p>
+                        </div>
+
+                        {/* High-Fidelity Mockup Container */}
+                        <div className="rounded-2xl border border-border/80 bg-slate-50/80 p-5 shadow-xs">
+                          {activeFeature.mock}
+                        </div>
+
+                        {/* Bullet Points */}
+                        <div className="space-y-2 pt-2 border-t border-border/60">
+                          <div className="text-xs font-bold text-foreground uppercase tracking-wider mb-2">Key Highlights</div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {activeFeature.points.map((pt, i) => (
+                              <div key={i} className="flex items-start gap-2 text-xs font-semibold text-foreground">
+                                <div className="size-4.5 rounded-full bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-600 shrink-0 mt-0.5">
+                                  <Check className="size-3" />
+                                </div>
+                                <span className="leading-snug">{pt}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* CTA Footer */}
+                        <div className="flex items-center justify-between pt-4 border-t border-border/60 gap-4 flex-wrap">
+                          <Link
+                            href="/signup"
+                            className={cn(buttonVariants({ size: "sm" }), "bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 h-10 rounded-xl border-0 shadow-sm shadow-emerald-600/20 group")}
+                          >
+                            Try This Feature Free
+                            <ArrowRight className="ml-2 size-3.5 transition-transform group-hover:translate-x-1" />
+                          </Link>
+                          <Link
+                            href="#demo-playground"
+                            className="text-xs font-bold text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors"
+                          >
+                            <span>Test live in Sandbox</span>
+                            <ArrowRight className="size-3" />
+                          </Link>
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
+                </div>
+              ) : (
+                /* All Features Bento Grid View */
+                <div className="space-y-16">
                   {FEATURE_PILLARS.map((pillar) => {
                     const pillarFeatures = features.filter((f) => f.category === pillar.id);
                     return (
-                      <div key={pillar.id} id={`pillar-${pillar.id}`} className="space-y-12 scroll-mt-28">
-                        {/* Pillar Group Header */}
-                        <div className="rounded-2xl border border-border/80 bg-slate-50/80 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                          <div className="flex items-center gap-3.5">
-                            <div className={cn("size-12 rounded-xl border flex items-center justify-center shadow-xs shrink-0", pillar.bg, pillar.color)}>
-                              <pillar.icon className="size-6" />
+                      <div key={pillar.id} className="space-y-6">
+                        <div className="flex items-center justify-between pb-3 border-b border-border/80 flex-wrap gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className={cn("size-9 rounded-xl border flex items-center justify-center shadow-xs", pillar.bg, pillar.color)}>
+                              <pillar.icon className="size-4.5" />
                             </div>
                             <div>
-                              <div className="flex items-center gap-2.5 flex-wrap">
-                                <h3 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">{pillar.title}</h3>
-                                <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-200/80 text-foreground border border-border">
-                                  {pillar.count}
-                                </span>
-                              </div>
-                              <p className="text-xs sm:text-sm text-muted-foreground font-medium mt-1">{pillar.desc}</p>
+                              <h3 className="text-lg sm:text-xl font-extrabold text-foreground">{pillar.title}</h3>
+                              <p className="text-xs text-muted-foreground">{pillar.desc}</p>
                             </div>
                           </div>
-                          <button
-                            onClick={() => {
-                              setSelectedFeatureCategory(pillar.id);
-                              const el = document.getElementById("features");
-                              if (el) el.scrollIntoView({ behavior: "smooth" });
-                            }}
-                            className="text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
-                          >
-                            Filter to this group <ArrowRight className="size-3.5" />
-                          </button>
+                          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-muted-foreground border border-border">
+                            {pillar.count}
+                          </span>
                         </div>
 
-                        {/* Features in this pillar */}
-                        <div className="space-y-16">
-                          {pillarFeatures.map((feature) => (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                          {pillarFeatures.map((f) => (
                             <div
-                              key={feature.title}
-                              id={`feature-${feature.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
-                              className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16 scroll-mt-32"
+                              key={f.title}
+                              className="rounded-2xl border border-border/80 bg-white p-5 shadow-xs hover:shadow-md hover:border-emerald-500/30 transition-all flex flex-col justify-between"
                             >
-                              <div className={cn("flex-1 space-y-5", feature.reverse && "lg:order-2")}>
-                                <div className={cn("size-12 rounded-2xl border flex items-center justify-center shadow-xs", feature.bg, feature.color)}>
-                                  <feature.icon className="size-6" />
+                              <div className="space-y-3">
+                                <div className={cn("size-10 rounded-xl border flex items-center justify-center", f.bg, f.color)}>
+                                  <f.icon className="size-5" />
                                 </div>
-                                <h4 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{feature.title}</h4>
-                                <p className="text-base text-muted-foreground leading-relaxed font-medium">{feature.desc}</p>
-                                <ul className="space-y-2.5 pt-1">
-                                  {feature.points.map((li, i) => (
-                                    <li key={i} className="flex items-center gap-2.5 text-sm font-semibold text-foreground">
-                                      <div className="size-5 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 shrink-0">
-                                        <Check className="size-3" />
-                                      </div>
-                                      {li}
+                                <h4 className="text-base font-bold text-foreground">{f.title}</h4>
+                                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{f.desc}</p>
+                                <ul className="space-y-1.5 pt-1">
+                                  {f.points.slice(0, 2).map((pt, i) => (
+                                    <li key={i} className="flex items-center gap-2 text-xs font-medium text-foreground">
+                                      <Check className="size-3 text-emerald-600 shrink-0" />
+                                      <span className="truncate">{pt}</span>
                                     </li>
                                   ))}
                                 </ul>
                               </div>
-                              <div className={cn("flex-1 w-full", feature.reverse && "lg:order-1")}>
-                                <div className="rounded-3xl border border-border/80 bg-slate-50/70 p-6 shadow-sm hover:shadow-xl transition-all duration-300">
-                                  {feature.mock}
-                                </div>
-                              </div>
+                              <button
+                                onClick={() => {
+                                  setSelectedFeatureCategory(f.category);
+                                  const idx = features.filter(item => item.category === f.category).findIndex(item => item.title === f.title);
+                                  setActiveFeatureIndex(idx >= 0 ? idx : 0);
+                                  const el = document.getElementById("features");
+                                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                                }}
+                                className="mt-4 pt-3 border-t border-border/60 text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 cursor-pointer"
+                              >
+                                View Interactive Mock <ArrowRight className="size-3" />
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -1395,45 +1467,6 @@ export default function LandingPage() {
                     );
                   })}
                 </div>
-              ) : (
-                <AnimatePresence mode="wait">
-                  <div key={selectedFeatureCategory} className="space-y-16">
-                    {displayedFeatures.map((feature, idx) => (
-                      <motion.div
-                        key={feature.title}
-                        id={`feature-${feature.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
-                        className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16 scroll-mt-32"
-                        initial={{ opacity: 0, y: 25 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -15 }}
-                        transition={{ duration: 0.35, delay: idx * 0.06 }}
-                      >
-                        <div className={cn("flex-1 space-y-5", feature.reverse && "lg:order-2")}>
-                          <div className={cn("size-12 rounded-2xl border flex items-center justify-center shadow-xs", feature.bg, feature.color)}>
-                            <feature.icon className="size-6" />
-                          </div>
-                          <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{feature.title}</h3>
-                          <p className="text-base text-muted-foreground leading-relaxed font-medium">{feature.desc}</p>
-                          <ul className="space-y-2.5 pt-1">
-                            {feature.points.map((li, i) => (
-                              <li key={i} className="flex items-center gap-2.5 text-sm font-semibold text-foreground">
-                                <div className="size-5 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 shrink-0">
-                                  <Check className="size-3" />
-                                </div>
-                                {li}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div className={cn("flex-1 w-full", feature.reverse && "lg:order-1")}>
-                          <div className="rounded-3xl border border-border/80 bg-slate-50/70 p-6 shadow-sm hover:shadow-xl transition-all duration-300">
-                            {feature.mock}
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </AnimatePresence>
               )}
             </div>
           </div>
