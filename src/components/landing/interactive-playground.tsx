@@ -87,31 +87,50 @@ export function InteractivePlayground() {
           </p>
         </div>
 
-        {/* Scenario Switcher Tabs */}
-        <div className="flex flex-wrap items-center justify-center gap-3 max-w-2xl mx-auto">
-          {scenarios.map((sc) => {
-            const isActive = activeScenario === sc.id;
-            return (
-              <button
-                key={sc.id}
-                onClick={() => {
-                  setActiveScenario(sc.id);
-                  resetState();
-                }}
-                className={cn(
-                  "flex items-center gap-2.5 px-4 py-2.5 rounded-2xl border text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer shadow-xs",
-                  isActive
-                    ? `${sc.activeBorder} text-foreground shadow-sm ring-1 ring-emerald-500/20`
-                    : "border-border/80 bg-white text-muted-foreground hover:bg-slate-100/80 hover:text-foreground"
-                )}
-              >
-                <div className={cn("size-6 rounded-lg flex items-center justify-center", sc.bg, sc.color)}>
-                  <sc.icon className="size-3.5" />
-                </div>
-                <span>{sc.label}</span>
-              </button>
-            );
-          })}
+        {/* Scenario Switcher Tabs - Grouped Segmented Dock */}
+        <div className="flex justify-center">
+          <div className="inline-flex flex-wrap sm:flex-nowrap items-center p-1.5 rounded-2xl bg-slate-200/70 border border-border/80 shadow-inner backdrop-blur-md gap-1 max-w-full overflow-x-auto">
+            {scenarios.map((sc) => {
+              const isActive = activeScenario === sc.id;
+              return (
+                <button
+                  key={sc.id}
+                  onClick={() => {
+                    setActiveScenario(sc.id);
+                    resetState();
+                  }}
+                  className={cn(
+                    "relative flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer select-none",
+                    isActive
+                      ? "text-foreground shadow-xs font-extrabold"
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/50"
+                  )}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activePlaygroundScenarioTab"
+                      className="absolute inset-0 bg-white rounded-xl shadow-xs border border-border/70 -z-10"
+                      transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                    />
+                  )}
+                  <div className={cn("size-6 rounded-lg flex items-center justify-center shrink-0", sc.bg, sc.color)}>
+                    <sc.icon className="size-3.5" />
+                  </div>
+                  <span>{sc.label}</span>
+                  <span
+                    className={cn(
+                      "hidden sm:inline-block text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md border",
+                      isActive
+                        ? "bg-slate-100 text-foreground border-border"
+                        : "bg-slate-200/60 text-muted-foreground border-transparent"
+                    )}
+                  >
+                    {sc.tag}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Live Interactive WhatsApp Window */}

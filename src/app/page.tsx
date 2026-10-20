@@ -43,6 +43,7 @@ import {
   TrendingUp,
   ShieldCheck,
   Flame,
+  GraduationCap,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -63,12 +64,101 @@ const stagger = {
   visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
 };
 
-const FEATURE_CATEGORIES = [
-  { id: "all", label: "All Features (13)" },
-  { id: "sales_ai", label: "AI & Lead Closing" },
-  { id: "broadcasts", label: "Broadcasts & SMS" },
-  { id: "automation", label: "Flows & Operations" },
-  { id: "education", label: "Tests & Screening" },
+interface FeatureCategory {
+  id: string;
+  label: string;
+  shortLabel: string;
+  count: number;
+  icon: React.ComponentType<{ className?: string }>;
+  tag: string;
+  desc: string;
+}
+
+const FEATURE_CATEGORIES: FeatureCategory[] = [
+  {
+    id: "all",
+    label: "All Capabilities",
+    shortLabel: "All",
+    count: 13,
+    icon: Sparkles,
+    tag: "Complete Suite",
+    desc: "Complete end-to-end platform for WhatsApp sales, outbound broadcasts, no-code workflows, and quizzes.",
+  },
+  {
+    id: "sales_ai",
+    label: "AI & Conversations",
+    shortLabel: "AI Chat",
+    count: 4,
+    icon: Bot,
+    tag: "4 Features",
+    desc: "Official WhatsApp coexistence, multimodal voice & image AI, custom knowledge training, and shared team inbox.",
+  },
+  {
+    id: "broadcasts",
+    label: "Broadcasts & Outreach",
+    shortLabel: "Campaigns",
+    count: 3,
+    icon: Radio,
+    tag: "3 Features",
+    desc: "Scale WhatsApp blasts, multi-channel SMS gateway, and automated lead nurturing drips.",
+  },
+  {
+    id: "automation",
+    label: "Flows, CRM & Ops",
+    shortLabel: "Flows & CRM",
+    count: 4,
+    icon: Workflow,
+    tag: "4 Features",
+    desc: "Visual drag-and-drop bot builder, sales pipeline Kanban, privacy audit trail, and standalone desktop/mobile PWA.",
+  },
+  {
+    id: "education",
+    label: "Quizzes & Screening",
+    shortLabel: "Quizzes",
+    count: 2,
+    icon: GraduationCap,
+    tag: "2 Features",
+    desc: "Interactive WhatsApp practice drills, timed tests, and smart candidate screening with routing.",
+  },
+];
+
+const FEATURE_PILLARS = [
+  {
+    id: "sales_ai",
+    title: "AI Assistant & Inbound Conversations",
+    desc: "Turn incoming chats into paying customers with 24/7 AI, voice/image intelligence, and unified team routing.",
+    icon: Bot,
+    color: "text-emerald-600 dark:text-emerald-400",
+    bg: "bg-emerald-500/10 border-emerald-500/25",
+    count: "4 Features",
+  },
+  {
+    id: "broadcasts",
+    title: "Outbound Broadcasts, SMS & Drip Campaigns",
+    desc: "Reach thousands of customers simultaneously with zero ban risk, SMS fallback, and timed follow-up sequences.",
+    icon: Radio,
+    color: "text-rose-600 dark:text-rose-400",
+    bg: "bg-rose-500/10 border-rose-500/25",
+    count: "3 Features",
+  },
+  {
+    id: "automation",
+    title: "Visual Flows, Sales CRM & Workspace Operations",
+    desc: "Automate complex business logic visually, track deals in a Kanban pipeline, and maintain full activity audit logs.",
+    icon: Workflow,
+    color: "text-violet-600 dark:text-violet-400",
+    bg: "bg-violet-500/10 border-violet-500/25",
+    count: "4 Features",
+  },
+  {
+    id: "education",
+    title: "Interactive Practice Quizzes & Smart Screening",
+    desc: "Deliver assessments directly in WhatsApp with instant button responses, automatic scoring, and conditional branch routing.",
+    icon: GraduationCap,
+    color: "text-amber-600 dark:text-amber-400",
+    bg: "bg-amber-500/10 border-amber-500/25",
+    count: "2 Features",
+  },
 ];
 
 export default function LandingPage() {
@@ -306,7 +396,7 @@ export default function LandingPage() {
       ),
     },
     {
-      category: "automation",
+      category: "sales_ai",
       icon: Users,
       title: "Shared Team Inbox",
       desc: "One WhatsApp number for your entire team with multi-agent routing, collision detection, custom tags, internal notes, and per-member access controls.",
@@ -1032,65 +1122,220 @@ export default function LandingPage() {
                 Speed up your entire sales funnel with automation that captures leads, replies instantly, and closes more — all on WhatsApp.
               </motion.p>
 
-              {/* Feature Category Filter Tabs */}
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-4">
-                {FEATURE_CATEGORIES.map((cat) => {
-                  const isSelected = selectedFeatureCategory === cat.id;
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => setSelectedFeatureCategory(cat.id)}
-                      className={cn(
-                        "px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer shadow-xs",
-                        isSelected
-                          ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                          : "bg-slate-100 text-muted-foreground hover:bg-slate-200/80 hover:text-foreground"
-                      )}
-                    >
-                      {cat.label}
-                    </button>
-                  );
-                })}
+              {/* Feature Category Filter Tabs - Grouped Segmented Dock */}
+              <div className="flex justify-center pt-4">
+                <div className="inline-flex flex-wrap sm:flex-nowrap items-center p-1.5 rounded-2xl bg-slate-100/90 border border-border/80 shadow-inner backdrop-blur-md gap-1 max-w-full overflow-x-auto">
+                  {FEATURE_CATEGORIES.map((cat) => {
+                    const isSelected = selectedFeatureCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setSelectedFeatureCategory(cat.id)}
+                        className={cn(
+                          "relative flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 whitespace-nowrap cursor-pointer select-none",
+                          isSelected
+                            ? "text-foreground font-extrabold"
+                            : "text-muted-foreground hover:text-foreground hover:bg-white/60"
+                        )}
+                      >
+                        {isSelected && (
+                          <motion.div
+                            layoutId="activeFeatureCategoryTab"
+                            className="absolute inset-0 bg-white rounded-xl shadow-xs border border-border -z-10"
+                            transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                          />
+                        )}
+                        <cat.icon className={cn("size-4 shrink-0", isSelected ? "text-emerald-600" : "text-muted-foreground")} />
+                        <span>{cat.label}</span>
+                        <span
+                          className={cn(
+                            "text-[10px] font-extrabold px-1.5 py-0.5 rounded-full border",
+                            isSelected
+                              ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
+                              : "bg-slate-200/80 text-muted-foreground border-transparent"
+                          )}
+                        >
+                          {cat.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+
+              {/* Group Context Banner & Quick Jump Pills */}
+              {selectedFeatureCategory !== "all" ? (
+                (() => {
+                  const activeCat = FEATURE_CATEGORIES.find((c) => c.id === selectedFeatureCategory);
+                  if (!activeCat) return null;
+                  return (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-2xl border border-border/80 bg-slate-50/80 p-4 max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 shadow-xs"
+                    >
+                      <div className="flex items-center gap-3 text-left w-full md:w-auto">
+                        <div className="size-10 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 shrink-0">
+                          <activeCat.icon className="size-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-foreground">{activeCat.label}</span>
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
+                              {activeCat.tag}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">{activeCat.desc}</p>
+                        </div>
+                      </div>
+
+                      {/* Sub-feature quick jump */}
+                      <div className="flex flex-wrap items-center gap-1.5 justify-start md:justify-end w-full md:w-auto shrink-0">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mr-1 hidden lg:inline">Quick Jump:</span>
+                        {displayedFeatures.map((f) => (
+                          <a
+                            key={f.title}
+                            href={`#feature-${f.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+                            className="text-[11px] font-semibold text-muted-foreground hover:text-emerald-700 bg-white border border-border px-2.5 py-1 rounded-lg hover:border-emerald-500/40 transition-colors shadow-2xs"
+                          >
+                            {f.title}
+                          </a>
+                        ))}
+                      </div>
+                    </motion.div>
+                  );
+                })()
+              ) : (
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-1 text-xs">
+                  <span className="text-muted-foreground font-semibold">Jump to pillar:</span>
+                  {FEATURE_PILLARS.map((p) => (
+                    <a
+                      key={p.id}
+                      href={`#pillar-${p.id}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 hover:bg-emerald-50 text-foreground hover:text-emerald-700 border border-border/80 font-bold transition-colors"
+                    >
+                      <p.icon className="size-3.5 text-muted-foreground" />
+                      <span>{p.title.split("&")[0].trim()}</span>
+                      <span className="text-[10px] text-muted-foreground bg-white px-1.5 py-0.2 rounded border border-border/50">{p.count.split(" ")[0]}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
             </motion.div>
 
-            {/* Filtered Feature List */}
+            {/* Feature Content */}
             <div className="space-y-20">
-              <AnimatePresence mode="wait">
-                {displayedFeatures.map((feature, idx) => (
-                  <motion.div
-                    key={`${selectedFeatureCategory}-${feature.title}`}
-                    className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16"
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.4, delay: idx * 0.05 }}
-                  >
-                    <div className={cn("flex-1 space-y-5", feature.reverse && "lg:order-2")}>
-                      <div className={cn("size-12 rounded-2xl border flex items-center justify-center shadow-xs", feature.bg, feature.color)}>
-                        <feature.icon className="size-6" />
-                      </div>
-                      <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{feature.title}</h3>
-                      <p className="text-base text-muted-foreground leading-relaxed font-medium">{feature.desc}</p>
-                      <ul className="space-y-2.5 pt-1">
-                        {feature.points.map((li, i) => (
-                          <li key={i} className="flex items-center gap-2.5 text-sm font-semibold text-foreground">
-                            <div className="size-5 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 shrink-0">
-                              <Check className="size-3" />
+              {selectedFeatureCategory === "all" ? (
+                <div className="space-y-24">
+                  {FEATURE_PILLARS.map((pillar) => {
+                    const pillarFeatures = features.filter((f) => f.category === pillar.id);
+                    return (
+                      <div key={pillar.id} id={`pillar-${pillar.id}`} className="space-y-12 scroll-mt-28">
+                        {/* Pillar Group Header */}
+                        <div className="rounded-2xl border border-border/80 bg-slate-50/80 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                          <div className="flex items-center gap-3.5">
+                            <div className={cn("size-12 rounded-xl border flex items-center justify-center shadow-xs shrink-0", pillar.bg, pillar.color)}>
+                              <pillar.icon className="size-6" />
                             </div>
-                            {li}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className={cn("flex-1 w-full", feature.reverse && "lg:order-1")}>
-                      <div className="rounded-3xl border border-border/80 bg-slate-50/70 p-6 shadow-sm hover:shadow-xl transition-all duration-300">
-                        {feature.mock}
+                            <div>
+                              <div className="flex items-center gap-2.5 flex-wrap">
+                                <h3 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">{pillar.title}</h3>
+                                <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-200/80 text-foreground border border-border">
+                                  {pillar.count}
+                                </span>
+                              </div>
+                              <p className="text-xs sm:text-sm text-muted-foreground font-medium mt-1">{pillar.desc}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSelectedFeatureCategory(pillar.id);
+                              const el = document.getElementById("features");
+                              if (el) el.scrollIntoView({ behavior: "smooth" });
+                            }}
+                            className="text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
+                          >
+                            Filter to this group <ArrowRight className="size-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Features in this pillar */}
+                        <div className="space-y-16">
+                          {pillarFeatures.map((feature) => (
+                            <div
+                              key={feature.title}
+                              id={`feature-${feature.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+                              className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16 scroll-mt-32"
+                            >
+                              <div className={cn("flex-1 space-y-5", feature.reverse && "lg:order-2")}>
+                                <div className={cn("size-12 rounded-2xl border flex items-center justify-center shadow-xs", feature.bg, feature.color)}>
+                                  <feature.icon className="size-6" />
+                                </div>
+                                <h4 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{feature.title}</h4>
+                                <p className="text-base text-muted-foreground leading-relaxed font-medium">{feature.desc}</p>
+                                <ul className="space-y-2.5 pt-1">
+                                  {feature.points.map((li, i) => (
+                                    <li key={i} className="flex items-center gap-2.5 text-sm font-semibold text-foreground">
+                                      <div className="size-5 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 shrink-0">
+                                        <Check className="size-3" />
+                                      </div>
+                                      {li}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                              <div className={cn("flex-1 w-full", feature.reverse && "lg:order-1")}>
+                                <div className="rounded-3xl border border-border/80 bg-slate-50/70 p-6 shadow-sm hover:shadow-xl transition-all duration-300">
+                                  {feature.mock}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+                    );
+                  })}
+                </div>
+              ) : (
+                <AnimatePresence mode="wait">
+                  <div key={selectedFeatureCategory} className="space-y-16">
+                    {displayedFeatures.map((feature, idx) => (
+                      <motion.div
+                        key={feature.title}
+                        id={`feature-${feature.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+                        className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16 scroll-mt-32"
+                        initial={{ opacity: 0, y: 25 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -15 }}
+                        transition={{ duration: 0.35, delay: idx * 0.06 }}
+                      >
+                        <div className={cn("flex-1 space-y-5", feature.reverse && "lg:order-2")}>
+                          <div className={cn("size-12 rounded-2xl border flex items-center justify-center shadow-xs", feature.bg, feature.color)}>
+                            <feature.icon className="size-6" />
+                          </div>
+                          <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{feature.title}</h3>
+                          <p className="text-base text-muted-foreground leading-relaxed font-medium">{feature.desc}</p>
+                          <ul className="space-y-2.5 pt-1">
+                            {feature.points.map((li, i) => (
+                              <li key={i} className="flex items-center gap-2.5 text-sm font-semibold text-foreground">
+                                <div className="size-5 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 shrink-0">
+                                  <Check className="size-3" />
+                                </div>
+                                {li}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className={cn("flex-1 w-full", feature.reverse && "lg:order-1")}>
+                          <div className="rounded-3xl border border-border/80 bg-slate-50/70 p-6 shadow-sm hover:shadow-xl transition-all duration-300">
+                            {feature.mock}
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </AnimatePresence>
+              )}
             </div>
           </div>
         </section>
