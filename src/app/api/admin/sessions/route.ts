@@ -15,8 +15,27 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: isSuperAdmin, error: gateError } = await supabase.rpc('is_superadmin')
-    if (gateError || !isSuperAdmin) {
+    let isSuperAdmin = user.app_metadata?.is_superadmin === true
+    if (!isSuperAdmin) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_superadmin, role')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (profile?.is_superadmin === true || profile?.role === 'superadmin') {
+        isSuperAdmin = true
+      }
+    }
+
+    if (!isSuperAdmin) {
+      const { data: rpcSuperAdmin } = await supabase.rpc('is_superadmin')
+      if (rpcSuperAdmin === true) {
+        isSuperAdmin = true
+      }
+    }
+
+    if (!isSuperAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -34,7 +53,7 @@ export async function GET(req: Request) {
 
     let query = adminSupabase
       .from('auth_sessions')
-      .select('*, businesses(name), profiles(email)', { count: 'exact' })
+      .select('*, businesses(name)', { count: 'exact' })
 
     if (isValidUuid(businessId)) {
       query = query.eq('business_id', businessId)
@@ -55,7 +74,22 @@ export async function GET(req: Request) {
 
     if (userFilter) {
       const escaped = userFilter.replace(/[*?]/g, '')
-      query = query.ilike('profiles.email', `%${escaped}%`)
+      const { data: matchedProfiles } = await adminSupabase
+        .from('profiles')
+        .select('user_id')
+        .ilike('email', `%${escaped}%`)
+        .limit(200)
+
+      const matchedUserIds = (matchedProfiles || []).map((p) => p.user_id).filter(Boolean)
+      if (matchedUserIds.length === 0) {
+        return NextResponse.json({
+          sessions: [],
+          count: 0,
+          page,
+          limit,
+        })
+      }
+      query = query.in('user_id', matchedUserIds)
     }
 
     const { data, error, count } = await query
@@ -64,11 +98,26 @@ export async function GET(req: Request) {
 
     if (error) throw error
 
+    // Fetch profile details for unique users in the current page
+    const userIds = [...new Set((data ?? []).map((r) => r.user_id).filter(Boolean))]
+    let profileMap = new Map<string, { email: string | null }>()
+
+    if (userIds.length > 0) {
+      const { data: profiles } = await adminSupabase
+        .from('profiles')
+        .select('user_id, email')
+        .in('user_id', userIds)
+
+      if (profiles) {
+        profileMap = new Map(profiles.map((p) => [p.user_id, p]))
+      }
+    }
+
     const sessions = (data ?? []).map((row) => ({
       business_id: row.business_id,
       business_name: row.businesses?.name ?? null,
       user_id: row.user_id,
-      email: row.profiles?.email ?? null,
+      email: profileMap.get(row.user_id)?.email ?? null,
       session_id: row.session_id,
       ip_address: row.ip_address,
       city: row.city,

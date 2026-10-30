@@ -369,7 +369,7 @@ export async function getLiveAdminNotifications(): Promise<AppNotification[]> {
 
     if (disconnectedCount && disconnectedCount > 0) {
       const sampleNames = (waIssues || [])
-        .map((w: { businesses?: { name?: string } | null }) => w.businesses?.name)
+        .map((w) => (w.businesses as unknown as Array<{ name?: string }>)?.[0]?.name)
         .filter(Boolean)
         .slice(0, 3)
         .join(", ");
@@ -447,7 +447,7 @@ export async function getLiveAdminNotifications(): Promise<AppNotification[]> {
 
     if (expiringCount && expiringCount > 0) {
       const expiringBizNames = (expiringSubs || [])
-        .map((s: { businesses?: { name?: string } | null }) => s.businesses?.name)
+        .map((s) => (s.businesses as unknown as Array<{ name?: string }>)?.[0]?.name)
         .filter(Boolean)
         .slice(0, 2)
         .join(", ");
