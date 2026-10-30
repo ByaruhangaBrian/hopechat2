@@ -8,6 +8,7 @@ import { getAvatarGradient } from "@/lib/avatar-colors";
 import { RoiCalculator } from "@/components/landing/roi-calculator";
 import { InteractivePlayground } from "@/components/landing/interactive-playground";
 import {
+  Bell,
   MessageSquare,
   ArrowRight,
   Zap,
@@ -90,10 +91,10 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
     id: "sales_ai",
     label: "AI & Inbound",
     shortLabel: "AI Chat",
-    count: 4,
+    count: 5,
     icon: Bot,
     tag: "Inbound AI",
-    desc: "WhatsApp coexistence, multimodal voice/image AI, custom knowledge training, and shared team inbox.",
+    desc: "WhatsApp coexistence, multimodal voice/image AI, custom knowledge training, real-time action alerts, and shared team inbox.",
   },
   {
     id: "broadcasts",
@@ -443,6 +444,46 @@ export default function LandingPage() {
       ),
     },
     {
+      category: "sales_ai",
+      icon: Bell,
+      title: "Smart Action Alerts & Notifications",
+      desc: "Stay ahead of what matters most with an instant notification center in your header. Get real-time alerts for human agent takeovers, WhatsApp disconnection, unread messages, low credits, and expiring subscriptions.",
+      points: [
+        "Live alerts for urgent customer handoffs & unread conversations",
+        "Instant warning if your WhatsApp Cloud API channel disconnects",
+        "Low balance & credit depletion alerts before replies pause",
+        "Upcoming subscription expiry and grace period renewal notices",
+        "One-tap navigation directly to the chat thread or settings page"
+      ],
+      color: "text-amber-500 dark:text-amber-400",
+      bg: "bg-amber-500/10 border-amber-500/25",
+      reverse: true,
+      mock: (
+        <div className="bg-white border border-border rounded-2xl p-5 space-y-3 shadow-xs">
+          <div className="flex items-center justify-between border-b border-border pb-2.5 text-xs font-bold text-foreground">
+            <span className="flex items-center gap-2"><Bell className="size-4 text-amber-500" /> Action Notifications</span>
+            <span className="text-[10px] text-rose-600 font-bold bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">2 Actions Needed</span>
+          </div>
+          <div className="space-y-2 text-xs">
+            <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-foreground font-semibold flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="size-2 rounded-full bg-rose-500 animate-pulse" />
+                <span>Human Takeover: Nalukenge K.</span>
+              </div>
+              <span className="text-[10px] font-extrabold text-rose-600">Take Over &rarr;</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-foreground font-semibold flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="size-2 rounded-full bg-amber-500" />
+                <span>Plan expires in 3 days</span>
+              </div>
+              <span className="text-[10px] font-extrabold text-amber-600">Renew &rarr;</span>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
       category: "automation",
       icon: CalendarCheck,
       title: "Appointment Bookings",
@@ -620,6 +661,10 @@ export default function LandingPage() {
   ];
 
   const faqs = [
+    {
+      q: "How do notifications work in HopeChat?",
+      a: "HopeChat features a live notification bell right next to your account icon. For business workspaces, it instantly surfaces urgent action items: new customer messages, AI handoffs waiting for human takeover, WhatsApp channel disconnections, low credit balances, and subscription renewal reminders. For super admins, it provides system-wide health alerts across all tenants.",
+    },
     {
       q: "What is HopeChat?",
       a: "HopeChat is a WhatsApp CRM and automation platform that helps businesses automate customer conversations, follow up on leads instantly, run broadcast campaigns, and build no-code workflows — all powered by the official WhatsApp Business API. It includes a shared inbox, AI assistant, knowledge base, chatbot builder, and native integrations for Google Sheets and Cal.com.",

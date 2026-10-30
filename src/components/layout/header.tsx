@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NotificationsPopover } from "@/components/notifications/notifications-popover";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -73,78 +74,83 @@ export function Header({ onOpenSidebar }: HeaderProps) {
         </div>
       </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className="flex items-center gap-3 rounded-xl p-1.5 transition-all duration-200 hover:bg-accent focus:outline-none data-popup-open:bg-accent"
-          aria-label="Open account menu"
-        >
-          <Avatar className="size-9 ring-2 ring-border">
-            {profile?.avatar_url ? (
-              <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? "Avatar"} />
-            ) : null}
-            <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
-              {initial}
-            </AvatarFallback>
-          </Avatar>
-          <div className="hidden flex-col items-start text-left sm:flex">
-            <span className="text-sm font-bold text-foreground leading-none">
-              {profile?.full_name ?? "User"}
-            </span>
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tighter">
-              {profile?.role || "Admin"}
-            </span>
-          </div>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          sideOffset={8}
-          className="w-56 glass border-border shadow-2xl"
-        >
-          <div className="px-2 py-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-2 px-2">Account</p>
-            <DropdownMenuItem
-              render={
-                <Link href="/settings?tab=profile" className="rounded-lg flex items-center gap-2" />
-              }
-            >
-              <User className="size-4" /> Profile
-            </DropdownMenuItem>
-            {canAccess(profile?.permissions, "settings", profile?.role) && (
+      <div className="flex items-center gap-2">
+        {/* Notification Bell next to Account Icon */}
+        <NotificationsPopover />
+
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="flex items-center gap-3 rounded-xl p-1.5 transition-all duration-200 hover:bg-accent focus:outline-none data-popup-open:bg-accent"
+            aria-label="Open account menu"
+          >
+            <Avatar className="size-9 ring-2 ring-border">
+              {profile?.avatar_url ? (
+                <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? "Avatar"} />
+              ) : null}
+              <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
+                {initial}
+              </AvatarFallback>
+            </Avatar>
+            <div className="hidden flex-col items-start text-left sm:flex">
+              <span className="text-sm font-bold text-foreground leading-none">
+                {profile?.full_name ?? "User"}
+              </span>
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tighter">
+                {profile?.role || "Admin"}
+              </span>
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            sideOffset={8}
+            className="w-56 glass border-border shadow-2xl"
+          >
+            <div className="px-2 py-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-2 px-2">Account</p>
               <DropdownMenuItem
                 render={
-                  <Link href="/settings?tab=whatsapp" className="rounded-lg flex items-center gap-2" />
+                  <Link href="/settings?tab=profile" className="rounded-lg flex items-center gap-2" />
                 }
               >
-                <SettingsIcon className="size-4" /> Settings
+                <User className="size-4" /> Profile
               </DropdownMenuItem>
-            )}
-          </div>
-          
-          <DropdownMenuSeparator className="bg-border/50" />
-          
-          <div className="px-2 py-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-2 px-2">Appearance</p>
-            <DropdownMenuItem 
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="rounded-lg flex items-center justify-between"
-            >
-              <div className="flex items-center gap-2">
-                {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-                <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
-              </div>
-              <div className="size-2 rounded-full bg-primary animate-pulse" />
-            </DropdownMenuItem>
-          </div>
+              {canAccess(profile?.permissions, "settings", profile?.role) && (
+                <DropdownMenuItem
+                  render={
+                    <Link href="/settings?tab=whatsapp" className="rounded-lg flex items-center gap-2" />
+                  }
+                >
+                  <SettingsIcon className="size-4" /> Settings
+                </DropdownMenuItem>
+              )}
+            </div>
+            
+            <DropdownMenuSeparator className="bg-border/50" />
+            
+            <div className="px-2 py-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-2 px-2">Appearance</p>
+              <DropdownMenuItem 
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="rounded-lg flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+                  <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+                </div>
+                <div className="size-2 rounded-full bg-primary animate-pulse" />
+              </DropdownMenuItem>
+            </div>
 
-          <DropdownMenuSeparator className="bg-border/50" />
-          
-          <div className="p-2">
-            <DropdownMenuItem onClick={signOut} className="rounded-lg flex items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive">
-              <LogOut className="size-4" /> Sign out
-            </DropdownMenuItem>
-          </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <DropdownMenuSeparator className="bg-border/50" />
+            
+            <div className="p-2">
+              <DropdownMenuItem onClick={signOut} className="rounded-lg flex items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive">
+                <LogOut className="size-4" /> Sign out
+              </DropdownMenuItem>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </header>
   );
 }
