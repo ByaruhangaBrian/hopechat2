@@ -76,27 +76,27 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
     i === 0 || totalLoaded > PAGE_SIZES[i - 1];
 
   return (
-    <section className="border-border bg-card hover:border-primary/40 hover:shadow-primary/5 hairline-top relative overflow-hidden rounded-xl border transition-colors duration-300 hover:shadow-lg">
-      <header className="border-border/70 bg-muted/20 flex items-center justify-between border-b px-5 py-4">
+    <section className="border-border bg-card hover:border-primary/40 hover:shadow-primary/5 hairline-top relative flex h-full flex-col overflow-hidden rounded-xl border transition-colors duration-300 hover:shadow-lg">
+      <header className="border-border/70 bg-muted/20 flex items-center justify-between border-b px-4 py-2.5">
         <h2 className="text-foreground text-sm font-semibold">
           Recent Activity
         </h2>
         <Link
           href="/inbox"
-          className="text-primary hover:bg-primary/10 -m-1 rounded-full px-2 py-1 text-xs font-medium transition-colors"
+          className="text-primary hover:bg-primary/10 -m-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors"
         >
           View all →
         </Link>
       </header>
 
       {loading || !items ? (
-        <div className="space-y-2 p-5">
+        <div className="space-y-1.5 p-3.5">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-10 w-full" />
+            <Skeleton key={i} className="h-8 w-full" />
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="p-5">
+        <div className="p-3.5">
           <EmptyState
             icon={Inbox}
             title="No activity yet"
@@ -105,7 +105,7 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
         </div>
       ) : (
         <>
-          <ul className="divide-border divide-y">
+          <ul className="divide-border divide-y flex-1">
             {visible.map((it, i) => {
               const theme = KIND_THEME[it.kind];
               const Icon = theme.icon;
@@ -113,16 +113,16 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
               // translation of the spec's white / #f9fafb stripes.
               const stripe = i % 2 === 0 ? 'bg-transparent' : 'bg-muted/20';
               const row = (
-                <div className="flex items-center gap-3 px-5 py-2.5">
+                <div className="flex items-center gap-2.5 px-4 py-1.5">
                   <span
                     className={cn(
-                      'flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ring-1 ring-white/5 transition-transform duration-300 ring-inset group-hover:scale-110',
+                      'flex size-6 flex-shrink-0 items-center justify-center rounded-full ring-1 ring-white/5 transition-transform duration-200 ring-inset group-hover:scale-110',
                       theme.badge
                     )}
                   >
-                    <Icon className="h-3.5 w-3.5" />
+                    <Icon className="size-3" />
                   </span>
-                  <span className="text-foreground min-w-0 flex-1 truncate text-sm">
+                  <span className="text-foreground min-w-0 flex-1 truncate text-xs">
                     {it.text}
                   </span>
                   <span className="flex flex-shrink-0 items-center gap-1.5">
@@ -130,7 +130,7 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
                       className={cn('h-1.5 w-1.5 rounded-full', theme.dot)}
                       aria-hidden
                     />
-                    <span className="text-muted-foreground text-xs tabular-nums">
+                    <span className="text-muted-foreground text-[11px] tabular-nums">
                       {relativeTime(it.at)}
                     </span>
                   </span>
@@ -155,13 +155,13 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
               );
             })}
           </ul>
-          <footer className="border-border/70 bg-muted/10 flex items-center justify-between border-t px-5 py-3 text-xs">
+          <footer className="border-border/70 bg-muted/10 mt-auto flex items-center justify-between border-t px-4 py-2 text-xs">
             <span className="text-muted-foreground tabular-nums">
               Showing {visible.length} of {totalLoaded}
               {totalLoaded === 50 ? '+' : ''}
             </span>
             <div className="flex items-center gap-1">
-              <span className="text-muted-foreground mr-1">Show</span>
+              <span className="text-muted-foreground mr-1 text-[11px]">Show</span>
               {PAGE_SIZES.map((size, i) => {
                 const disabled = !isSizeUseful(size, i);
                 return (

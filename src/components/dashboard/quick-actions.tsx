@@ -3,12 +3,11 @@
 import Link from 'next/link';
 import { motion, type Variants } from 'framer-motion';
 import { UserPlus, Briefcase, Radio, Zap } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { ComponentType } from 'react';
 
 // Quick-action shortcuts. Each navigates to the page that owns the
-// relevant "create" flow. We deliberately don't try to auto-open any
-// modal on the target page — that'd require touching those pages,
-// which is out of scope here.
+// relevant "create" flow.
 interface Action {
   label: string;
   href: string;
@@ -45,21 +44,21 @@ const ACTIONS: Action[] = [
 
 const gridContainer: Variants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.05 } },
+  show: { transition: { staggerChildren: 0.04 } },
 };
 
 const cardItem: Variants = {
-  hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
+  hidden: { opacity: 0, y: 6 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.25, ease: 'easeOut' } },
 };
 
-export function QuickActions() {
+export function QuickActions({ className }: { className?: string }) {
   return (
     <motion.div
       variants={gridContainer}
       initial="hidden"
       animate="show"
-      className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+      className={cn("flex flex-wrap items-center gap-2", className)}
     >
       {ACTIONS.map((a) => {
         const Icon = a.icon;
@@ -67,19 +66,22 @@ export function QuickActions() {
           <motion.div
             key={a.href}
             variants={cardItem}
-            whileHover={{ y: -3, scale: 1.02 }}
+            whileHover={{ y: -1.5, scale: 1.02 }}
             transition={{ type: 'spring', stiffness: 320, damping: 22 }}
           >
             <Link
               href={a.href}
-              className="group border-border bg-card hover:border-primary/40 hover:bg-muted/60 flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors duration-300"
+              className="group border-border bg-card/80 hover:border-primary/40 hover:bg-muted/60 inline-flex h-8 items-center gap-2 rounded-lg border px-2.5 sm:px-3 text-xs font-semibold text-foreground transition-all duration-200 shadow-sm"
             >
               <div
-                className={`flex h-9 w-9 items-center justify-center rounded-lg shadow-inner transition-transform duration-300 group-hover:scale-110 ${a.chip}`}
+                className={cn(
+                  "flex size-5 items-center justify-center rounded transition-transform duration-200 group-hover:scale-110",
+                  a.chip
+                )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="size-3" />
               </div>
-              <span className="text-foreground text-sm font-medium">
+              <span className="whitespace-nowrap">
                 {a.label}
               </span>
             </Link>

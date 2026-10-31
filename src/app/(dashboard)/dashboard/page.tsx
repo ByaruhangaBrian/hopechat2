@@ -154,45 +154,46 @@ export default function DashboardPage() {
         variants={pageContainer}
         initial="hidden"
         animate="show"
-        className="space-y-5"
+        className="space-y-3 sm:space-y-3.5"
       >
         {profile?.business?.status === 'trialing' && <WelcomeGuide />}
 
-        {/* Header */}
+        {/* Header with Quick Actions & Credits */}
         <motion.div
           variants={sectionItem}
-          className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
-            <h1 className="text-foreground text-2xl font-bold">Dashboard</h1>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Live analytics across conversations, contacts, deals, broadcasts,
-              and automations.
+            <h1 className="text-foreground text-xl sm:text-2xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground text-xs mt-0.5">
+              Live analytics across conversations, contacts, deals, broadcasts, and automations.
             </p>
           </div>
-          {profile?.business?.credits_remaining !== undefined && (
-            <div className="flex items-center gap-2 self-start rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-600 shadow-lg shadow-emerald-500/10 sm:self-center dark:text-emerald-400">
-              <Coins className="h-4 w-4" />
-              <span>
-                {profile.business.credits_remaining.toLocaleString()} Credits
-                Remaining
-              </span>
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+            {profile?.business?.credits_remaining !== undefined && (
+              <div className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                <Coins className="h-3.5 w-3.5" />
+                <span>
+                  {profile.business.credits_remaining.toLocaleString()} Credits
+                </span>
+              </div>
+            )}
+            <QuickActions />
+          </div>
         </motion.div>
 
         {profile?.business?.status === 'trialing' && (
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-600 shadow-lg shadow-blue-500/5 dark:text-blue-400">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3.5 py-2 text-xs text-blue-600 shadow-sm dark:text-blue-400">
             <span>
-              <span className="flex items-center gap-1.5 font-semibold">
-                <Clock className="h-4 w-4" />
+              <span className="inline-flex items-center gap-1 font-semibold">
+                <Clock className="h-3.5 w-3.5" />
                 Trial Period —
-              </span>
+              </span>{' '}
               Your business is on a free trial. Upgrade to unlock all features.
             </span>
             <button
               onClick={() => router.push('/settings?tab=billing')}
-              className="shrink-0 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
+              className="shrink-0 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
             >
               View Plans
             </button>
@@ -200,18 +201,17 @@ export default function DashboardPage() {
         )}
 
         {profile?.business?.status === 'canceled' && (
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 shadow-lg shadow-red-500/5 dark:text-red-400">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3.5 py-2 text-xs text-red-600 shadow-sm dark:text-red-400">
             <span>
-              <span className="flex items-center gap-1.5 font-semibold">
-                <XCircle className="h-4 w-4" />
+              <span className="inline-flex items-center gap-1 font-semibold">
+                <XCircle className="h-3.5 w-3.5" />
                 Subscription Canceled —
-              </span>
-              Your subscription has been canceled. Some features may be
-              unavailable.
+              </span>{' '}
+              Your subscription has been canceled. Some features may be unavailable.
             </span>
             <button
               onClick={() => router.push('/settings?tab=billing')}
-              className="shrink-0 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700"
+              className="shrink-0 rounded-md bg-red-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-700"
             >
               Reactivate
             </button>
@@ -219,18 +219,17 @@ export default function DashboardPage() {
         )}
 
         {profile?.business?.status === 'past_due' && (
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 shadow-lg shadow-amber-500/5 dark:text-amber-400">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs text-amber-600 shadow-sm dark:text-amber-400">
             <span>
-              <span className="flex items-center gap-1.5 font-semibold">
-                <AlertTriangle className="h-4 w-4" />
+              <span className="inline-flex items-center gap-1 font-semibold">
+                <AlertTriangle className="h-3.5 w-3.5" />
                 Payment Past Due —
-              </span>
-              Your payment is overdue. Please update your billing information to
-              avoid service interruption.
+              </span>{' '}
+              Your payment is overdue. Please update your billing information.
             </span>
             <button
               onClick={() => router.push('/settings?tab=billing')}
-              className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-amber-700"
+              className="shrink-0 rounded-md bg-amber-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-amber-700"
             >
               Update Billing
             </button>
@@ -240,7 +239,7 @@ export default function DashboardPage() {
         {/* Metric cards */}
         <motion.div
           variants={sectionItem}
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+          className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 lg:grid-cols-4 sm:gap-3"
         >
           {metricsLoading || !metrics ? (
             Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
@@ -302,23 +301,12 @@ export default function DashboardPage() {
           )}
         </motion.div>
 
-        {/* Quick actions */}
-        <motion.div variants={sectionItem}>
-          <QuickActions />
-        </motion.div>
-
-        {/* Charts row */}
-        {/* items-stretch (the grid default) stretches the two columns to
-          match the tallest sibling; adding h-full on each wrapper and
-          on the inner panels makes both cards actually fill that
-          stretched height so their rounded borders line up. Without
-          this, the pipeline card rendered at its natural (shorter)
-          height while the line chart drove the row height. */}
+        {/* Row 1: Conversations (8 cols) + Pipeline Donut (4 cols) */}
         <motion.div
           variants={sectionItem}
-          className="grid grid-cols-1 gap-4 lg:grid-cols-5"
+          className="grid grid-cols-1 gap-3 lg:grid-cols-12"
         >
-          <div className="h-full lg:col-span-3">
+          <div className="h-full lg:col-span-8">
             <ConversationsChart
               series={series}
               loading={seriesLoading}
@@ -326,22 +314,25 @@ export default function DashboardPage() {
               onRangeChange={handleRangeChange}
             />
           </div>
-          <div className="h-full lg:col-span-2">
+          <div className="h-full lg:col-span-4">
             <PipelineDonut data={pipeline} loading={pipelineLoading} />
           </div>
         </motion.div>
 
-        {/* Response time */}
-        <motion.div variants={sectionItem}>
-          <ResponseTimeChart
-            data={responseTime}
-            loading={responseTimeLoading}
-          />
-        </motion.div>
-
-        {/* Activity feed */}
-        <motion.div variants={sectionItem}>
-          <ActivityFeed items={activity} loading={activityLoading} />
+        {/* Row 2: Response Time (6 cols) + Activity Feed (6 cols) */}
+        <motion.div
+          variants={sectionItem}
+          className="grid grid-cols-1 gap-3 lg:grid-cols-12"
+        >
+          <div className="h-full lg:col-span-6">
+            <ResponseTimeChart
+              data={responseTime}
+              loading={responseTimeLoading}
+            />
+          </div>
+          <div className="h-full lg:col-span-6">
+            <ActivityFeed items={activity} loading={activityLoading} />
+          </div>
         </motion.div>
       </motion.div>
     </MotionConfig>

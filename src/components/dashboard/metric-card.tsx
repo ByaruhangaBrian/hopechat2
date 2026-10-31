@@ -85,33 +85,33 @@ export function MetricCard({
 
   return (
     <motion.div
-      whileHover={{ y: -4, scale: 1.015 }}
+      whileHover={{ y: -3, scale: 1.01 }}
       transition={{ type: 'spring', stiffness: 320, damping: 24 }}
       className={cn(
-        "group border-border bg-card hairline-top relative overflow-hidden rounded-2xl border p-6 transition-colors duration-300 hover:shadow-2xl",
+        "group border-border bg-card hairline-top relative overflow-hidden rounded-xl border p-3.5 sm:p-4 transition-colors duration-300 hover:shadow-xl",
         styles.hoverBorder
       )}
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-muted-foreground text-xs font-bold tracking-widest uppercase">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase truncate">
             {title}
           </p>
           <AnimatedNumber value={value} />
         </div>
         <div className={cn(
-          "relative flex size-12 items-center justify-center rounded-xl border bg-gradient-to-tr transition-all duration-300",
+          "relative flex size-9 shrink-0 items-center justify-center rounded-lg border bg-gradient-to-tr transition-all duration-300",
           styles.iconContainer
         )}>
-          <Icon className="size-6 transition-transform duration-300 group-hover:scale-110" />
+          <Icon className="size-4.5 transition-transform duration-300 group-hover:scale-110" />
         </div>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-2">
         {delta ? (
           <DeltaRow sign={delta.sign} label={delta.label} />
         ) : subtitle ? (
-          <p className="text-muted-foreground/50 text-sm font-medium">
+          <p className="text-muted-foreground/60 text-xs font-medium truncate">
             {subtitle}
           </p>
         ) : null}
@@ -128,7 +128,7 @@ export function MetricCard({
       <div
         aria-hidden
         className={cn(
-          "absolute -top-4 -right-4 size-24 rounded-full blur-3xl transition-colors duration-300",
+          "absolute -top-4 -right-4 size-20 rounded-full blur-2xl transition-colors duration-300",
           styles.cornerGlow
         )}
       />
@@ -169,7 +169,7 @@ function AnimatedNumber({ value }: { value: string }) {
   return (
     <span
       ref={ref}
-      className="text-foreground mt-2 block text-3xl font-black tracking-tight tabular-nums"
+      className="text-foreground mt-0.5 block text-xl sm:text-2xl font-black tracking-tight tabular-nums"
     >
       {display}
     </span>
@@ -222,11 +222,11 @@ function DeltaRow({ sign, label }: { sign: number; label: string }) {
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold',
+        'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-bold',
         tone
       )}
     >
-      <Arrow className="size-3.5" aria-hidden />
+      <Arrow className="size-3" aria-hidden />
       <span className="tabular-nums">{label}</span>
     </div>
   );

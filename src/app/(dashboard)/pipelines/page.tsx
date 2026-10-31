@@ -293,23 +293,23 @@ export default function PipelinesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2.5 sm:space-y-3">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2.5">
           {/* Pipeline selector dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
                 <Button
                   variant="outline"
-                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                  className="inline-flex h-8 items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
                 >
-                  <GitBranch className="h-4 w-4 text-primary" />
-                  <span className="font-semibold">
+                  <GitBranch className="h-3.5 w-3.5 text-primary" />
+                  <span>
                     {selectedPipeline?.name ?? "Select Pipeline"}
                   </span>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
               }
             />
@@ -318,7 +318,7 @@ export default function PipelinesPage() {
               className="w-64 border-border bg-card text-foreground"
             >
               {pipelines.length === 0 && (
-                <DropdownMenuItem disabled className="text-muted-foreground">
+                <DropdownMenuItem disabled className="text-muted-foreground text-xs">
                   No pipelines yet
                 </DropdownMenuItem>
               )}
@@ -328,8 +328,8 @@ export default function PipelinesPage() {
                   onClick={() => setSelectedPipelineId(p.id)}
                   className={
                     p.id === selectedPipelineId
-                      ? "text-primary"
-                      : "text-foreground/80"
+                      ? "text-primary text-xs"
+                      : "text-foreground/80 text-xs"
                   }
                 >
                   <GitBranch className="mr-2 h-3.5 w-3.5" />
@@ -340,7 +340,7 @@ export default function PipelinesPage() {
               {selectedPipeline && (
                 <DropdownMenuItem
                   onClick={() => setSettingsOpen(true)}
-                  className="text-foreground/80"
+                  className="text-foreground/80 text-xs"
                 >
                   <Settings className="mr-2 h-3.5 w-3.5" />
                   Manage Pipelines
@@ -353,18 +353,20 @@ export default function PipelinesPage() {
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
+            size="sm"
             onClick={() => setNewPipelineOpen(true)}
-            className="border-border bg-card text-foreground hover:bg-muted"
+            className="h-8 px-2.5 text-xs border-border bg-card text-foreground hover:bg-muted"
           >
-            <Plus className="mr-1 h-4 w-4" />
+            <Plus className="mr-1 h-3.5 w-3.5" />
             Add Pipeline
           </Button>
           <Button
+            size="sm"
             onClick={() => handleAddDeal()}
             disabled={!selectedPipelineId || stages.length === 0}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            className="h-8 px-3 text-xs bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
           >
-            <Plus className="mr-1 h-4 w-4" />
+            <Plus className="mr-1 h-3.5 w-3.5" />
             Add Deal
           </Button>
         </div>

@@ -221,16 +221,16 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       >
         {/* Logo row */}
         <div className={cn(
-          "flex h-16 shrink-0 flex-col justify-center border-b border-sidebar-border px-4 transition-all duration-300",
+          "flex h-13 shrink-0 flex-col justify-center border-b border-sidebar-border px-3.5 transition-all duration-300",
           isCollapsed && "items-center px-0"
         )}>
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="flex shrink-0 items-center justify-center rounded-xl bg-primary p-1.5 text-primary-foreground shadow-lg shadow-primary/20">
-              <MessageSquare className="size-4" />
+          <div className="flex items-center gap-2.5">
+            <Link href="/dashboard" className="flex shrink-0 items-center justify-center rounded-lg bg-primary p-1.5 text-primary-foreground shadow-md shadow-primary/20">
+              <MessageSquare className="size-3.5" />
             </Link>
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-bold tracking-tight text-sidebar-foreground">
+                <span className="block truncate text-sm font-bold tracking-tight text-sidebar-foreground leading-tight">
                   HopeChat
                 </span>
                 <span className="block truncate text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/50 leading-tight">
@@ -242,19 +242,19 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex size-7 items-center justify-center rounded-lg text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground lg:hidden"
+                className="flex size-6 items-center justify-center rounded-md text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground lg:hidden"
               >
-                <X className="size-4" />
+                <X className="size-3.5" />
               </button>
             )}
           </div>
         </div>
 
         {impersonatedName && !isCollapsed && (
-          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2">
-            <div className="flex items-start gap-2">
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-3 py-1.5">
+            <div className="flex items-start gap-1.5">
               <ShieldAlert className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <p className="text-[10px] font-medium text-amber-500 leading-tight">
                   Impersonating: <span className="text-foreground font-bold">{impersonatedName}</span>
                 </p>
@@ -270,8 +270,8 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         )}
 
         {/* Main navigation */}
-        <nav className="flex-1 space-y-0.5 overflow-y-auto scrollbar-hide px-3 py-3">
-          <ul className="space-y-1">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto scrollbar-hide px-2 py-1.5">
+          <ul className="space-y-0.5">
             {filteredNavItems.map((item) => {
               const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
               const showUnreadDot = item.href === "/inbox" && totalUnread > 0 && !isActive;
@@ -280,34 +280,34 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 <Link
                   href={item.href}
                   className={cn(
-                    "group relative flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 transition-all duration-200",
+                    "group relative flex items-center gap-2 rounded-lg px-2 py-1 transition-all duration-150",
                     isActive
                       ? "bg-primary/10 text-foreground font-semibold shadow-sm"
                       : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                    isCollapsed && "justify-center px-0 py-2"
+                    isCollapsed && "justify-center px-0 py-1.5"
                   )}
                 >
                   <div className={cn(
-                    "flex size-7 shrink-0 items-center justify-center rounded-lg transition-all duration-200",
+                    "flex size-6.5 shrink-0 items-center justify-center rounded-md transition-all duration-150",
                     item.bg,
                     item.color,
-                    "group-hover:scale-110",
-                    isActive && "ring-1 ring-primary/20 shadow-[0_0_12px_rgba(0,0,0,0.06)]"
+                    "group-hover:scale-105",
+                    isActive && "ring-1 ring-primary/20 shadow-[0_0_10px_rgba(0,0,0,0.06)]"
                   )}>
-                    <item.icon className="size-4 shrink-0 transition-transform duration-200 group-hover:scale-105" />
+                    <item.icon className="size-3.5 shrink-0 transition-transform duration-150 group-hover:scale-105" />
                   </div>
-                  {!isCollapsed && <span className="flex-1 text-sm font-medium tracking-tight">{item.label}</span>}
+                  {!isCollapsed && <span className="flex-1 text-[13px] font-medium tracking-tight leading-none">{item.label}</span>}
                   {showUnreadDot && (
                     <span className={cn(
                       "absolute flex h-2 w-2",
-                      isCollapsed ? "right-1.5 top-1.5" : "right-2.5"
+                      isCollapsed ? "right-1.5 top-1.5" : "right-2"
                     )}>
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
                       <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                     </span>
                   )}
                   {isActive && !isCollapsed && (
-                    <div className="absolute left-0 h-4 w-1 rounded-full bg-primary shadow-[0_0_8px_oklch(var(--primary))]" />
+                    <div className="absolute left-0 h-3.5 w-1 rounded-full bg-primary shadow-[0_0_8px_oklch(var(--primary))]" />
                   )}
                 </Link>
               );
@@ -327,32 +327,32 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             })}
           </ul>
 
-          {!isCollapsed && <div className="mx-2 my-2.5 h-px bg-sidebar-border/50" />}
+          {!isCollapsed && <div className="mx-2 my-1.5 h-px bg-sidebar-border/50" />}
 
-          <ul className="space-y-1">
+          <ul className="space-y-0.5">
             {bottomNavItems.map((item) => {
               const isActive = pathname.startsWith(item.href);
               const content = (
                 <Link
                   href={item.href}
                   className={cn(
-                    "group relative flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 transition-all duration-200",
+                    "group relative flex items-center gap-2 rounded-lg px-2 py-1 transition-all duration-150",
                     isActive
                       ? "bg-primary/10 text-foreground font-semibold shadow-sm"
                       : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                    isCollapsed && "justify-center px-0 py-2"
+                    isCollapsed && "justify-center px-0 py-1.5"
                   )}
                 >
                   <div className={cn(
-                    "flex size-7 shrink-0 items-center justify-center rounded-lg transition-all duration-200",
+                    "flex size-6.5 shrink-0 items-center justify-center rounded-md transition-all duration-150",
                     item.bg,
                     item.color,
-                    "group-hover:scale-110",
-                    isActive && "ring-1 ring-primary/20 shadow-[0_0_12px_rgba(0,0,0,0.06)]"
+                    "group-hover:scale-105",
+                    isActive && "ring-1 ring-primary/20 shadow-[0_0_10px_rgba(0,0,0,0.06)]"
                   )}>
-                    <item.icon className="size-4 shrink-0 transition-transform duration-200 group-hover:scale-105" />
+                    <item.icon className="size-3.5 shrink-0 transition-transform duration-150 group-hover:scale-105" />
                   </div>
-                  {!isCollapsed && <span className="flex-1 text-sm font-medium tracking-tight">{item.label}</span>}
+                  {!isCollapsed && <span className="flex-1 text-[13px] font-medium tracking-tight leading-none">{item.label}</span>}
                 </Link>
               );
 
@@ -372,22 +372,22 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           </ul>
 
           {consentPending && (
-            <ul className="space-y-0.5">
+            <ul className="space-y-0.5 mt-1">
               <li>
                 <button
                   type="button"
                   onClick={openConsentNotice}
                   className={cn(
-                    "group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition-all duration-200",
+                    "group flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left transition-all duration-150",
                     "text-amber-600 dark:text-amber-400 hover:bg-sidebar-accent",
-                    isCollapsed && "justify-center px-0 py-2"
+                    isCollapsed && "justify-center px-0 py-1.5"
                   )}
                 >
-                  <ShieldAlert className="size-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                  <ShieldAlert className="size-3.5 shrink-0 transition-transform duration-150 group-hover:scale-110" />
                   {!isCollapsed && (
                     <>
-                      <span className="flex-1 text-sm font-medium">Review terms</span>
-                      <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
+                      <span className="flex-1 text-[13px] font-medium leading-none">Review terms</span>
+                      <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
                     </>
                   )}
                 </button>
@@ -396,90 +396,92 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           )}
         </nav>
 
-        {/* Bottom controls */}
-        <div className="shrink-0 p-2 flex justify-end">
+        {/* User section + Collapse toggle */}
+        <div className={cn(
+          "shrink-0 p-1.5 border-t border-sidebar-border/50",
+          isCollapsed ? "flex flex-col items-center gap-1.5" : "flex items-center justify-between gap-1.5"
+        )}>
+          <div className={isCollapsed ? "" : "min-w-0 flex-1"}>
+            <DropdownMenu>
+              <DropdownMenuTrigger className={cn(
+                "flex w-full items-center gap-2 rounded-lg p-1 text-left transition-all duration-150 hover:bg-sidebar-accent/50 focus:outline-none",
+                isCollapsed && "justify-center p-0 h-8 w-8"
+              )}>
+                <Avatar className="size-7 shrink-0 ring-1 ring-sidebar-border">
+                  {profile?.avatar_url ? (
+                    <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? "Avatar"} />
+                  ) : null}
+                  <AvatarFallback className={cn("text-[10px] font-bold text-white select-none", getAvatarGradient(profile?.full_name ?? profile?.email))}>
+                    {profile?.full_name?.charAt(0)?.toUpperCase() ?? profile?.email?.charAt(0)?.toUpperCase() ?? "U"}
+                  </AvatarFallback>
+                </Avatar>
+                {!isCollapsed && (
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-bold text-sidebar-foreground leading-tight">
+                      {profile?.full_name ?? "User"}
+                    </p>
+                    <p className="truncate text-[9px] uppercase tracking-tighter text-sidebar-foreground/40 font-bold leading-tight">
+                      {profile?.role || "Team Member"}
+                    </p>
+                  </div>
+                )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" side="right" sideOffset={12} className="w-56 glass border-sidebar-border shadow-2xl">
+                <div className="px-2 py-2">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-2 px-2">Account</p>
+                  <DropdownMenuItem
+                    render={
+                      <Link href="/settings?tab=profile" className="rounded-lg flex items-center gap-2" />
+                    }
+                  >
+                    <User className="size-4" /> Profile
+                  </DropdownMenuItem>
+                  {canAccess(profile?.permissions, "settings", profile?.role) && (
+                    <DropdownMenuItem
+                      render={
+                        <Link href="/settings?tab=whatsapp" className="rounded-lg flex items-center gap-2" />
+                      }
+                    >
+                      <Settings className="size-4" /> Settings
+                    </DropdownMenuItem>
+                  )}
+                </div>
+                
+                <DropdownMenuSeparator className="bg-sidebar-border/50" />
+                
+                <div className="px-2 py-2">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-2 px-2">Appearance</p>
+                  <DropdownMenuItem 
+                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                    className="rounded-lg flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+                      <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+                    </div>
+                    <div className="size-2 rounded-full bg-primary animate-pulse" />
+                  </DropdownMenuItem>
+                </div>
+
+                <DropdownMenuSeparator className="bg-sidebar-border/50" />
+                
+                <div className="p-2">
+                  <DropdownMenuItem onClick={signOut} className="rounded-lg flex items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive">
+                    <LogOut className="size-4" /> Sign out
+                  </DropdownMenuItem>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           {/* Collapse toggle (Desktop only) */}
           <button
             onClick={toggleCollapse}
-            className="hidden size-7 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent/50 text-sidebar-foreground/40 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground lg:flex"
+            className="hidden size-6.5 shrink-0 items-center justify-center rounded-md border border-sidebar-border/60 bg-sidebar-accent/30 text-sidebar-foreground/50 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground lg:flex"
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isCollapsed ? <ChevronRight className="size-3.5" /> : <ChevronLeft className="size-3.5" />}
           </button>
-        </div>
-
-        {/* User section */}
-        <div className="shrink-0 p-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger className={cn(
-              "flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left transition-all duration-200 hover:bg-sidebar-accent/50 focus:outline-none",
-              isCollapsed && "justify-center p-0 h-10"
-            )}>
-              <Avatar className="size-7 shrink-0 ring-1 ring-sidebar-border">
-                {profile?.avatar_url ? (
-                  <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? "Avatar"} />
-                ) : null}
-                <AvatarFallback className={cn("text-[10px] font-bold text-white select-none", getAvatarGradient(profile?.full_name ?? profile?.email))}>
-                  {profile?.full_name?.charAt(0)?.toUpperCase() ?? profile?.email?.charAt(0)?.toUpperCase() ?? "U"}
-                </AvatarFallback>
-              </Avatar>
-              {!isCollapsed && (
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-bold text-sidebar-foreground">
-                    {profile?.full_name ?? "User"}
-                  </p>
-                  <p className="truncate text-[9px] uppercase tracking-tighter text-sidebar-foreground/40 font-bold">
-                    {profile?.role || "Team Member"}
-                  </p>
-                </div>
-              )}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="right" sideOffset={12} className="w-56 glass border-sidebar-border shadow-2xl">
-              <div className="px-2 py-2">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-2 px-2">Account</p>
-                <DropdownMenuItem
-                  render={
-                    <Link href="/settings?tab=profile" className="rounded-lg flex items-center gap-2" />
-                  }
-                >
-                  <User className="size-4" /> Profile
-                </DropdownMenuItem>
-                {canAccess(profile?.permissions, "settings", profile?.role) && (
-                  <DropdownMenuItem
-                    render={
-                      <Link href="/settings?tab=whatsapp" className="rounded-lg flex items-center gap-2" />
-                    }
-                  >
-                    <Settings className="size-4" /> Settings
-                  </DropdownMenuItem>
-                )}
-              </div>
-              
-              <DropdownMenuSeparator className="bg-sidebar-border/50" />
-              
-              <div className="px-2 py-2">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-2 px-2">Appearance</p>
-                <DropdownMenuItem 
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  className="rounded-lg flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-                    <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
-                  </div>
-                  <div className="size-2 rounded-full bg-primary animate-pulse" />
-                </DropdownMenuItem>
-              </div>
-
-              <DropdownMenuSeparator className="bg-sidebar-border/50" />
-              
-              <div className="p-2">
-                <DropdownMenuItem onClick={signOut} className="rounded-lg flex items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive">
-                  <LogOut className="size-4" /> Sign out
-                </DropdownMenuItem>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </aside>
     </TooltipProvider>

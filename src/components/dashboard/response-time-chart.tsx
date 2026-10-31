@@ -14,8 +14,8 @@ interface ResponseTimeChartProps {
 }
 
 const VB_W = 760;
-const VB_H = 220;
-const PADDING = { top: 24, right: 16, bottom: 32, left: 44 };
+const VB_H = 170;
+const PADDING = { top: 16, right: 14, bottom: 24, left: 36 };
 
 export function ResponseTimeChart({
   data,
@@ -25,15 +25,14 @@ export function ResponseTimeChart({
   const hasData = data?.buckets.some((b) => b.avgMinutes != null) ?? false;
 
   return (
-    <section className="border-border bg-card hover:border-primary/40 hover:shadow-primary/5 hairline-top relative overflow-hidden rounded-xl border transition-colors duration-300 hover:shadow-lg">
-      <header className="border-border/70 bg-muted/20 flex items-center justify-between border-b px-5 py-4">
+    <section className="border-border bg-card hover:border-primary/40 hover:shadow-primary/5 hairline-top relative flex h-full flex-col overflow-hidden rounded-xl border transition-colors duration-300 hover:shadow-lg">
+      <header className="border-border/70 bg-muted/20 flex items-center justify-between border-b px-4 py-2.5">
         <div>
           <h2 className="text-foreground text-sm font-semibold">
             Average First Response Time
           </h2>
           <p className="text-muted-foreground/60 mt-0.5 text-xs">
-            Minutes to reply to a customer&apos;s first unreplied message, by
-            weekday
+            Minutes to reply to first customer message, by weekday
           </p>
         </div>
         {data && (data.thisWeekAvg != null || data.lastWeekAvg != null) && (
@@ -52,9 +51,9 @@ export function ResponseTimeChart({
         )}
       </header>
 
-      <div className="p-5">
+      <div className="p-3.5">
         {loading || !data ? (
-          <Skeleton className="h-[220px] w-full" />
+          <Skeleton className="h-[170px] w-full" />
         ) : !hasData ? (
           <EmptyState
             icon={Clock}
@@ -95,7 +94,7 @@ function Bars({
   return (
     <svg
       viewBox={`0 0 ${VB_W} ${VB_H}`}
-      className="h-[220px] w-full"
+      className="h-[170px] w-full"
       role="img"
     >
       <defs>

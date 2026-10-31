@@ -14,7 +14,7 @@ interface PipelineDonutProps {
 export function PipelineDonut({ data, loading }: PipelineDonutProps) {
   return (
     <section className="border-border bg-card hover:border-primary/40 hover:shadow-primary/5 hairline-top relative flex h-full flex-col overflow-hidden rounded-xl border transition-colors duration-300 hover:shadow-lg">
-      <header className="border-border/70 bg-muted/20 border-b px-5 py-4">
+      <header className="border-border/70 bg-muted/20 border-b px-4 py-2.5">
         <h2 className="text-foreground text-sm font-semibold">
           Pipeline Value
         </h2>
@@ -23,9 +23,9 @@ export function PipelineDonut({ data, loading }: PipelineDonutProps) {
         </p>
       </header>
 
-      <div className="flex flex-1 flex-col p-5">
+      <div className="flex flex-1 flex-col p-3.5">
         {loading || !data ? (
-          <Skeleton className="h-56 w-full" />
+          <Skeleton className="h-40 w-full" />
         ) : data.stages.length === 0 ? (
           <EmptyState
             icon={GitBranch}
@@ -35,24 +35,24 @@ export function PipelineDonut({ data, loading }: PipelineDonutProps) {
         ) : (
           <>
             <Donut data={data} />
-            <ul className="mt-5 space-y-1">
+            <ul className="mt-2.5 space-y-0.5">
               {data.stages.map((s) => (
                 <li
                   key={s.id}
-                  className="hover:bg-muted/50 -mx-2 flex items-center gap-3 rounded-lg px-2 py-1.5 text-xs transition-colors"
+                  className="hover:bg-muted/50 -mx-1.5 flex items-center gap-2 rounded-lg px-2 py-1 text-xs transition-colors"
                 >
                   <span
-                    className="h-2.5 w-2.5 flex-shrink-0 rounded-full ring-1 ring-black/10 dark:ring-white/20"
+                    className="h-2 w-2 flex-shrink-0 rounded-full ring-1 ring-black/10 dark:ring-white/20"
                     style={{ background: s.color }}
                     aria-hidden
                   />
                   <span className="text-muted-foreground flex-1 truncate">
                     {s.name}
                   </span>
-                  <span className="text-muted-foreground/40 tabular-nums">
+                  <span className="text-muted-foreground/40 tabular-nums text-[11px]">
                     {s.dealCount} deal{s.dealCount === 1 ? '' : 's'}
                   </span>
-                  <span className="text-foreground w-20 text-right font-semibold tabular-nums">
+                  <span className="text-foreground w-16 text-right font-semibold tabular-nums text-xs">
                     {formatCurrencyShort(s.totalValue)}
                   </span>
                 </li>
@@ -108,7 +108,7 @@ function Donut({ data }: { data: PipelineDonutData }) {
       >
         <svg
           viewBox={`0 0 ${size} ${size}`}
-          className="h-48 w-48"
+          className="h-32 w-32 sm:h-36 sm:w-36"
           role="img"
           aria-label="Pipeline value by stage"
         >

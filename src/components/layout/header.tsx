@@ -56,19 +56,19 @@ export function Header({ onOpenSidebar }: HeaderProps) {
     "U";
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border bg-background/60 backdrop-blur-md px-4 lg:px-6 sticky top-0 z-30">
-      <div className="flex min-w-0 items-center gap-4">
+    <header className="flex h-13.5 shrink-0 items-center justify-between gap-3 border-b border-border bg-background/60 backdrop-blur-md px-3.5 lg:px-5 sticky top-0 z-30">
+      <div className="flex min-w-0 items-center gap-3">
         {/* Hamburger — mobile only */}
         <button
           type="button"
           onClick={onOpenSidebar}
           aria-label="Open menu"
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden"
         >
-          <Menu className="size-5" />
+          <Menu className="size-4.5" />
         </button>
         <div className="space-y-0.5">
-          <h1 className="truncate text-lg font-bold tracking-tight text-foreground">
+          <h1 className="truncate text-base sm:text-lg font-bold tracking-tight text-foreground">
             {title}
           </h1>
         </div>
@@ -80,10 +80,10 @@ export function Header({ onOpenSidebar }: HeaderProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="flex items-center gap-3 rounded-xl p-1.5 transition-all duration-200 hover:bg-accent focus:outline-none data-popup-open:bg-accent"
+            className="flex items-center gap-2.5 rounded-lg p-1 transition-all duration-150 hover:bg-accent focus:outline-none data-popup-open:bg-accent"
             aria-label="Open account menu"
           >
-            <Avatar className="size-9 ring-2 ring-border">
+            <Avatar className="size-8 ring-1 ring-border">
               {profile?.avatar_url ? (
                 <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? "Avatar"} />
               ) : null}
@@ -92,10 +92,10 @@ export function Header({ onOpenSidebar }: HeaderProps) {
               </AvatarFallback>
             </Avatar>
             <div className="hidden flex-col items-start text-left sm:flex">
-              <span className="text-sm font-bold text-foreground leading-none">
+              <span className="text-xs font-bold text-foreground leading-tight">
                 {profile?.full_name ?? "User"}
               </span>
-              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tighter">
+              <span className="text-[9px] font-medium text-muted-foreground uppercase tracking-tighter leading-tight">
                 {profile?.role || "Admin"}
               </span>
             </div>

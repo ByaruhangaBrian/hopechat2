@@ -25,8 +25,8 @@ interface ConversationsChartProps {
 // container resizes.
 // ------------------------------------------------------------
 const VB_W = 760;
-const VB_H = 240;
-const PADDING = { top: 16, right: 16, bottom: 28, left: 40 };
+const VB_H = 190;
+const PADDING = { top: 12, right: 14, bottom: 24, left: 36 };
 
 export function ConversationsChart({
   series,
@@ -50,7 +50,7 @@ export function ConversationsChart({
 
   return (
     <section className="border-border bg-card hover:border-primary/40 hover:shadow-primary/5 hairline-top relative flex h-full flex-col overflow-hidden rounded-xl border transition-colors duration-300 hover:shadow-lg">
-      <header className="border-border/70 bg-muted/20 flex items-center justify-between border-b px-5 py-4">
+      <header className="border-border/70 bg-muted/20 flex items-center justify-between border-b px-4 py-2.5">
         <div>
           <h2 className="text-foreground text-sm font-semibold">
             Conversations Over Time
@@ -59,28 +59,28 @@ export function ConversationsChart({
             Daily message volume by direction
           </p>
         </div>
-        <div className="border-border/60 bg-muted/50 flex items-center gap-1 rounded-lg border p-1">
+        <div className="border-border/60 bg-muted/50 flex items-center gap-1 rounded-lg border p-0.5">
           {[7, 30, 90].map((r) => (
             <button
               key={r}
               type="button"
               onClick={() => onRangeChange(r as RangeDays)}
               className={cn(
-                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                'rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
                 range === r
                   ? 'bg-background text-foreground ring-border/60 shadow-sm ring-1'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              {r} days
+              {r}d
             </button>
           ))}
         </div>
       </header>
 
-      <div className="p-5">
+      <div className="p-3.5">
         {loading || !data ? (
-          <Skeleton className="h-[240px] w-full" />
+          <Skeleton className="h-[190px] w-full" />
         ) : data.every((p) => p.incoming === 0 && p.outgoing === 0) ? (
           <EmptyState
             icon={MessageSquare}
@@ -92,7 +92,7 @@ export function ConversationsChart({
         )}
       </div>
 
-      <footer className="border-border text-muted-foreground/60 flex items-center gap-4 border-t px-5 py-3 text-xs">
+      <footer className="border-border text-muted-foreground/60 mt-auto flex items-center gap-4 border-t px-4 py-2 text-xs">
         <LegendDot color="#3b82f6" label="Incoming" />
         <LegendDot color="#10b8a2" label="Outgoing" />
       </footer>

@@ -228,48 +228,46 @@ export default function ContactsPage() {
   const hasPrev = page > 0;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-3">
+      {/* Header & Actions Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Contacts</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Contacts</h1>
+          <p className="text-xs text-muted-foreground">
             Manage your contact list. {totalCount > 0 && `${totalCount} total contacts.`}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <div className="relative w-44 sm:w-60">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
+              placeholder="Search contacts..."
+              className="h-8 pl-8 text-xs bg-card border-border text-foreground placeholder:text-muted-foreground"
+            />
+          </div>
           <Button
             variant="outline"
+            size="sm"
             onClick={() => setImportOpen(true)}
-            className="border-border text-muted-foreground hover:bg-muted"
+            className="h-8 px-2.5 text-xs border-border text-muted-foreground hover:bg-muted"
           >
-            <Upload className="size-4" />
+            <Upload className="size-3.5 mr-1" />
             Import
           </Button>
           <Button
+            size="sm"
             onClick={openAddForm}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            className="h-8 px-3 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
           >
-            <Plus className="size-4" />
+            <Plus className="size-3.5 mr-1" />
             Add Contact
           </Button>
         </div>
-      </div>
-
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            // Reset pagination when the query changes — the result
-            // set shrinks/grows, page N may no longer be valid.
-            setPage(0);
-          }}
-          placeholder="Search by name, phone, or email..."
-          className="pl-8 bg-card border-border text-foreground placeholder:text-muted-foreground"
-        />
       </div>
 
       {/* Table */}
@@ -277,31 +275,31 @@ export default function ContactsPage() {
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-muted-foreground">Name</TableHead>
-              <TableHead className="text-muted-foreground">Phone</TableHead>
-              <TableHead className="text-muted-foreground hidden md:table-cell">Email</TableHead>
-              <TableHead className="text-muted-foreground hidden lg:table-cell">Company</TableHead>
-              <TableHead className="text-muted-foreground hidden md:table-cell">Tags</TableHead>
-              <TableHead className="text-muted-foreground hidden lg:table-cell">Created</TableHead>
-              <TableHead className="text-muted-foreground w-12" />
+              <TableHead className="py-2 text-xs text-muted-foreground">Name</TableHead>
+              <TableHead className="py-2 text-xs text-muted-foreground">Phone</TableHead>
+              <TableHead className="py-2 text-xs text-muted-foreground hidden md:table-cell">Email</TableHead>
+              <TableHead className="py-2 text-xs text-muted-foreground hidden lg:table-cell">Company</TableHead>
+              <TableHead className="py-2 text-xs text-muted-foreground hidden md:table-cell">Tags</TableHead>
+              <TableHead className="py-2 text-xs text-muted-foreground hidden lg:table-cell">Created</TableHead>
+              <TableHead className="py-2 text-xs text-muted-foreground w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow className="border-border">
-                <TableCell colSpan={7} className="text-center py-12">
+                <TableCell colSpan={7} className="text-center py-8">
                   <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="size-6 animate-spin text-primary" />
-                    <p className="text-sm text-muted-foreground">Loading contacts...</p>
+                    <Loader2 className="size-5 animate-spin text-primary" />
+                    <p className="text-xs text-muted-foreground">Loading contacts...</p>
                   </div>
                 </TableCell>
               </TableRow>
             ) : contacts.length === 0 ? (
               <TableRow className="border-border">
-                <TableCell colSpan={7} className="text-center py-12">
+                <TableCell colSpan={7} className="text-center py-8">
                   <div className="flex flex-col items-center gap-2">
-                    <Users className="size-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
+                    <Users className="size-7 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">
                       {search ? 'No contacts match your search.' : 'No contacts yet.'}
                     </p>
                     {!search && (
@@ -309,9 +307,9 @@ export default function ContactsPage() {
                         variant="outline"
                         size="sm"
                         onClick={openAddForm}
-                        className="mt-2 border-border text-muted-foreground hover:bg-muted"
+                        className="mt-1 h-7 px-2.5 text-xs border-border text-muted-foreground hover:bg-muted"
                       >
-                        <Plus className="size-3.5" />
+                        <Plus className="size-3 mr-1" />
                         Add your first contact
                       </Button>
                     )}
@@ -325,25 +323,25 @@ export default function ContactsPage() {
                   className="border-border hover:bg-card/50 cursor-pointer"
                   onClick={() => openDetail(contact.id)}
                 >
-                  <TableCell className="text-foreground font-medium">
+                  <TableCell className="py-1.5 text-foreground font-medium text-xs">
                     {contact.name || <span className="text-muted-foreground italic">Unnamed</span>}
                   </TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-xs">
+                  <TableCell className="py-1.5 text-muted-foreground font-mono text-xs">
                     {contact.phone}
                   </TableCell>
-                  <TableCell className="text-muted-foreground hidden md:table-cell text-sm">
+                  <TableCell className="py-1.5 text-muted-foreground hidden md:table-cell text-xs">
                     {contact.email || <span className="text-muted-foreground/60">-</span>}
                   </TableCell>
-                  <TableCell className="text-muted-foreground hidden lg:table-cell text-sm">
+                  <TableCell className="py-1.5 text-muted-foreground hidden lg:table-cell text-xs">
                     {contact.company || <span className="text-muted-foreground/60">-</span>}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">
+                  <TableCell className="py-1.5 hidden md:table-cell">
                     <div className="flex flex-wrap gap-1">
                       {contact.tags && contact.tags.length > 0 ? (
                         contact.tags.slice(0, 3).map((tag) => (
                           <span
                             key={tag.id}
-                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                            className="inline-flex items-center rounded-full px-1.5 py-0.2 text-[10px] font-medium"
                             style={{
                               backgroundColor: tag.color + '20',
                               color: tag.color,
@@ -362,24 +360,24 @@ export default function ContactsPage() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-xs hidden lg:table-cell">
+                  <TableCell className="py-1.5 text-muted-foreground text-xs hidden lg:table-cell">
                     {new Date(contact.created_at).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric',
                     })}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-1.5">
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         render={
                           <Button
                             variant="ghost"
                             size="icon-sm"
-                            className="text-muted-foreground hover:text-foreground"
+                            className="size-7 text-muted-foreground hover:text-foreground"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <MoreHorizontal className="size-4" />
+                            <MoreHorizontal className="size-3.5" />
                           </Button>
                         }
                       />

@@ -13,13 +13,16 @@ export function SkeletonCard({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'rounded-xl border border-border bg-card p-5',
+        'rounded-xl border border-border bg-card p-3.5 sm:p-4',
         className,
       )}
     >
-      <Skeleton className="h-4 w-32" />
-      <Skeleton className="mt-4 h-8 w-20" />
-      <Skeleton className="mt-2 h-3 w-16" />
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="size-8 rounded-lg" />
+      </div>
+      <Skeleton className="mt-2 h-6 w-20" />
+      <Skeleton className="mt-2 h-3.5 w-16" />
     </div>
   )
 }

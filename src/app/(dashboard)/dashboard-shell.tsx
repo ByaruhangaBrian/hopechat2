@@ -8,8 +8,8 @@ import { Header } from "@/components/layout/header";
 import { SubscriptionBanner } from "@/components/billing/subscription-banner";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { ConsentNotice } from "@/components/consent/consent-notice";
-import { createClient } from "@/lib/supabase/client";
 import { canAccess, type PermissionKey } from "@/lib/permissions";
+import { cn } from "@/lib/utils";
 
 // Paths that are business configuration — denied users get bounced to the
 // dashboard. The sidebar hides the links, this keeps direct URLs honest.
@@ -28,7 +28,6 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   const { user, profile, loading: authLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const supabase = createClient();
 
   // Profile loading state - wait for profile if user is present
   const loading = authLoading || (user && !profile);
@@ -125,8 +124,17 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
         <SubscriptionBanner />
         <InstallPrompt />
         <ConsentNotice />
-        {/* Thinner horizontal padding on mobile so cards have room to breathe. */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
+        {/* Compact padding across pages; full-bleed for Inbox */}
+        <main
+          className={cn(
+            "flex-1 overflow-y-auto",
+            pathname === "/inbox" || pathname?.startsWith("/inbox")
+              ? "overflow-hidden p-0"
+              : "p-3 sm:p-4 lg:p-4.5"
+          )}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

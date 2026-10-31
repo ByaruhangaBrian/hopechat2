@@ -74,11 +74,11 @@ function RateCell({
 }) {
   const pct = percent(value, total);
   return (
-    <div className="flex items-center gap-2">
-      <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
+    <div className="flex items-center gap-1.5">
+      <span className="w-8 text-right text-xs tabular-nums text-muted-foreground">
         {pct}%
       </span>
-      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+      <div className="h-1.5 w-14 overflow-hidden rounded-full bg-muted">
         <div
           className={`h-1.5 rounded-full ${color}`}
           style={{ width: `${pct}%` }}
@@ -271,7 +271,7 @@ export default function BroadcastsPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Top indeterminate progress bar: only visible while a broadcast
           is mid-send. Pure CSS animation so no extra deps. */}
       {anySending && (
@@ -302,40 +302,42 @@ export default function BroadcastsPage() {
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Broadcasts</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Broadcasts</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Send bulk messages to your contacts using approved templates.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {profile?.business?.credits_remaining !== undefined && (
-            <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-500 self-start sm:self-center">
-              <Coins className="h-4 w-4" />
+            <div className="flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-500 self-start sm:self-center">
+              <Coins className="h-3.5 w-3.5" />
               <span>{profile.business.credits_remaining.toLocaleString()} Credits Remaining</span>
             </div>
           )}
           <Button
+            size="sm"
             onClick={() => router.push('/broadcasts/new')}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            className="h-8 px-3 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5 mr-1" />
             New Broadcast
           </Button>
         </div>
       </div>
 
       {rows.length === 0 ? (
-        <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-border bg-card">
-          <Radio className="mb-3 h-10 w-10 text-muted-foreground" />
+        <div className="flex h-52 flex-col items-center justify-center rounded-xl border border-border bg-card">
+          <Radio className="mb-2 h-8 w-8 text-muted-foreground" />
           <p className="text-sm font-medium text-foreground">No broadcasts yet</p>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             Create your first broadcast to reach your contacts at scale.
           </p>
           <Button
+            size="sm"
             onClick={() => router.push('/broadcasts/new')}
-            className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90"
+            className="mt-3 h-8 px-3 text-xs bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5 mr-1" />
             New Broadcast
           </Button>
         </div>
@@ -344,16 +346,16 @@ export default function BroadcastsPage() {
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">Name</TableHead>
-                <TableHead className="hidden text-muted-foreground md:table-cell">Template</TableHead>
-                <TableHead className="hidden text-right text-muted-foreground sm:table-cell">
+                <TableHead className="py-2 text-xs text-muted-foreground">Name</TableHead>
+                <TableHead className="py-2 text-xs hidden text-muted-foreground md:table-cell">Template</TableHead>
+                <TableHead className="py-2 text-xs hidden text-right text-muted-foreground sm:table-cell">
                   Recipients
                 </TableHead>
-                <TableHead className="hidden text-muted-foreground lg:table-cell">Delivery</TableHead>
-                <TableHead className="hidden text-muted-foreground lg:table-cell">Read</TableHead>
-                <TableHead className="text-muted-foreground">Status</TableHead>
-                <TableHead className="hidden text-muted-foreground sm:table-cell">Date</TableHead>
-                <TableHead className="text-right text-muted-foreground">Actions</TableHead>
+                <TableHead className="py-2 text-xs hidden text-muted-foreground lg:table-cell">Delivery</TableHead>
+                <TableHead className="py-2 text-xs hidden text-muted-foreground lg:table-cell">Read</TableHead>
+                <TableHead className="py-2 text-xs text-muted-foreground">Status</TableHead>
+                <TableHead className="py-2 text-xs hidden text-muted-foreground sm:table-cell">Date</TableHead>
+                <TableHead className="py-2 text-xs text-right text-muted-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -374,22 +376,22 @@ export default function BroadcastsPage() {
                         : () => router.push(`/broadcasts/${broadcast.id}`)
                     }
                   >
-                    <TableCell className="font-medium text-foreground">
+                    <TableCell className="py-1.5 text-xs font-medium text-foreground">
                       {broadcast.name}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">
+                    <TableCell className="py-1.5 text-xs hidden md:table-cell">
                       {isSms ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-500">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.2 text-[11px] font-medium text-emerald-500">
                           SMS
                         </span>
                       ) : (
-                        <span className="text-muted-foreground">{broadcast.template_name}</span>
+                        <span className="text-muted-foreground text-xs">{broadcast.template_name}</span>
                       )}
                     </TableCell>
-                    <TableCell className="hidden text-right text-muted-foreground tabular-nums sm:table-cell">
+                    <TableCell className="py-1.5 text-xs hidden text-right text-muted-foreground tabular-nums sm:table-cell">
                       {broadcast.total_recipients}
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell className="py-1.5 text-xs hidden lg:table-cell">
                       {isSms ? (
                         <span className="text-xs text-muted-foreground/60">—</span>
                       ) : (
@@ -400,7 +402,7 @@ export default function BroadcastsPage() {
                         />
                       )}
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell className="py-1.5 text-xs hidden lg:table-cell">
                       {isSms ? (
                         <span className="text-xs text-muted-foreground/60">—</span>
                       ) : (
